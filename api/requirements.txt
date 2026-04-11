@@ -1,0 +1,31 @@
+# ─── Web framework ────────────────────────────────────────────────────────────
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+
+# ─── Database ─────────────────────────────────────────────────────────────────
+supabase==2.7.4
+
+# ─── AI providers ─────────────────────────────────────────────────────────────
+openai==1.45.0
+google-generativeai==0.7.2
+
+# ─── Data validation (like FluentValidation / DataAnnotations in C#) ──────────
+pydantic==2.9.2
+pydantic-settings==2.5.2
+
+# ─── HTTP client (for Google Business Profile API calls) ──────────────────────
+httpx==0.27.2
+
+# ─── Payments ─────────────────────────────────────────────────────────────────
+stripe==10.9.0
+
+# ─── Email ────────────────────────────────────────────────────────────────────
+resend==2.3.0
+
+# ─── SMS (Phase 2 only — install when you start Phase 2) ─────────────────────
+# twilio==9.3.0
+
+# ─── Dev & testing ────────────────────────────────────────────────────────────
+pytest==8.3.3
+pytest-asyncio==0.24.0
+python-dotenv==1.0.1

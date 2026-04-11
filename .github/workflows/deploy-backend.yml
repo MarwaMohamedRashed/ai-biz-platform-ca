@@ -1,0 +1,39 @@
+# Auto-deploy FastAPI backend to Railway on every push to main
+# Railway detects the push via webhook — this workflow just triggers it
+
+name: Deploy backend to Railway
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'api/**'              # Only run when backend code changes
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          cd api
+          pip install -r requirements.txt
+
+      - name: Run tests
+        run: |
+          cd api
+          pytest tests/ -v --tb=short
+        continue-on-error: true   # Don't block deploy on test failure during early development
+
+      - name: Trigger Railway deploy
+        run: |
+          curl -X POST "${{ secrets.RAILWAY_DEPLOY_HOOK_URL }}"
+        # Set RAILWAY_DEPLOY_HOOK_URL in GitHub repo Settings → Secrets
+        # Get the webhook URL from your Railway project → Settings → Deploy Hooks
