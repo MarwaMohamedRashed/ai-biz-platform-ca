@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LeapOne — UI Color Preview</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f1f5f9; padding: 24px; }
+    h1 { text-align: center; font-size: 22px; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
+    .subtitle { text-align: center; color: #64748b; font-size: 14px; margin-bottom: 32px; }
+
+    .options { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; }
+
+    .option { width: 320px; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.10); background: white; }
+    .option-label { text-align: center; padding: 12px; font-weight: 700; font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase; }
+
+    /* Phone mockup */
+    .phone { border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; }
+
+    /* Header */
+    .header { padding: 14px 16px 10px; display: flex; align-items: center; justify-content: space-between; }
+    .header-logo { font-weight: 800; font-size: 16px; letter-spacing: -0.5px; }
+    .header-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: white; }
+
+    /* Chat area */
+    .chat { padding: 12px 14px; min-height: 280px; display: flex; flex-direction: column; gap: 12px; }
+
+    /* AI message */
+    .ai-msg { display: flex; gap: 8px; align-items: flex-start; }
+    .ai-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+    .ai-bubble { border-radius: 4px 14px 14px 14px; padding: 10px 12px; font-size: 13px; line-height: 1.5; max-width: 230px; color: #1e293b; }
+
+    /* Card */
+    .card { border-radius: 12px; padding: 10px 12px; margin-left: 36px; font-size: 12px; border: 1px solid; }
+    .card-title { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+    .card-row { color: #64748b; margin-bottom: 6px; line-height: 1.4; }
+    .card-actions { display: flex; gap: 6px; margin-top: 8px; }
+    .btn { padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; border: none; cursor: pointer; }
+
+    /* User message */
+    .user-msg { display: flex; justify-content: flex-end; }
+    .user-bubble { border-radius: 14px 4px 14px 14px; padding: 9px 13px; font-size: 13px; color: white; max-width: 200px; line-height: 1.4; }
+
+    /* Input */
+    .input-bar { padding: 10px 12px; border-top: 1px solid #e2e8f0; display: flex; align-items: center; gap: 8px; background: white; }
+    .input-field { flex: 1; border: 1px solid #e2e8f0; border-radius: 20px; padding: 8px 14px; font-size: 13px; color: #475569; outline: none; }
+    .mic-btn { width: 36px; height: 36px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; font-size: 15px; cursor: pointer; }
+
+    /* Bottom nav */
+    .bottom-nav { display: flex; border-top: 1px solid #e2e8f0; background: white; }
+    .nav-item { flex: 1; padding: 10px 4px 8px; text-align: center; font-size: 10px; font-weight: 500; color: #94a3b8; cursor: pointer; }
+    .nav-item.active { font-weight: 700; }
+    .nav-icon { font-size: 18px; display: block; margin-bottom: 2px; }
+
+    /* Color swatches */
+    .swatches { display: flex; gap: 8px; padding: 12px 16px; background: #f8fafc; border-top: 1px solid #e2e8f0; }
+    .swatch { height: 24px; border-radius: 6px; flex: 1; }
+
+    /* ─── Option A: Indigo + Orange ─── */
+    .a .option-label { background: #eef2ff; color: #4f46e5; }
+    .a .header { background: white; border-bottom: 1px solid #e2e8f0; }
+    .a .header-logo { color: #4f46e5; }
+    .a .header-logo span { color: #f97316; }
+    .a .header-avatar { background: #4f46e5; }
+    .a .chat { background: #f8fafc; }
+    .a .ai-icon { background: #eef2ff; color: #4f46e5; }
+    .a .ai-bubble { background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    .a .card { background: #fff7ed; border-color: #fed7aa; }
+    .a .card-title { color: #ea580c; }
+    .a .btn-primary { background: #4f46e5; color: white; }
+    .a .btn-secondary { background: white; color: #4f46e5; border: 1px solid #4f46e5; }
+    .a .user-bubble { background: linear-gradient(135deg, #4f46e5, #7c3aed); }
+    .a .mic-btn { background: #fff7ed; color: #f97316; }
+    .a .nav-item.active { color: #4f46e5; }
+    .a .nav-active-dot { display: block; width: 4px; height: 4px; border-radius: 50%; background: #4f46e5; margin: 3px auto 0; }
+
+    /* ─── Option B: Blue + Teal ─── */
+    .b .option-label { background: #eff6ff; color: #1d4ed8; }
+    .b .header { background: white; border-bottom: 1px solid #e2e8f0; }
+    .b .header-logo { color: #1d4ed8; }
+    .b .header-logo span { color: #0d9488; }
+    .b .header-avatar { background: #1d4ed8; }
+    .b .chat { background: #f8fafc; }
+    .b .ai-icon { background: #f0fdfa; color: #0d9488; }
+    .b .ai-bubble { background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    .b .card { background: #f0fdfa; border-color: #99f6e4; }
+    .b .card-title { color: #0f766e; }
+    .b .btn-primary { background: #1d4ed8; color: white; }
+    .b .btn-secondary { background: white; color: #0d9488; border: 1px solid #0d9488; }
+    .b .user-bubble { background: linear-gradient(135deg, #1d4ed8, #0d9488); }
+    .b .mic-btn { background: #f0fdfa; color: #0d9488; }
+    .b .nav-item.active { color: #1d4ed8; }
+    .b .nav-active-dot { display: block; width: 4px; height: 4px; border-radius: 50%; background: #1d4ed8; margin: 3px auto 0; }
+
+    /* ─── Option C: Violet + Amber ─── */
+    .c .option-label { background: #f5f3ff; color: #7c3aed; }
+    .c .header { background: white; border-bottom: 1px solid #e2e8f0; }
+    .c .header-logo { color: #7c3aed; }
+    .c .header-logo span { color: #f59e0b; }
+    .c .header-avatar { background: #7c3aed; }
+    .c .chat { background: #fffbf5; }
+    .c .ai-icon { background: #f5f3ff; color: #7c3aed; }
+    .c .ai-bubble { background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    .c .card { background: #fffbeb; border-color: #fde68a; }
+    .c .card-title { color: #b45309; }
+    .c .btn-primary { background: #7c3aed; color: white; }
+    .c .btn-secondary { background: white; color: #7c3aed; border: 1px solid #7c3aed; }
+    .c .user-bubble { background: linear-gradient(135deg, #7c3aed, #a855f7); }
+    .c .mic-btn { background: #fffbeb; color: #f59e0b; }
+    .c .nav-item.active { color: #7c3aed; }
+    .c .nav-active-dot { display: block; width: 4px; height: 4px; border-radius: 50%; background: #7c3aed; margin: 3px auto 0; }
+
+    .nav-active-dot-hidden { display: block; width: 4px; height: 4px; margin: 3px auto 0; }
+  </style>
+</head>
+<body>
+
+  <h1>LeapOne — UI Color Options</h1>
+  <p class="subtitle">Light mode • AI-first chat interface • Mobile preview</p>
+
+  <div class="options">
+
+    <!-- OPTION A -->
+    <div class="option a">
+      <div class="option-label">Option A — Indigo + Orange ★ Recommended</div>
+      <div class="phone">
+        <div class="header">
+          <div class="header-logo">Leap<span>One</span></div>
+          <div class="header-avatar">M</div>
+        </div>
+        <div class="chat">
+          <div class="ai-msg">
+            <div class="ai-icon">✦</div>
+            <div class="ai-bubble">Good morning! Here's what needs your attention today:</div>
+          </div>
+          <div class="card">
+            <div class="card-title">⭐ 3 Reviews Waiting</div>
+            <div class="card-row">2 need responses · 1 negative review</div>
+            <div class="card-actions">
+              <button class="btn btn-primary">Review Now</button>
+              <button class="btn btn-secondary">Later</button>
+            </div>
+          </div>
+          <div class="card" style="background:#eef2ff; border-color:#c7d2fe;">
+            <div class="card-title" style="color:#4338ca;">📅 2 Appointments Today</div>
+            <div class="card-row">2:00 PM — Sarah J. · 4:30 PM — Mike T.</div>
+            <div class="card-actions">
+              <button class="btn btn-primary">View Schedule</button>
+            </div>
+          </div>
+          <div class="user-msg">
+            <div class="user-bubble">Show me the negative review</div>
+          </div>
+        </div>
+        <div class="input-bar">
+          <div class="mic-btn">🎙</div>
+          <input class="input-field" placeholder="Ask anything..." readonly />
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-item active"><span class="nav-icon">🤖</span>Chat<span class="nav-active-dot"></span></div>
+          <div class="nav-item"><span class="nav-icon">⭐</span>Reviews<span class="nav-active-dot-hidden"></span></div>
+          <div class="nav-item"><span class="nav-icon">📅</span>Bookings<span class="nav-active-dot-hidden"></span></div>
+          <div class="nav-item"><span class="nav-icon">🚀</span>Guide<span class="nav-active-dot-hidden"></span></div>
+        </div>
+      </div>
+      <div class="swatches">
+        <div class="swatch" style="background:#4f46e5;" title="Indigo"></div>
+        <div class="swatch" style="background:#f97316;" title="Orange"></div>
+        <div class="swatch" style="background:#f8fafc;" title="Background"></div>
+        <div class="swatch" style="background:#1e293b;" title="Text"></div>
+      </div>
+    </div>
+
+    <!-- OPTION B -->
+    <div class="option b">
+      <div class="option-label">Option B — Blue + Teal</div>
+      <div class="phone">
+        <div class="header">
+          <div class="header-logo">Leap<span>One</span></div>
+          <div class="header-avatar">M</div>
+        </div>
+        <div class="chat">
+          <div class="ai-msg">
+            <div class="ai-icon">✦</div>
+            <div class="ai-bubble">Good morning! Here's what needs your attention today:</div>
+          </div>
+          <div class="card">
+            <div class="card-title">⭐ 3 Reviews Waiting</div>
+            <div class="card-row">2 need responses · 1 negative review</div>
+            <div class="card-actions">
+              <button class="btn btn-primary">Review Now</button>
+              <button class="btn btn-secondary">Later</button>
+            </div>
+          </div>
+          <div class="card" style="background:#eff6ff; border-color:#bfdbfe;">
+            <div class="card-title" style="color:#1d4ed8;">📅 2 Appointments Today</div>
+            <div class="card-row">2:00 PM — Sarah J. · 4:30 PM — Mike T.</div>
+            <div class="card-actions">
+              <button class="btn btn-primary">View Schedule</button>
+            </div>
+          </div>
+          <div class="user-msg">
+            <div class="user-bubble">Show me the negative review</div>
+          </div>
+        </div>
+        <div class="input-bar">
+          <div class="mic-btn">🎙</div>
+          <input class="input-field" placeholder="Ask anything..." readonly />
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-item active"><span class="nav-icon">🤖</span>Chat<span class="nav-active-dot"></span></div>
+          <div class="nav-item"><span class="nav-icon">⭐</span>Reviews<span class="nav-active-dot-hidden"></span></div>
+          <div class="nav-item"><span class="nav-icon">📅</span>Bookings<span class="nav-active-dot-hidden"></span></div>
+          <div class="nav-item"><span class="nav-icon">🚀</span>Guide<span class="nav-active-dot-hidden"></span></div>
+        </div>
+      </div>
+      <div class="swatches">
+        <div class="swatch" style="background:#1d4ed8;" title="Blue"></div>
+        <div class="swatch" style="background:#0d9488;" title="Teal"></div>
+        <div class="swatch" style="background:#f8fafc;" title="Background"></div>
+        <div class="swatch" style="background:#1e293b;" title="Text"></div>
+      </div>
+    </div>
+
+    <!-- OPTION C -->
+    <div class="option c">
+      <div class="option-label">Option C — Violet + Amber</div>
+      <div class="phone">
+        <div class="header">
+          <div class="header-logo">Leap<span>One</span></div>
+          <div class="header-avatar">M</div>
+        </div>
+        <div class="chat">
+          <div class="ai-msg">
+            <div class="ai-icon">✦</div>
+            <div class="ai-bubble">Good morning! Here's what needs your attention today:</div>
+          </div>
+          <div class="card">
+            <div class="card-title">⭐ 3 Reviews Waiting</div>
+            <div class="card-row">2 need responses · 1 negative review</div>
+            <div class="card-actions">
+              <button class="btn btn-primary">Review Now</button>
+              <button class="btn btn-secondary">Later</button>
+            </div>
+          </div>
+          <div class="card" style="background:#f5f3ff; border-color:#ddd6fe;">
+            <div class="card-title" style="color:#6d28d9;">📅 2 Appointments Today</div>
+            <div class="card-row">2:00 PM — Sarah J. · 4:30 PM — Mike T.</div>
+            <div class="card-actions">
+              <button class="btn btn-primary">View Schedule</button>
+            </div>
+          </div>
+          <div class="user-msg">
+            <div class="user-bubble">Show me the negative review</div>
+          </div>
+        </div>
+        <div class="input-bar">
+          <div class="mic-btn">🎙</div>
+          <input class="input-field" placeholder="Ask anything..." readonly />
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-item active"><span class="nav-icon">🤖</span>Chat<span class="nav-active-dot"></span></div>
+          <div class="nav-item"><span class="nav-icon">⭐</span>Reviews<span class="nav-active-dot-hidden"></span></div>
+          <div class="nav-item"><span class="nav-icon">📅</span>Bookings<span class="nav-active-dot-hidden"></span></div>
+          <div class="nav-item"><span class="nav-icon">🚀</span>Guide<span class="nav-active-dot-hidden"></span></div>
+        </div>
+      </div>
+      <div class="swatches">
+        <div class="swatch" style="background:#7c3aed;" title="Violet"></div>
+        <div class="swatch" style="background:#f59e0b;" title="Amber"></div>
+        <div class="swatch" style="background:#fffbf5;" title="Background"></div>
+        <div class="swatch" style="background:#1e293b;" title="Text"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <p style="text-align:center; margin-top:28px; color:#94a3b8; font-size:13px;">
+    leapone.ca · Light mode default · Dark mode toggle coming later
+  </p>
+
+</body>
+</html>

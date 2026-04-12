@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LeapOne — Logo Preview</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #f1f5f9; padding: 40px 24px; }
+    h1 { text-align: center; font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
+    .subtitle { text-align: center; color: #64748b; font-size: 14px; margin-bottom: 40px; }
+
+    .section { margin-bottom: 48px; }
+    .section-title { font-size: 13px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 20px; text-align: center; }
+
+    /* Logo options grid */
+    .logo-grid { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+    .logo-card { background: white; border-radius: 16px; padding: 28px 32px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); display: flex; flex-direction: column; align-items: center; gap: 16px; min-width: 180px; }
+    .logo-card-label { font-size: 12px; color: #94a3b8; font-weight: 500; }
+
+    /* Wordmark styles */
+    .wordmark { font-family: 'Inter', sans-serif; font-weight: 800; font-size: 26px; letter-spacing: -0.5px; }
+    .wordmark .leap { color: #4f46e5; }
+    .wordmark .one { color: #f97316; }
+
+    .wordmark-sm { font-family: 'Inter', sans-serif; font-weight: 800; font-size: 18px; letter-spacing: -0.5px; }
+    .wordmark-sm .leap { color: #4f46e5; }
+    .wordmark-sm .one { color: #f97316; }
+
+    /* Dark background preview */
+    .on-dark { background: #1e293b; border-radius: 12px; padding: 16px 24px; }
+    .on-dark .leap { color: white; }
+    .on-dark .one { color: #f97316; }
+
+    /* Sizes row */
+    .sizes { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; justify-content: center; }
+
+    /* App icon previews */
+    .icon-grid { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+    .icon-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .icon-label { font-size: 11px; color: #94a3b8; font-weight: 500; }
+
+    /* Usage context */
+    .context-grid { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+    .context-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.07); width: 300px; }
+    .context-header { padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; }
+    .context-label { font-size: 11px; color: #94a3b8; padding: 8px 16px; font-weight: 500; }
+
+    /* Favicon row */
+    .favicon-row { display: flex; align-items: center; gap: 8px; background: #f8fafc; padding: 8px 12px; border-radius: 8px; font-size: 12px; color: #64748b; }
+  </style>
+</head>
+<body>
+
+  <h1>LeapOne — Logo Concepts</h1>
+  <p class="subtitle">Soft & rounded · Indigo + Orange · Inter font</p>
+
+  <!-- SECTION 1: Icon + Wordmark options -->
+  <div class="section">
+    <div class="section-title">Icon + Wordmark Options</div>
+    <div class="logo-grid">
+
+      <!-- Option 1: Leap arc icon -->
+      <div class="logo-card">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="40" height="40" rx="12" fill="#eef2ff"/>
+            <path d="M10 28 C10 28, 15 14, 20 18 C25 22, 30 10, 30 10" stroke="#4f46e5" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+            <circle cx="30" cy="10" r="3.5" fill="#f97316"/>
+          </svg>
+          <div class="wordmark"><span class="leap">Leap</span><span class="one">One</span></div>
+        </div>
+        <div class="logo-card-label">Option A — Leap arc + dot</div>
+      </div>
+
+      <!-- Option 2: Upward arrow icon -->
+      <div class="logo-card">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="40" height="40" rx="12" fill="#eef2ff"/>
+            <path d="M20 30 L20 14" stroke="#4f46e5" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M13 21 L20 13 L27 21" stroke="#4f46e5" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <circle cx="29" cy="13" r="3.5" fill="#f97316"/>
+          </svg>
+          <div class="wordmark"><span class="leap">Leap</span><span class="one">One</span></div>
+        </div>
+        <div class="logo-card-label">Option B — Arrow + spark</div>
+      </div>
+
+      <!-- Option 3: Leap motion -->
+      <div class="logo-card">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="40" height="40" rx="12" fill="#eef2ff"/>
+            <!-- body -->
+            <circle cx="14" cy="26" r="3" fill="#4f46e5" opacity="0.3"/>
+            <circle cx="21" cy="20" r="3.5" fill="#4f46e5" opacity="0.6"/>
+            <circle cx="28" cy="13" r="4" fill="#4f46e5"/>
+            <circle cx="30" cy="11" r="2.5" fill="#f97316"/>
+          </svg>
+          <div class="wordmark"><span class="leap">Leap</span><span class="one">One</span></div>
+        </div>
+        <div class="logo-card-label">Option C — Leap trajectory</div>
+      </div>
+
+      <!-- Option 4: L monogram -->
+      <div class="logo-card">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="40" height="40" rx="12" fill="#4f46e5"/>
+            <path d="M13 10 L13 28 L27 28" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <circle cx="28" cy="13" r="4" fill="#f97316"/>
+          </svg>
+          <div class="wordmark"><span class="leap">Leap</span><span class="one">One</span></div>
+        </div>
+        <div class="logo-card-label">Option D — L monogram + spark</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SECTION 2: App Icon sizes -->
+  <div class="section">
+    <div class="section-title">App Icon — Option D at different sizes</div>
+    <div class="icon-grid">
+
+      <div class="icon-wrap">
+        <svg width="80" height="80" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="40" height="40" rx="12" fill="#4f46e5"/>
+          <path d="M13 10 L13 28 L27 28" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <circle cx="28" cy="13" r="4" fill="#f97316"/>
+        </svg>
+        <div class="icon-label">80px (home screen)</div>
+      </div>
+
+      <div class="icon-wrap">
+        <svg width="48" height="48" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="40" height="40" rx="12" fill="#4f46e5"/>
+          <path d="M13 10 L13 28 L27 28" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <circle cx="28" cy="13" r="4" fill="#f97316"/>
+        </svg>
+        <div class="icon-label">48px (tab bar)</div>
+      </div>
+
+      <div class="icon-wrap">
+        <svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="40" height="40" rx="12" fill="#4f46e5"/>
+          <path d="M13 10 L13 28 L27 28" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <circle cx="28" cy="13" r="4" fill="#f97316"/>
+        </svg>
+        <div class="icon-label">32px (favicon)</div>
+      </div>
+
+      <div class="icon-wrap">
+        <svg width="16" height="16" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="40" height="40" rx="12" fill="#4f46e5"/>
+          <path d="M13 10 L13 28 L27 28" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <circle cx="28" cy="13" r="4" fill="#f97316"/>
+        </svg>
+        <div class="icon-label">16px (browser tab)</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SECTION 3: Usage in context -->
+  <div class="section">
+    <div class="section-title">Logo in context</div>
+    <div class="context-grid">
+
+      <!-- App header light -->
+      <div class="context-card">
+        <div class="context-label">Mobile app header (light)</div>
+        <div class="context-header" style="background:white;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
+              <rect width="40" height="40" rx="12" fill="#4f46e5"/>
+              <path d="M13 10 L13 28 L27 28" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              <circle cx="28" cy="13" r="4" fill="#f97316"/>
+            </svg>
+            <div class="wordmark-sm"><span class="leap">Leap</span><span class="one">One</span></div>
+          </div>
+          <div style="width:32px;height:32px;border-radius:50%;background:#4f46e5;display:flex;align-items:center;justify-content:center;color:white;font-size:13px;font-weight:600;">M</div>
+        </div>
+        <div style="padding:12px 16px; font-size:12px; color:#94a3b8;">App header — icon + wordmark</div>
+      </div>
+
+      <!-- App header dark -->
+      <div class="context-card">
+        <div class="context-label">Mobile app header (dark future)</div>
+        <div class="context-header" style="background:#1e293b; border-bottom-color:#334155;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
+              <rect width="40" height="40" rx="12" fill="#4f46e5"/>
+              <path d="M13 10 L13 28 L27 28" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              <circle cx="28" cy="13" r="4" fill="#f97316"/>
+            </svg>
+            <div class="wordmark-sm"><span style="color:white;font-weight:800;font-family:Inter,sans-serif;">Leap</span><span style="color:#f97316;font-weight:800;font-family:Inter,sans-serif;">One</span></div>
+          </div>
+          <div style="width:32px;height:32px;border-radius:50%;background:#4f46e5;display:flex;align-items:center;justify-content:center;color:white;font-size:13px;font-weight:600;">M</div>
+        </div>
+        <div style="padding:12px 16px; font-size:12px; color:#94a3b8;">Works on dark mode too</div>
+      </div>
+
+      <!-- Browser favicon -->
+      <div class="context-card">
+        <div class="context-label">Browser tab</div>
+        <div style="padding:12px 16px;">
+          <div class="favicon-row">
+            <svg width="16" height="16" viewBox="0 0 40 40" fill="none">
+              <rect width="40" height="40" rx="12" fill="#4f46e5"/>
+              <path d="M13 10 L13 28 L27 28" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              <circle cx="28" cy="13" r="4" fill="#f97316"/>
+            </svg>
+            LeapOne — AI Assistant for Canadian Small...
+          </div>
+        </div>
+        <div style="padding:0 16px 12px; font-size:12px; color:#94a3b8;">Readable at 16px favicon size</div>
+      </div>
+
+    </div>
+  </div>
+
+  <p style="text-align:center; color:#94a3b8; font-size:13px;">
+    leapone.ca · Soft & rounded · Inter 800 · Indigo + Orange
+  </p>
+
+</body>
+</html>

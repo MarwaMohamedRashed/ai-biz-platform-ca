@@ -4,21 +4,42 @@
 -- These tables are used by ALL THREE products
 -- ============================================================
 
--- Note for C#/.NET developers:
--- This is standard PostgreSQL. Your SQL skills transfer directly.
--- "uuid_generate_v4()" = like NEWID() in SQL Server
--- "now()" = like GETDATE() in SQL Server
--- "jsonb" = a JSON column with indexing support (no equivalent in standard SQL Server)
-
 -- Enable UUID generation (Supabase enables this by default)
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- ─── Users ────────────────────────────────────────────────────────────────────
--- Supabase Auth manages this table automatically.
--- You don't create users here — Supabase does it when they sign up.
--- Your other tables reference auth.users(id) as a foreign key.
+-- ─── Profiles ────────────────────────────────────────────────────────────────
+-- Extends auth.users (managed by Supabase Auth).
+-- Created automatically by trigger when a user signs up.
+-- We do NOT duplicate email here — always read from auth.users.
+CREATE TABLE profiles (
+    id           UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    full_name    TEXT,
+    avatar_url   TEXT,
+    created_at   TIMESTAMPTZ DEFAULT now(),
+    updated_at   TIMESTAMPTZ DEFAULT now()
+);
 
--- ─── Business profiles ────────────────────────────────────────────────────────
+-- Auto-create a profile row when a new user signs up
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO profiles (id, full_name, avatar_url)
+    VALUES (
+        NEW.id,
+        NEW.raw_user_meta_data->>'full_name',
+        NEW.raw_user_meta_data->>'avatar_url'
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+-- ─── Businesses ───────────────────────────────────────────────────────────────
+-- One owner (user_id) can have one business now.
+-- business_members table (below) supports expanding to teams in Phase 2.
 CREATE TABLE businesses (
     id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id      UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -34,8 +55,24 @@ CREATE TABLE businesses (
     updated_at   TIMESTAMPTZ DEFAULT now()
 );
 
--- One business per user (for now — can expand to multi-location later)
+-- One business per user for Phase 1. Remove this index in Phase 2 to allow multi-location.
 CREATE UNIQUE INDEX businesses_user_id_idx ON businesses(user_id);
+
+-- ─── Business Members (Phase 2 team support) ─────────────────────────────────
+-- Deferred to Phase 2 but defined now so FK references are ready.
+-- title: the person's role within the business (e.g. "Owner", "Manager", "Receptionist")
+CREATE TYPE member_role AS ENUM ('owner', 'admin', 'member');
+
+CREATE TABLE business_members (
+    id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    business_id  UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    user_id      UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    role         member_role NOT NULL DEFAULT 'member',
+    title        TEXT,             -- Job title within the business
+    invited_at   TIMESTAMPTZ DEFAULT now(),
+    accepted_at  TIMESTAMPTZ,
+    UNIQUE (business_id, user_id)
+);
 
 -- ─── Subscriptions ────────────────────────────────────────────────────────────
 CREATE TYPE subscription_product AS ENUM ('reviews', 'bookings', 'startup');
@@ -45,7 +82,7 @@ CREATE TABLE subscriptions (
     id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     business_id  UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     product      subscription_product NOT NULL,
-    stripe_id    TEXT UNIQUE,      -- Stripe subscription ID
+    stripe_id    TEXT UNIQUE,      -- Stripe subscription or payment intent ID
     status       subscription_status DEFAULT 'trialing',
     plan_tier    TEXT,             -- 'starter', 'pro', etc.
     trial_ends   TIMESTAMPTZ,
@@ -56,55 +93,73 @@ CREATE TABLE subscriptions (
 -- A business can subscribe to each product once
 CREATE UNIQUE INDEX subscriptions_business_product_idx ON subscriptions(business_id, product);
 
--- ─── Conversations (shared AI conversation log) ────────────────────────────────
+-- ─── Conversations ────────────────────────────────────────────────────────────
+-- Shared AI conversation log across all products.
+-- messages: array of {role: "user"|"assistant", content: "...", timestamp: "..."}
 CREATE TABLE conversations (
     id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     business_id  UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     product      subscription_product NOT NULL,
-    messages     JSONB DEFAULT '[]',   -- Array of {role, content, timestamp}
+    messages     JSONB DEFAULT '[]',
     status       TEXT DEFAULT 'active',
     created_at   TIMESTAMPTZ DEFAULT now(),
     updated_at   TIMESTAMPTZ DEFAULT now()
 );
 
--- ─── Notifications log ────────────────────────────────────────────────────────
+-- ─── Notifications ────────────────────────────────────────────────────────────
+-- Log of every notification sent to business owners.
+-- regarding_type + regarding_id: polymorphic reference to what triggered the notification.
+-- Example: regarding_type='review', regarding_id=<review UUID>
 CREATE TYPE notification_channel AS ENUM ('email', 'sms', 'whatsapp');
 
 CREATE TABLE notifications (
-    id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    business_id  UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
-    channel      notification_channel NOT NULL,
-    recipient    TEXT NOT NULL,    -- Email address or phone number
-    subject      TEXT,
-    body         TEXT,
-    status       TEXT DEFAULT 'pending',  -- pending, sent, failed
-    sent_at      TIMESTAMPTZ,
-    created_at   TIMESTAMPTZ DEFAULT now()
+    id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    business_id      UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    channel          notification_channel NOT NULL,
+    recipient        TEXT NOT NULL,       -- Email address or phone number
+    subject          TEXT,
+    body             TEXT,
+    status           TEXT DEFAULT 'pending',  -- pending, sent, failed
+    regarding_type   TEXT,                -- 'review', 'booking', 'payment', etc.
+    regarding_id     UUID,                -- ID of the related record
+    sent_at          TIMESTAMPTZ,
+    created_at       TIMESTAMPTZ DEFAULT now()
 );
 
--- ─── Row Level Security (RLS) ─────────────────────────────────────────────────
--- This is Supabase's equivalent of applying user-based WHERE clauses automatically.
--- Once enabled, a logged-in user can ONLY see their own data — the database enforces it.
--- C#/.NET equivalent: imagine if Entity Framework automatically added
---   .Where(x => x.UserId == currentUser.Id) to every query.
+CREATE INDEX notifications_business_id_idx    ON notifications(business_id);
+CREATE INDEX notifications_regarding_idx      ON notifications(regarding_type, regarding_id);
 
-ALTER TABLE businesses    ENABLE ROW LEVEL SECURITY;
-ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+-- ─── Row Level Security ───────────────────────────────────────────────────────
+-- Once enabled, Supabase automatically filters every query by the logged-in user.
+-- Users can only read/write their own data — enforced at the database level.
 
--- Users can only see their own business
+ALTER TABLE profiles         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE businesses       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE business_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE subscriptions    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE conversations    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications    ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users see own profile" ON profiles
+    FOR ALL USING (auth.uid() = id);
+
 CREATE POLICY "Users see own business" ON businesses
     FOR ALL USING (auth.uid() = user_id);
 
--- Users can see subscriptions for their own business
+CREATE POLICY "Users see own memberships" ON business_members
+    FOR ALL USING (auth.uid() = user_id);
+
 CREATE POLICY "Users see own subscriptions" ON subscriptions
     FOR ALL USING (
         business_id IN (SELECT id FROM businesses WHERE user_id = auth.uid())
     );
 
--- Users see their own conversations
 CREATE POLICY "Users see own conversations" ON conversations
+    FOR ALL USING (
+        business_id IN (SELECT id FROM businesses WHERE user_id = auth.uid())
+    );
+
+CREATE POLICY "Users see own notifications" ON notifications
     FOR ALL USING (
         business_id IN (SELECT id FROM businesses WHERE user_id = auth.uid())
     );
@@ -118,10 +173,18 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE TRIGGER profiles_updated_at
+    BEFORE UPDATE ON profiles
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
 CREATE TRIGGER businesses_updated_at
     BEFORE UPDATE ON businesses
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 CREATE TRIGGER subscriptions_updated_at
     BEFORE UPDATE ON subscriptions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER conversations_updated_at
+    BEFORE UPDATE ON conversations
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();

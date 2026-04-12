@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LeapOne — Login Screen Preview</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f1f5f9;
+      min-height: 100vh;
+      padding: 40px 24px;
+    }
+
+    h1 { text-align: center; font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
+    .subtitle { text-align: center; color: #64748b; font-size: 14px; margin-bottom: 40px; }
+
+    .screens { display: flex; gap: 32px; justify-content: center; flex-wrap: wrap; align-items: flex-start; }
+
+    .screen-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .screen-label { font-size: 12px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; }
+
+    /* Phone frame */
+    .phone {
+      width: 320px;
+      background: white;
+      border-radius: 36px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+      overflow: hidden;
+      border: 6px solid #1e293b;
+      position: relative;
+    }
+
+    /* Status bar */
+    .status-bar {
+      background: white;
+      padding: 12px 20px 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .status-icons { display: flex; gap: 4px; align-items: center; }
+
+    /* Screen content */
+    .screen-content { padding: 12px 24px 36px; }
+
+    /* Logo section */
+    .logo-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 0 28px;
+      gap: 12px;
+    }
+    .logo-icon {
+      width: 64px;
+      height: 64px;
+      filter: drop-shadow(0 4px 12px rgba(79,70,229,0.25));
+    }
+    .logo-wordmark {
+      font-weight: 800;
+      font-size: 26px;
+      letter-spacing: -0.5px;
+    }
+    .logo-wordmark .leap { color: #4f46e5; }
+    .logo-wordmark .one { color: #f97316; }
+    .tagline {
+      font-size: 13px;
+      color: #64748b;
+      font-weight: 400;
+      margin-top: -4px;
+    }
+
+    /* Welcome text */
+    .welcome-text {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .welcome-text h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 4px;
+    }
+    .welcome-text p {
+      font-size: 13px;
+      color: #64748b;
+    }
+
+    /* Google button */
+    .btn-google {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 13px 16px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 12px;
+      background: white;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1e293b;
+      cursor: pointer;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      transition: all 0.15s;
+    }
+    .btn-google:hover { border-color: #c7d2fe; background: #f8f9ff; }
+
+    /* Divider */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .divider-line { flex: 1; height: 1px; background: #e2e8f0; }
+    .divider-text { font-size: 12px; color: #94a3b8; font-weight: 500; }
+
+    /* Form fields */
+    .field { margin-bottom: 12px; }
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 5px;
+    }
+    .field input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      color: #1e293b;
+      background: #f8fafc;
+      outline: none;
+    }
+    .field input:focus { border-color: #4f46e5; background: white; }
+    .field input.filled { border-color: #e2e8f0; background: white; color: #1e293b; }
+
+    /* Forgot password */
+    .forgot { text-align: right; margin-top: -6px; margin-bottom: 16px; }
+    .forgot a { font-size: 12px; color: #4f46e5; font-weight: 500; text-decoration: none; }
+
+    /* Primary button */
+    .btn-primary {
+      width: 100%;
+      padding: 13px;
+      background: #4f46e5;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 12px rgba(79,70,229,0.3);
+    }
+
+    /* Sign up link */
+    .signup-link {
+      text-align: center;
+      font-size: 13px;
+      color: #64748b;
+    }
+    .signup-link a { color: #4f46e5; font-weight: 600; text-decoration: none; }
+
+    /* ── Sign Up screen extras ── */
+    .name-row { display: flex; gap: 10px; }
+    .name-row .field { flex: 1; }
+
+    .terms {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 16px;
+      font-size: 11px;
+      color: #64748b;
+      line-height: 1.5;
+    }
+    .terms input[type="checkbox"] {
+      width: 14px;
+      height: 14px;
+      margin-top: 1px;
+      flex-shrink: 0;
+      accent-color: #4f46e5;
+    }
+    .terms a { color: #4f46e5; text-decoration: none; }
+
+    /* ── Password Reset screen ── */
+    .back-link {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #4f46e5;
+      font-weight: 500;
+      margin-bottom: 24px;
+      cursor: pointer;
+    }
+    .reset-icon {
+      width: 56px;
+      height: 56px;
+      background: #eef2ff;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      margin: 0 auto 16px;
+    }
+    .success-badge {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 12px;
+      color: #166534;
+      text-align: center;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    /* Google SVG logo */
+    .google-svg { width: 18px; height: 18px; }
+  </style>
+</head>
+<body>
+
+  <h1>LeapOne — Auth Screens</h1>
+  <p class="subtitle">Login · Sign Up · Password Reset · Light mode · Mobile-first</p>
+
+  <div class="screens">
+
+    <!-- ── SCREEN 1: LOGIN ── -->
+    <div class="screen-wrap">
+      <div class="screen-label">Sign In</div>
+      <div class="phone">
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="status-icons">
+            <span>●●●</span>
+            <span>WiFi</span>
+            <span>🔋</span>
+          </div>
+        </div>
+        <div class="screen-content">
+          <div class="logo-section">
+            <svg class="logo-icon" width="64" height="64" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="40" height="40" rx="12" fill="#4f46e5"/>
+              <path d="M13 10 L13 28 L27 28" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              <circle cx="28" cy="13" r="4" fill="#f97316"/>
+            </svg>
+            <div class="logo-wordmark"><span class="leap">Leap</span><span class="one">One</span></div>
+            <div class="tagline">AI assistant for your business</div>
+          </div>
+
+          <div class="welcome-text">
+            <h2>Welcome back</h2>
+            <p>Sign in to your account</p>
+          </div>
+
+          <button class="btn-google">
+            <svg class="google-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            Continue with Google
+          </button>
+
+          <div class="divider">
+            <div class="divider-line"></div>
+            <div class="divider-text">or sign in with email</div>
+            <div class="divider-line"></div>
+          </div>
+
+          <div class="field">
+            <label>Email address</label>
+            <input type="email" class="filled" value="marwa@leapone.ca" readonly />
+          </div>
+
+          <div class="field">
+            <label>Password</label>
+            <input type="password" value="••••••••" readonly />
+          </div>
+
+          <div class="forgot"><a href="#">Forgot password?</a></div>
+
+          <button class="btn-primary">Sign In</button>
+
+          <div class="signup-link">
+            Don't have an account? <a href="#">Sign up free</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 2: SIGN UP ── -->
+    <div class="screen-wrap">
+      <div class="screen-label">Sign Up</div>
+      <div class="phone">
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="status-icons"><span>●●●</span><span>WiFi</span><span>🔋</span></div>
+        </div>
+        <div class="screen-content">
+          <div class="logo-section" style="padding: 24px 0 20px;">
+            <svg class="logo-icon" width="56" height="56" viewBox="0 0 40 40" fill="none">
+              <rect width="40" height="40" rx="12" fill="#4f46e5"/>
+              <path d="M13 10 L13 28 L27 28" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              <circle cx="28" cy="13" r="4" fill="#f97316"/>
+            </svg>
+            <div class="logo-wordmark"><span class="leap">Leap</span><span class="one">One</span></div>
+          </div>
+
+          <div class="welcome-text" style="margin-bottom:20px;">
+            <h2>Create your account</h2>
+            <p>Free 14-day trial · No credit card needed</p>
+          </div>
+
+          <button class="btn-google">
+            <svg class="google-svg" viewBox="0 0 24 24">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            Sign up with Google
+          </button>
+
+          <div class="divider">
+            <div class="divider-line"></div>
+            <div class="divider-text">or use email</div>
+            <div class="divider-line"></div>
+          </div>
+
+          <div class="name-row">
+            <div class="field">
+              <label>First name</label>
+              <input type="text" class="filled" value="Marwa" readonly />
+            </div>
+            <div class="field">
+              <label>Last name</label>
+              <input type="text" class="filled" value="Saleh" readonly />
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Work email</label>
+            <input type="email" class="filled" value="marwa@mybiz.ca" readonly />
+          </div>
+
+          <div class="field">
+            <label>Password</label>
+            <input type="password" value="••••••••" readonly />
+          </div>
+
+          <div class="terms">
+            <input type="checkbox" checked readonly />
+            <span>I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a></span>
+          </div>
+
+          <button class="btn-primary">Create Account</button>
+
+          <div class="signup-link">
+            Already have an account? <a href="#">Sign in</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCREEN 3: PASSWORD RESET ── -->
+    <div class="screen-wrap">
+      <div class="screen-label">Password Reset</div>
+      <div class="phone">
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="status-icons"><span>●●●</span><span>WiFi</span><span>🔋</span></div>
+        </div>
+        <div class="screen-content">
+          <div style="padding-top: 16px;">
+            <div class="back-link">← Back to sign in</div>
+
+            <div class="reset-icon">🔑</div>
+
+            <div class="welcome-text" style="margin-bottom:20px;">
+              <h2>Forgot password?</h2>
+              <p>Enter your email and we'll send you a reset link</p>
+            </div>
+
+            <div class="success-badge">
+              ✅ Reset link sent to marwa@mybiz.ca
+            </div>
+
+            <div class="field">
+              <label>Email address</label>
+              <input type="email" class="filled" value="marwa@mybiz.ca" readonly />
+            </div>
+
+            <button class="btn-primary" style="margin-top:8px;">Send Reset Link</button>
+
+            <div style="margin-top: 24px; background: #f8fafc; border-radius: 12px; padding: 14px; font-size: 12px; color: #64748b; line-height: 1.6;">
+              <strong style="color:#1e293b; display:block; margin-bottom:4px;">Didn't receive the email?</strong>
+              Check your spam folder or <a href="#" style="color:#4f46e5; font-weight:500;">try a different email address</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <p style="text-align:center; margin-top:40px; color:#94a3b8; font-size:13px;">
+    leapone.ca · Auth screens · Light mode · Inter · Indigo + Orange
+  </p>
+
+</body>
+</html>

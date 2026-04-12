@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LeapOne — Onboarding Preview</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #e2e8f0; padding: 32px 24px; }
+
+    h1 { text-align: center; font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
+    .subtitle { text-align: center; color: #64748b; font-size: 14px; margin-bottom: 32px; }
+
+    .section { margin-bottom: 56px; }
+    .section-label {
+      text-align: center; font-size: 12px; font-weight: 600;
+      color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 16px;
+    }
+
+    /* ── Shared ── */
+    .btn {
+      display: block; width: 100%; padding: 13px;
+      border-radius: 12px; font-size: 14px; font-weight: 600;
+      border: none; cursor: pointer; font-family: 'Inter', sans-serif;
+      text-align: center;
+    }
+    .btn-indigo { background: #4f46e5; color: white; box-shadow: 0 4px 12px rgba(79,70,229,0.28); }
+    .btn-outline { background: white; color: #4f46e5; border: 1.5px solid #c7d2fe; }
+    .btn-google {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      width: 100%; padding: 13px;
+      border: 1.5px solid #e2e8f0; border-radius: 12px;
+      background: white; font-size: 14px; font-weight: 600;
+      color: #1e293b; cursor: pointer; font-family: 'Inter', sans-serif;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .google-svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 5px; }
+    .field input, .field select {
+      width: 100%; padding: 11px 14px;
+      border: 1.5px solid #e2e8f0; border-radius: 10px;
+      font-size: 14px; font-family: 'Inter', sans-serif; color: #1e293b;
+      background: white; outline: none;
+    }
+    .field input.filled { border-color: #c7d2fe; }
+
+    /* ════════════════════════════════
+       MOBILE
+    ════════════════════════════════ */
+    .mobile-row { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; align-items: flex-start; }
+    .screen-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .screen-tag { font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.07em; }
+
+    .phone {
+      width: 300px; background: white;
+      border-radius: 36px; box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+      overflow: hidden; border: 6px solid #1e293b;
+      display: flex; flex-direction: column; height: 620px;
+    }
+    .status-bar {
+      background: white; padding: 10px 20px 4px;
+      display: flex; justify-content: space-between;
+      font-size: 11px; font-weight: 600; color: #1e293b; flex-shrink: 0;
+    }
+
+    /* Progress bar */
+    .progress-header {
+      padding: 12px 16px 0; background: white; flex-shrink: 0;
+    }
+    .progress-top {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
+    }
+    .step-label { font-size: 12px; font-weight: 600; color: #94a3b8; }
+    .skip-btn { font-size: 12px; color: #94a3b8; cursor: pointer; }
+    .progress-track { height: 4px; background: #f1f5f9; border-radius: 4px; overflow: hidden; }
+    .progress-fill { height: 100%; background: #4f46e5; border-radius: 4px; transition: width 0.3s; }
+
+    /* Screen body */
+    .screen-body {
+      flex: 1; overflow-y: auto; padding: 20px 18px;
+      display: flex; flex-direction: column;
+    }
+
+    /* Step icon */
+    .step-icon {
+      width: 64px; height: 64px; border-radius: 20px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 30px; margin-bottom: 20px; flex-shrink: 0;
+    }
+    .icon-indigo { background: #eef2ff; }
+    .icon-green { background: #f0fdf4; }
+    .icon-orange { background: #fff7ed; }
+
+    .step-title { font-size: 20px; font-weight: 800; color: #1e293b; margin-bottom: 6px; letter-spacing: -0.3px; }
+    .step-desc { font-size: 13px; color: #64748b; line-height: 1.6; margin-bottom: 24px; }
+
+    /* Business type chips */
+    .type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+    .type-chip {
+      padding: 10px 8px; border: 1.5px solid #e2e8f0; border-radius: 10px;
+      text-align: center; cursor: pointer; font-size: 12px; font-weight: 600; color: #475569;
+    }
+    .type-chip.selected { border-color: #4f46e5; background: #eef2ff; color: #4f46e5; }
+    .type-chip-icon { font-size: 20px; display: block; margin-bottom: 4px; }
+
+    /* Connect card */
+    .connect-card {
+      background: #f8fafc; border: 1.5px solid #e2e8f0;
+      border-radius: 14px; padding: 16px; margin-bottom: 16px;
+    }
+    .connect-card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .connect-card-icon { font-size: 24px; }
+    .connect-card-title { font-size: 14px; font-weight: 700; color: #1e293b; }
+    .connect-card-sub { font-size: 12px; color: #64748b; }
+    .connect-status {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 600;
+    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .dot-waiting { background: #e2e8f0; }
+    .dot-connected { background: #16a34a; }
+
+    /* Permission list */
+    .permission-list { margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
+    .permission-item {
+      display: flex; align-items: center; gap: 10px;
+      background: #f8fafc; border-radius: 10px; padding: 10px 12px;
+      font-size: 12px; color: #475569; font-weight: 500;
+    }
+    .permission-icon { font-size: 16px; flex-shrink: 0; }
+    .permission-check { margin-left: auto; color: #4f46e5; font-size: 14px; font-weight: 700; }
+
+    /* Sync animation */
+    .sync-container {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 16px;
+      padding: 20px;
+    }
+    .sync-icon-wrap {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: #eef2ff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px; position: relative;
+    }
+    .sync-ring {
+      position: absolute; inset: -6px;
+      border-radius: 50%;
+      border: 3px solid #4f46e5;
+      border-top-color: transparent;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .sync-title { font-size: 18px; font-weight: 800; color: #1e293b; }
+    .sync-desc { font-size: 13px; color: #64748b; text-align: center; line-height: 1.5; }
+    .sync-progress-list { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+    .sync-item {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 13px; color: #475569;
+    }
+    .sync-check { color: #16a34a; font-size: 14px; font-weight: 700; }
+    .sync-spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #4f46e5; border-top-color: transparent; animation: spin 0.8s linear infinite; }
+
+    /* Success */
+    .success-container {
+      flex: 1; display: flex; flex-direction: column; padding: 20px 18px;
+    }
+    .success-hero {
+      text-align: center; padding: 20px 0 24px;
+    }
+    .success-icon {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: #f0fdf4; display: flex; align-items: center; justify-content: center;
+      font-size: 36px; margin: 0 auto 16px;
+      border: 3px solid #bbf7d0;
+    }
+    .success-title { font-size: 22px; font-weight: 800; color: #1e293b; margin-bottom: 6px; }
+    .success-desc { font-size: 13px; color: #64748b; line-height: 1.5; }
+
+    .summary-card {
+      background: #f8fafc; border-radius: 14px; padding: 14px 16px;
+      margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px;
+    }
+    .summary-row { display: flex; align-items: center; justify-content: space-between; }
+    .summary-label { font-size: 13px; color: #64748b; display: flex; align-items: center; gap: 6px; }
+    .summary-value { font-size: 13px; font-weight: 700; color: #1e293b; }
+    .summary-value.orange { color: #f97316; }
+    .summary-value.red { color: #dc2626; }
+
+    /* ════════════════════════════════
+       DESKTOP
+    ════════════════════════════════ */
+    .desktop-frame {
+      max-width: 900px; margin: 0 auto;
+      border-radius: 16px; box-shadow: 0 8px 48px rgba(0,0,0,0.14); overflow: hidden;
+    }
+    .title-bar {
+      background: #f8fafc; border-bottom: 1px solid #e2e8f0;
+      padding: 10px 16px; display: flex; align-items: center; gap: 8px;
+    }
+    .traffic-lights { display: flex; gap: 6px; }
+    .tl { width: 12px; height: 12px; border-radius: 50%; }
+    .tl-red { background: #ff5f57; }
+    .tl-yellow { background: #ffbd2e; }
+    .tl-green { background: #28c840; }
+    .title-bar-text { flex: 1; text-align: center; font-size: 12px; font-weight: 500; color: #94a3b8; }
+
+    /* Desktop onboarding layout */
+    .d-onboard { display: flex; height: 560px; background: white; }
+
+    /* Left stepper panel */
+    .d-stepper {
+      width: 260px; background: #4f46e5; padding: 36px 28px;
+      display: flex; flex-direction: column; gap: 0;
+    }
+    .d-stepper-logo { display: flex; align-items: center; gap: 8px; margin-bottom: 40px; }
+    .d-stepper-wordmark { font-weight: 800; font-size: 18px; color: white; letter-spacing: -0.4px; }
+    .d-stepper-wordmark .one { color: #f97316; }
+
+    .d-step {
+      display: flex; gap: 14px; align-items: flex-start;
+      margin-bottom: 28px; position: relative;
+    }
+    .d-step:not(:last-child)::after {
+      content: '';
+      position: absolute; left: 15px; top: 36px;
+      width: 2px; height: 20px;
+      background: rgba(255,255,255,0.2);
+    }
+    .d-step-num {
+      width: 30px; height: 30px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; flex-shrink: 0;
+    }
+    .step-done { background: #16a34a; color: white; }
+    .step-active { background: white; color: #4f46e5; }
+    .step-todo { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.6); }
+    .d-step-info { padding-top: 4px; }
+    .d-step-title { font-size: 13px; font-weight: 700; color: white; }
+    .d-step-sub { font-size: 11px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+
+    .d-stepper-footer { margin-top: auto; font-size: 11px; color: rgba(255,255,255,0.4); }
+
+    /* Right content panel */
+    .d-content {
+      flex: 1; padding: 40px 44px;
+      display: flex; flex-direction: column; overflow-y: auto;
+    }
+    .d-step-label { font-size: 12px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+    .d-title { font-size: 24px; font-weight: 800; color: #1e293b; margin-bottom: 8px; letter-spacing: -0.4px; }
+    .d-desc { font-size: 14px; color: #64748b; line-height: 1.6; margin-bottom: 28px; }
+
+    .d-form { display: flex; flex-direction: column; gap: 14px; flex: 1; }
+    .d-field label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 5px; }
+    .d-field input, .d-field select {
+      width: 100%; padding: 11px 14px;
+      border: 1.5px solid #e2e8f0; border-radius: 10px;
+      font-size: 14px; font-family: 'Inter', sans-serif; color: #1e293b;
+      background: white; outline: none;
+    }
+    .d-field input.filled { border-color: #c7d2fe; background: #fafafe; }
+
+    .d-type-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 4px; }
+    .d-type-chip {
+      padding: 12px 8px; border: 1.5px solid #e2e8f0; border-radius: 10px;
+      text-align: center; cursor: pointer; font-size: 12px; font-weight: 600; color: #475569;
+    }
+    .d-type-chip.selected { border-color: #4f46e5; background: #eef2ff; color: #4f46e5; }
+    .d-type-chip-icon { font-size: 24px; display: block; margin-bottom: 6px; }
+
+    .d-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+    .d-connect-card {
+      background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px;
+      padding: 18px 20px; margin-bottom: 14px;
+    }
+    .d-connect-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .d-connect-icon { font-size: 28px; }
+    .d-connect-info { flex: 1; }
+    .d-connect-title { font-size: 14px; font-weight: 700; color: #1e293b; }
+    .d-connect-sub { font-size: 12px; color: #64748b; }
+    .d-connected-badge {
+      display: flex; align-items: center; gap: 6px;
+      background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 20px;
+      padding: 4px 12px; font-size: 12px; font-weight: 600; color: #16a34a;
+    }
+    .d-permission-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .d-permission-item {
+      display: flex; align-items: center; gap: 8px;
+      background: white; border-radius: 8px; padding: 8px 10px;
+      font-size: 12px; color: #475569; font-weight: 500; border: 1px solid #e2e8f0;
+    }
+
+    .d-action-row {
+      display: flex; gap: 10px; justify-content: flex-end; margin-top: auto; padding-top: 20px;
+    }
+    .d-btn { padding: 10px 24px; border-radius: 10px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; font-family: 'Inter', sans-serif; }
+    .d-btn-indigo { background: #4f46e5; color: white; box-shadow: 0 3px 10px rgba(79,70,229,0.25); }
+    .d-btn-outline { background: white; color: #4f46e5; border: 1.5px solid #c7d2fe; }
+
+    /* Desktop success */
+    .d-success {
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 20px;
+    }
+    .d-success-icon {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: #f0fdf4; display: flex; align-items: center; justify-content: center;
+      font-size: 40px; margin-bottom: 20px; border: 3px solid #bbf7d0;
+    }
+    .d-summary-row { display: flex; gap: 16px; margin: 20px 0 28px; }
+    .d-summary-stat {
+      flex: 1; background: #f8fafc; border-radius: 12px; padding: 14px;
+      text-align: center; border: 1px solid #e2e8f0;
+    }
+    .d-summary-stat-val { font-size: 28px; font-weight: 800; color: #1e293b; }
+    .d-summary-stat-val.orange { color: #f97316; }
+    .d-summary-stat-val.red { color: #dc2626; }
+    .d-summary-stat-lbl { font-size: 12px; color: #64748b; margin-top: 4px; }
+  </style>
+</head>
+<body>
+
+  <h1>LeapOne — Onboarding Flow</h1>
+  <p class="subtitle">3 steps · Business setup → Connect Google → Done · Mobile + Desktop</p>
+
+  <!-- ════════ MOBILE ════════ -->
+  <div class="section">
+    <div class="section-label">Mobile — 4 screens</div>
+    <div class="mobile-row">
+
+      <!-- Step 1: Business Info -->
+      <div class="screen-wrap">
+        <div class="screen-tag">Step 1 — Business Info</div>
+        <div class="phone">
+          <div class="status-bar"><span>9:41</span><span>●●● WiFi 🔋</span></div>
+          <div class="progress-header">
+            <div class="progress-top">
+              <div class="step-label">Step 1 of 3</div>
+              <div class="skip-btn">Skip</div>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:33%"></div></div>
+          </div>
+          <div class="screen-body">
+            <div class="step-icon icon-indigo">🏢</div>
+            <div class="step-title">Tell us about your business</div>
+            <div class="step-desc">This helps LeapOne personalize your AI responses and checklist.</div>
+
+            <div class="field">
+              <label>Business name</label>
+              <input type="text" class="filled" value="Marwa's Salon & Spa" readonly />
+            </div>
+            <div class="field">
+              <label>City</label>
+              <input type="text" class="filled" value="Toronto, ON" readonly />
+            </div>
+            <div class="field">
+              <label>Business type</label>
+            </div>
+            <div class="type-grid">
+              <div class="type-chip selected"><span class="type-chip-icon">💇</span>Salon</div>
+              <div class="type-chip"><span class="type-chip-icon">🍽</span>Restaurant</div>
+              <div class="type-chip"><span class="type-chip-icon">🏋</span>Fitness</div>
+              <div class="type-chip"><span class="type-chip-icon">🛍</span>Retail</div>
+              <div class="type-chip"><span class="type-chip-icon">🔧</span>Trades</div>
+              <div class="type-chip"><span class="type-chip-icon">➕</span>Other</div>
+            </div>
+
+            <div style="margin-top:auto;">
+              <button class="btn btn-indigo">Continue →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Connect Google -->
+      <div class="screen-wrap">
+        <div class="screen-tag">Step 2 — Connect Google</div>
+        <div class="phone">
+          <div class="status-bar"><span>9:43</span><span>●●● WiFi 🔋</span></div>
+          <div class="progress-header">
+            <div class="progress-top">
+              <div class="step-label">Step 2 of 3</div>
+              <div class="skip-btn">Skip</div>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:66%"></div></div>
+          </div>
+          <div class="screen-body">
+            <div class="step-icon icon-orange">🔗</div>
+            <div class="step-title">Connect your Google Business</div>
+            <div class="step-desc">We'll import your reviews and let you post responses — all from LeapOne.</div>
+
+            <div class="connect-card">
+              <div class="connect-card-top">
+                <div class="connect-card-icon">📍</div>
+                <div>
+                  <div class="connect-card-title">Google Business Profile</div>
+                  <div class="connect-card-sub">Required for Phase 1</div>
+                </div>
+              </div>
+              <div class="connect-status">
+                <div class="status-dot dot-waiting"></div>
+                <span style="font-size:12px;color:#94a3b8;font-weight:600;">Not connected yet</span>
+              </div>
+            </div>
+
+            <div class="permission-list">
+              <div class="permission-item">
+                <span class="permission-icon">📥</span>
+                Read your Google reviews
+                <span class="permission-check">✓</span>
+              </div>
+              <div class="permission-item">
+                <span class="permission-icon">📤</span>
+                Post responses on your behalf
+                <span class="permission-check">✓</span>
+              </div>
+              <div class="permission-item">
+                <span class="permission-icon">🔒</span>
+                We never share your data
+                <span class="permission-check">✓</span>
+              </div>
+            </div>
+
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px;">
+              <button class="btn-google">
+                <svg class="google-svg" viewBox="0 0 24 24">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                </svg>
+                Connect with Google
+              </button>
+              <button class="btn btn-outline" style="font-size:13px;padding:10px;">Skip for now</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Syncing -->
+      <div class="screen-wrap">
+        <div class="screen-tag">Step 3 — Syncing</div>
+        <div class="phone">
+          <div class="status-bar"><span>9:44</span><span>●●● WiFi 🔋</span></div>
+          <div class="progress-header">
+            <div class="progress-top">
+              <div class="step-label">Step 3 of 3</div>
+              <div class="skip-btn"></div>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:90%"></div></div>
+          </div>
+          <div class="sync-container">
+            <div class="sync-icon-wrap">
+              ⭐
+              <div class="sync-ring"></div>
+            </div>
+            <div class="sync-title">Importing reviews…</div>
+            <div class="sync-desc">We're fetching your Google reviews. This only takes a moment.</div>
+            <div class="sync-progress-list">
+              <div class="sync-item"><span class="sync-check">✓</span> Connected to Google Business Profile</div>
+              <div class="sync-item"><span class="sync-check">✓</span> Found Marwa's Salon & Spa</div>
+              <div class="sync-item"><span class="sync-spinner"></span> Importing 27 reviews…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Success -->
+      <div class="screen-wrap">
+        <div class="screen-tag">Step 4 — You're Ready!</div>
+        <div class="phone">
+          <div class="status-bar"><span>9:45</span><span>●●● WiFi 🔋</span></div>
+          <div class="progress-header">
+            <div class="progress-top"><div class="step-label">Setup complete</div></div>
+            <div class="progress-track"><div class="progress-fill" style="width:100%"></div></div>
+          </div>
+          <div class="success-container">
+            <div class="success-hero">
+              <div class="success-icon">🎉</div>
+              <div class="success-title">You're all set!</div>
+              <div class="success-desc" style="margin-top:4px;">Marwa's Salon & Spa is connected. Here's what LeapOne found:</div>
+            </div>
+
+            <div class="summary-card">
+              <div class="summary-row">
+                <div class="summary-label">⭐ Reviews imported</div>
+                <div class="summary-value">27</div>
+              </div>
+              <div class="summary-row">
+                <div class="summary-label">🕐 Need response</div>
+                <div class="summary-value orange">3</div>
+              </div>
+              <div class="summary-row">
+                <div class="summary-label">⚠ Negative reviews</div>
+                <div class="summary-value red">1</div>
+              </div>
+              <div class="summary-row">
+                <div class="summary-label">📊 Avg rating</div>
+                <div class="summary-value">4.8 ★</div>
+              </div>
+            </div>
+
+            <div style="background:#eef2ff;border-radius:12px;padding:12px;font-size:12px;color:#4f46e5;font-weight:500;margin-bottom:20px;line-height:1.5;">
+              ✦ LeapOne has already drafted responses for your 3 pending reviews. Ready to review them?
+            </div>
+
+            <button class="btn btn-indigo">Go to My Dashboard →</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ════════ DESKTOP ════════ -->
+  <div class="section">
+    <div class="section-label">Desktop — Step 1 (Business Info)</div>
+    <div class="desktop-frame">
+      <div class="title-bar">
+        <div class="traffic-lights"><div class="tl tl-red"></div><div class="tl tl-yellow"></div><div class="tl tl-green"></div></div>
+        <div class="title-bar-text">leapone.ca — Setup</div>
+      </div>
+      <div class="d-onboard">
+
+        <!-- Left stepper -->
+        <div class="d-stepper">
+          <div class="d-stepper-logo">
+            <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
+              <rect width="40" height="40" rx="12" fill="rgba(255,255,255,0.15)"/>
+              <path d="M13 10 L13 28 L27 28" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="28" cy="13" r="4" fill="#f97316"/>
+            </svg>
+            <div class="d-stepper-wordmark">Leap<span class="one">One</span></div>
+          </div>
+
+          <div class="d-step">
+            <div class="d-step-num step-active">1</div>
+            <div class="d-step-info">
+              <div class="d-step-title">Business Info</div>
+              <div class="d-step-sub">Name, city, type</div>
+            </div>
+          </div>
+          <div class="d-step">
+            <div class="d-step-num step-todo">2</div>
+            <div class="d-step-info">
+              <div class="d-step-title" style="color:rgba(255,255,255,0.5);">Connect Google</div>
+              <div class="d-step-sub">Business Profile API</div>
+            </div>
+          </div>
+          <div class="d-step">
+            <div class="d-step-num step-todo">3</div>
+            <div class="d-step-info">
+              <div class="d-step-title" style="color:rgba(255,255,255,0.5);">You're Ready</div>
+              <div class="d-step-sub">Start managing reviews</div>
+            </div>
+          </div>
+
+          <div class="d-stepper-footer">leapone.ca · Setup takes under 5 minutes</div>
+        </div>
+
+        <!-- Right content -->
+        <div class="d-content">
+          <div class="d-step-label">Step 1 of 3</div>
+          <div class="d-title">Tell us about your business</div>
+          <div class="d-desc">This helps LeapOne personalize your AI responses and match Ontario regulations correctly.</div>
+
+          <div class="d-form">
+            <div class="d-two-col">
+              <div class="d-field">
+                <label>Business name</label>
+                <input type="text" class="filled" value="Marwa's Salon & Spa" readonly />
+              </div>
+              <div class="d-field">
+                <label>City</label>
+                <input type="text" class="filled" value="Toronto" readonly />
+              </div>
+            </div>
+            <div class="d-two-col">
+              <div class="d-field">
+                <label>Province</label>
+                <select><option>Ontario</option></select>
+              </div>
+              <div class="d-field">
+                <label>Phone (optional)</label>
+                <input type="text" placeholder="416-555-0123" readonly />
+              </div>
+            </div>
+            <div class="d-field">
+              <label>Business type</label>
+              <div class="d-type-grid">
+                <div class="d-type-chip selected"><span class="d-type-chip-icon">💇</span>Salon / Spa</div>
+                <div class="d-type-chip"><span class="d-type-chip-icon">🍽</span>Restaurant</div>
+                <div class="d-type-chip"><span class="d-type-chip-icon">🏋</span>Fitness</div>
+                <div class="d-type-chip"><span class="d-type-chip-icon">🛍</span>Retail</div>
+                <div class="d-type-chip"><span class="d-type-chip-icon">🔧</span>Trades</div>
+                <div class="d-type-chip"><span class="d-type-chip-icon">➕</span>Other</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-action-row">
+            <button class="d-btn d-btn-outline">← Back</button>
+            <button class="d-btn d-btn-indigo">Continue →</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Desktop: Step 2 Connect Google -->
+  <div class="section">
+    <div class="section-label">Desktop — Step 2 (Connect Google)</div>
+    <div class="desktop-frame">
+      <div class="title-bar">
+        <div class="traffic-lights"><div class="tl tl-red"></div><div class="tl tl-yellow"></div><div class="tl tl-green"></div></div>
+        <div class="title-bar-text">leapone.ca — Setup</div>
+      </div>
+      <div class="d-onboard">
+        <div class="d-stepper">
+          <div class="d-stepper-logo">
+            <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
+              <rect width="40" height="40" rx="12" fill="rgba(255,255,255,0.15)"/>
+              <path d="M13 10 L13 28 L27 28" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="28" cy="13" r="4" fill="#f97316"/>
+            </svg>
+            <div class="d-stepper-wordmark">Leap<span class="one">One</span></div>
+          </div>
+          <div class="d-step">
+            <div class="d-step-num step-done">✓</div>
+            <div class="d-step-info"><div class="d-step-title">Business Info</div><div class="d-step-sub">Marwa's Salon & Spa</div></div>
+          </div>
+          <div class="d-step">
+            <div class="d-step-num step-active">2</div>
+            <div class="d-step-info"><div class="d-step-title">Connect Google</div><div class="d-step-sub">Business Profile API</div></div>
+          </div>
+          <div class="d-step">
+            <div class="d-step-num step-todo">3</div>
+            <div class="d-step-info"><div class="d-step-title" style="color:rgba(255,255,255,0.5);">You're Ready</div><div class="d-step-sub">Start managing reviews</div></div>
+          </div>
+          <div class="d-stepper-footer">leapone.ca · Setup takes under 5 minutes</div>
+        </div>
+
+        <div class="d-content">
+          <div class="d-step-label">Step 2 of 3</div>
+          <div class="d-title">Connect Google Business Profile</div>
+          <div class="d-desc">LeapOne needs access to read your reviews and post responses on your behalf.</div>
+
+          <div class="d-connect-card">
+            <div class="d-connect-top">
+              <div class="d-connect-icon">📍</div>
+              <div class="d-connect-info">
+                <div class="d-connect-title">Google Business Profile</div>
+                <div class="d-connect-sub">Marwa's Salon & Spa · Toronto, ON</div>
+              </div>
+              <div class="d-connected-badge">✓ Connected</div>
+            </div>
+            <div class="d-permission-grid">
+              <div class="d-permission-item">📥 Read reviews</div>
+              <div class="d-permission-item">📤 Post responses</div>
+              <div class="d-permission-item">📊 View analytics</div>
+              <div class="d-permission-item">🔒 PIPEDA compliant</div>
+            </div>
+          </div>
+
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px 16px;font-size:13px;color:#166534;line-height:1.6;margin-bottom:20px;">
+            ✅ <strong>Connected successfully.</strong> We found <strong>Marwa's Salon & Spa</strong> with 27 reviews. Ready to import?
+          </div>
+
+          <div class="d-action-row">
+            <button class="d-btn d-btn-outline">← Back</button>
+            <button class="d-btn d-btn-indigo">Import Reviews →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Desktop: Success -->
+  <div class="section">
+    <div class="section-label">Desktop — Step 3 (You're Ready!)</div>
+    <div class="desktop-frame">
+      <div class="title-bar">
+        <div class="traffic-lights"><div class="tl tl-red"></div><div class="tl tl-yellow"></div><div class="tl tl-green"></div></div>
+        <div class="title-bar-text">leapone.ca — Setup Complete</div>
+      </div>
+      <div class="d-onboard">
+        <div class="d-stepper">
+          <div class="d-stepper-logo">
+            <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
+              <rect width="40" height="40" rx="12" fill="rgba(255,255,255,0.15)"/>
+              <path d="M13 10 L13 28 L27 28" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="28" cy="13" r="4" fill="#f97316"/>
+            </svg>
+            <div class="d-stepper-wordmark">Leap<span class="one">One</span></div>
+          </div>
+          <div class="d-step"><div class="d-step-num step-done">✓</div><div class="d-step-info"><div class="d-step-title">Business Info</div><div class="d-step-sub">Marwa's Salon & Spa</div></div></div>
+          <div class="d-step"><div class="d-step-num step-done">✓</div><div class="d-step-info"><div class="d-step-title">Connect Google</div><div class="d-step-sub">27 reviews imported</div></div></div>
+          <div class="d-step"><div class="d-step-num step-active">✓</div><div class="d-step-info"><div class="d-step-title">You're Ready!</div><div class="d-step-sub">Setup complete</div></div></div>
+          <div class="d-stepper-footer">leapone.ca</div>
+        </div>
+
+        <div class="d-content">
+          <div class="d-success">
+            <div class="d-success-icon">🎉</div>
+            <div class="d-title" style="margin-bottom:6px;">You're all set, Marwa!</div>
+            <div class="d-desc" style="margin-bottom:0;">LeapOne has imported your reviews and drafted responses for the ones that need attention.</div>
+            <div class="d-summary-row">
+              <div class="d-summary-stat"><div class="d-summary-stat-val">27</div><div class="d-summary-stat-lbl">Reviews imported</div></div>
+              <div class="d-summary-stat"><div class="d-summary-stat-val orange">3</div><div class="d-summary-stat-lbl">Need response</div></div>
+              <div class="d-summary-stat"><div class="d-summary-stat-val red">1</div><div class="d-summary-stat-lbl">Negative review</div></div>
+              <div class="d-summary-stat"><div class="d-summary-stat-val">4.8★</div><div class="d-summary-stat-lbl">Avg rating</div></div>
+            </div>
+            <div style="background:#eef2ff;border-radius:12px;padding:14px 20px;font-size:13px;color:#4f46e5;font-weight:500;line-height:1.5;margin-bottom:24px;max-width:460px;">
+              ✦ LeapOne has already drafted responses for your 3 pending reviews. Approve them with one click.
+            </div>
+            <button class="d-btn d-btn-indigo" style="padding:12px 32px;font-size:15px;">Go to My Dashboard →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p style="text-align:center; margin-top:8px; color:#94a3b8; font-size:13px;">
+    leapone.ca · Onboarding Flow · Mobile + Desktop · Light mode · Inter · Indigo + Orange
+  </p>
+
+</body>
+</html>

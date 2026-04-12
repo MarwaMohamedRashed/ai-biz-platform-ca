@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LeapOne — Auth Desktop Preview</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #e2e8f0; padding: 32px 24px; }
+
+    h1 { text-align: center; font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
+    .subtitle { text-align: center; color: #64748b; font-size: 14px; margin-bottom: 32px; }
+
+    .section { margin-bottom: 48px; }
+    .section-label {
+      text-align: center;
+      font-size: 12px; font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 16px;
+    }
+
+    /* Desktop frame */
+    .desktop-frame {
+      max-width: 1000px;
+      margin: 0 auto;
+      border-radius: 16px;
+      box-shadow: 0 8px 48px rgba(0,0,0,0.14);
+      overflow: hidden;
+    }
+
+    /* Title bar */
+    .title-bar {
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .traffic-lights { display: flex; gap: 6px; }
+    .tl { width: 12px; height: 12px; border-radius: 50%; }
+    .tl-red { background: #ff5f57; }
+    .tl-yellow { background: #ffbd2e; }
+    .tl-green { background: #28c840; }
+    .title-bar-text { flex: 1; text-align: center; font-size: 12px; font-weight: 500; color: #94a3b8; }
+
+    /* Split layout */
+    .split-layout { display: flex; height: 580px; }
+
+    /* ── Left panel (branding) ── */
+    .left-panel {
+      width: 420px;
+      background: linear-gradient(145deg, #4f46e5 0%, #4338ca 60%, #3730a3 100%);
+      padding: 48px 44px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Background decoration */
+    .left-panel::before {
+      content: '';
+      position: absolute;
+      top: -80px; right: -80px;
+      width: 260px; height: 260px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.06);
+    }
+    .left-panel::after {
+      content: '';
+      position: absolute;
+      bottom: -60px; left: -60px;
+      width: 200px; height: 200px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.04);
+    }
+
+    .left-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: relative;
+      z-index: 1;
+    }
+    .left-wordmark {
+      font-weight: 800;
+      font-size: 22px;
+      letter-spacing: -0.5px;
+      color: white;
+    }
+    .left-wordmark .one { color: #f97316; }
+
+    .left-content { position: relative; z-index: 1; }
+    .left-headline {
+      font-size: 28px;
+      font-weight: 800;
+      color: white;
+      line-height: 1.3;
+      margin-bottom: 16px;
+      letter-spacing: -0.5px;
+    }
+    .left-headline span { color: #f97316; }
+    .left-desc {
+      font-size: 14px;
+      color: rgba(255,255,255,0.75);
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+
+    /* Feature list */
+    .feature-list { display: flex; flex-direction: column; gap: 10px; }
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.85);
+      font-weight: 500;
+    }
+    .feature-dot {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: rgba(249,115,22,0.25);
+      border: 1.5px solid #f97316;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px;
+      flex-shrink: 0;
+    }
+
+    .left-footer {
+      font-size: 11px;
+      color: rgba(255,255,255,0.45);
+      position: relative; z-index: 1;
+    }
+
+    /* ── Right panel (form) ── */
+    .right-panel {
+      flex: 1;
+      background: white;
+      padding: 48px 44px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      overflow-y: auto;
+    }
+
+    .form-title { font-size: 22px; font-weight: 800; color: #1e293b; margin-bottom: 4px; }
+    .form-subtitle { font-size: 13px; color: #64748b; margin-bottom: 28px; }
+
+    /* Google button */
+    .btn-google {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      background: white;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1e293b;
+      cursor: pointer;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      font-family: 'Inter', sans-serif;
+    }
+    .btn-google:hover { border-color: #c7d2fe; }
+    .google-svg { width: 18px; height: 18px; }
+
+    /* Divider */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .divider-line { flex: 1; height: 1px; background: #e2e8f0; }
+    .divider-text { font-size: 12px; color: #94a3b8; font-weight: 500; white-space: nowrap; }
+
+    /* Fields */
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 5px; }
+    .field input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      color: #1e293b;
+      background: #f8fafc;
+      outline: none;
+    }
+    .field input.filled { background: white; }
+
+    .name-row { display: flex; gap: 12px; }
+    .name-row .field { flex: 1; }
+
+    .forgot { text-align: right; margin-top: -8px; margin-bottom: 18px; }
+    .forgot a { font-size: 12px; color: #4f46e5; font-weight: 500; text-decoration: none; }
+
+    /* Primary button */
+    .btn-primary {
+      width: 100%;
+      padding: 13px;
+      background: #4f46e5;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 12px rgba(79,70,229,0.28);
+    }
+
+    .switch-link { text-align: center; font-size: 13px; color: #64748b; }
+    .switch-link a { color: #4f46e5; font-weight: 600; text-decoration: none; }
+
+    .terms {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 16px;
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.5;
+    }
+    .terms input[type="checkbox"] { width: 14px; height: 14px; margin-top: 1px; accent-color: #4f46e5; flex-shrink: 0; }
+    .terms a { color: #4f46e5; text-decoration: none; }
+
+    /* Trial badge */
+    .trial-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #16a34a;
+      margin-bottom: 20px;
+    }
+
+    /* Password reset centered */
+    .centered-frame {
+      max-width: 480px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 8px 48px rgba(0,0,0,0.10);
+      overflow: hidden;
+    }
+    .centered-content { padding: 48px 44px; }
+    .reset-icon {
+      width: 60px; height: 60px;
+      background: #eef2ff;
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px;
+      margin-bottom: 20px;
+    }
+    .back-link {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #4f46e5;
+      font-weight: 500;
+      margin-bottom: 24px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .success-badge {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #166534;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .help-box {
+      margin-top: 16px;
+      background: #f8fafc;
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.6;
+    }
+    .help-box strong { color: #1e293b; display: block; margin-bottom: 4px; }
+    .help-box a { color: #4f46e5; font-weight: 500; }
+  </style>
+</head>
+<body>
+
+  <h1>LeapOne — Auth Screens (Desktop)</h1>
+  <p class="subtitle">Split layout · Left branding panel · Right form panel</p>
+
+  <!-- ── SCREEN 1: LOGIN ── -->
+  <div class="section">
+    <div class="section-label">Sign In — Desktop</div>
+    <div class="desktop-frame">
+      <div class="title-bar">
+        <div class="traffic-lights">
+          <div class="tl tl-red"></div><div class="tl tl-yellow"></div><div class="tl tl-green"></div>
+        </div>
+        <div class="title-bar-text">leapone.ca — Sign In</div>
+      </div>
+      <div class="split-layout">
+
+        <!-- Left branding -->
+        <div class="left-panel">
+          <div class="left-logo">
+            <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
+              <rect width="40" height="40" rx="12" fill="rgba(255,255,255,0.15)"/>
+              <path d="M13 10 L13 28 L27 28" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="28" cy="13" r="4" fill="#f97316"/>
+            </svg>
+            <div class="left-wordmark">Leap<span class="one">One</span></div>
+          </div>
+
+          <div class="left-content">
+            <div class="left-headline">
+              Your AI team for<br/><span>Canadian business</span>
+            </div>
+            <div class="left-desc">
+              Handle reviews, bookings, and compliance — all through simple conversation. No complex dashboards.
+            </div>
+            <div class="feature-list">
+              <div class="feature-item">
+                <div class="feature-dot">⭐</div>
+                AI drafts your Google review responses
+              </div>
+              <div class="feature-item">
+                <div class="feature-dot">📅</div>
+                Customers book via SMS — no app needed
+              </div>
+              <div class="feature-item">
+                <div class="feature-dot">🚀</div>
+                Ontario startup compliance checklist
+              </div>
+              <div class="feature-item">
+                <div class="feature-dot">✦</div>
+                Works on phone, tablet, and desktop
+              </div>
+            </div>
+          </div>
+
+          <div class="left-footer">
+            © 2026 LeapOne · leapone.ca · Made for Canadian businesses
+          </div>
+        </div>
+
+        <!-- Right form -->
+        <div class="right-panel">
+          <div class="form-title">Welcome back</div>
+          <div class="form-subtitle">Sign in to your LeapOne account</div>
+
+          <button class="btn-google">
+            <svg class="google-svg" viewBox="0 0 24 24">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            Continue with Google
+          </button>
+
+          <div class="divider">
+            <div class="divider-line"></div>
+            <div class="divider-text">or sign in with email</div>
+            <div class="divider-line"></div>
+          </div>
+
+          <div class="field">
+            <label>Email address</label>
+            <input type="email" class="filled" value="marwa@mybiz.ca" readonly />
+          </div>
+
+          <div class="field">
+            <label>Password</label>
+            <input type="password" value="••••••••" readonly />
+          </div>
+
+          <div class="forgot"><a href="#">Forgot password?</a></div>
+
+          <button class="btn-primary">Sign In</button>
+
+          <div class="switch-link">
+            Don't have an account? <a href="#">Start free trial</a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SCREEN 2: SIGN UP ── -->
+  <div class="section">
+    <div class="section-label">Sign Up — Desktop</div>
+    <div class="desktop-frame">
+      <div class="title-bar">
+        <div class="traffic-lights">
+          <div class="tl tl-red"></div><div class="tl tl-yellow"></div><div class="tl tl-green"></div>
+        </div>
+        <div class="title-bar-text">leapone.ca — Create Account</div>
+      </div>
+      <div class="split-layout">
+
+        <!-- Left branding -->
+        <div class="left-panel">
+          <div class="left-logo">
+            <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
+              <rect width="40" height="40" rx="12" fill="rgba(255,255,255,0.15)"/>
+              <path d="M13 10 L13 28 L27 28" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="28" cy="13" r="4" fill="#f97316"/>
+            </svg>
+            <div class="left-wordmark">Leap<span class="one">One</span></div>
+          </div>
+
+          <div class="left-content">
+            <div class="left-headline">
+              Start free.<br/>Grow with <span>AI.</span>
+            </div>
+            <div class="left-desc">
+              Join Canadian small businesses saving hours every week. 14-day free trial, no credit card required.
+            </div>
+            <div class="feature-list">
+              <div class="feature-item">
+                <div class="feature-dot">✓</div>
+                Free 14-day trial
+              </div>
+              <div class="feature-item">
+                <div class="feature-dot">✓</div>
+                No credit card needed
+              </div>
+              <div class="feature-item">
+                <div class="feature-dot">✓</div>
+                Cancel anytime
+              </div>
+              <div class="feature-item">
+                <div class="feature-dot">✓</div>
+                Setup in under 5 minutes
+              </div>
+            </div>
+          </div>
+
+          <div class="left-footer">
+            © 2026 LeapOne · leapone.ca · Made for Canadian businesses
+          </div>
+        </div>
+
+        <!-- Right form -->
+        <div class="right-panel">
+          <div class="trial-badge">🎉 14-day free trial · No credit card needed</div>
+          <div class="form-title">Create your account</div>
+          <div class="form-subtitle">Get started in under 5 minutes</div>
+
+          <button class="btn-google">
+            <svg class="google-svg" viewBox="0 0 24 24">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            Sign up with Google
+          </button>
+
+          <div class="divider">
+            <div class="divider-line"></div>
+            <div class="divider-text">or use email</div>
+            <div class="divider-line"></div>
+          </div>
+
+          <div class="name-row">
+            <div class="field">
+              <label>First name</label>
+              <input type="text" class="filled" value="Marwa" readonly />
+            </div>
+            <div class="field">
+              <label>Last name</label>
+              <input type="text" class="filled" value="Saleh" readonly />
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Work email</label>
+            <input type="email" class="filled" value="marwa@mybiz.ca" readonly />
+          </div>
+
+          <div class="field">
+            <label>Password</label>
+            <input type="password" value="••••••••" readonly />
+          </div>
+
+          <div class="terms">
+            <input type="checkbox" checked readonly />
+            <span>I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>. LeapOne is designed for Canadian businesses and complies with PIPEDA.</span>
+          </div>
+
+          <button class="btn-primary">Create Free Account</button>
+
+          <div class="switch-link">
+            Already have an account? <a href="#">Sign in</a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SCREEN 3: PASSWORD RESET ── -->
+  <div class="section">
+    <div class="section-label">Password Reset — Desktop (centered card)</div>
+    <div style="background:#f8fafc;border-radius:16px;padding:48px 24px;max-width:1000px;margin:0 auto;">
+      <div class="centered-frame">
+        <div class="title-bar">
+          <div class="traffic-lights">
+            <div class="tl tl-red"></div><div class="tl tl-yellow"></div><div class="tl tl-green"></div>
+          </div>
+          <div class="title-bar-text">leapone.ca — Reset Password</div>
+        </div>
+        <div class="centered-content">
+          <a class="back-link" href="#">← Back to sign in</a>
+          <div class="reset-icon">🔑</div>
+          <div class="form-title" style="margin-bottom:4px;">Forgot your password?</div>
+          <div class="form-subtitle" style="margin-bottom:20px;">Enter your email and we'll send a reset link</div>
+
+          <div class="success-badge">
+            ✅ Reset link sent to marwa@mybiz.ca — check your inbox
+          </div>
+
+          <div class="field">
+            <label>Email address</label>
+            <input type="email" class="filled" value="marwa@mybiz.ca" readonly />
+          </div>
+
+          <button class="btn-primary" style="margin-top:4px;">Send Reset Link</button>
+
+          <div class="help-box">
+            <strong>Didn't receive the email?</strong>
+            Check your spam folder or <a href="#">try a different email</a>. Reset links expire after 1 hour.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p style="text-align:center; margin-top:8px; color:#94a3b8; font-size:13px;">
+    leapone.ca · Auth screens · Desktop · Light mode · Inter · Indigo + Orange
+  </p>
+
+</body>
+</html>
