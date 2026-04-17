@@ -1,7 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getTranslations } from 'next-intl/server'
 import ChatInput from '@/components/dashboard/ChatInput'
-import LanguageSwitcher from '@/components/LanguageSwitcher'
+import UserMenu from '@/components/dashboard/UserMenu'
 
 function getGreetingKey(): 'morning' | 'afternoon' | 'evening' {
   const hour = new Date().getHours()
@@ -21,7 +21,8 @@ export default async function DashboardPage() {
     .eq('id', user!.id)
     .single()
 
-  const firstName = profile?.full_name?.split(' ')[0]
+  const fullName = profile?.full_name?.trim() || ''
+  const firstName = fullName.split(' ')[0]
     || user!.email?.split('@')[0]
     || 'there'
 
@@ -47,13 +48,7 @@ export default async function DashboardPage() {
               <span className="text-[#4f46e5]">Leap</span><span className="text-[#f97316]">One</span>
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            <LanguageSwitcher />
-            <div className="w-8 h-8 rounded-full bg-[#4f46e5] flex items-center justify-center
-                            text-white text-xs font-bold">
-              {initial}
-            </div>
-          </div>
+          <UserMenu initial={initial} name={fullName} email={user!.email ?? ''} />
         </header>
 
         {/* Desktop page header */}
@@ -65,7 +60,7 @@ export default async function DashboardPage() {
             </p>
             <h1 className="text-base font-extrabold text-[#1e293b]">{t('pageTitle')}</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button className="flex items-center gap-1.5 text-xs font-semibold text-slate-500
                                border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-50 transition-colors">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -82,6 +77,7 @@ export default async function DashboardPage() {
               </svg>
               Refresh
             </button>
+            <UserMenu initial={initial} name={fullName} email={user!.email ?? ''} />
           </div>
         </div>
 

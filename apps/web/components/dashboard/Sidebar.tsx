@@ -3,8 +3,6 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import SignOutButton from './SignOutButton'
-import LanguageSwitcher from '@/components/LanguageSwitcher'
 
 interface Props {
   user: { name: string; email: string }
@@ -83,14 +81,15 @@ export default function Sidebar({ user, locale }: Props) {
   const initial = (user.name || user.email)[0]?.toUpperCase() ?? '?'
 
   return (
-    <aside className="hidden md:flex flex-col w-[240px] flex-shrink-0
+    <aside className="hidden md:flex flex-col w-[220px] flex-shrink-0
                       bg-white border-r border-slate-100">
 
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-5 py-5 border-b border-slate-100">
+      <div className="flex items-center gap-2.5 px-5 py-5">
         <div className="w-8 h-8 rounded-lg bg-[#4f46e5] flex items-center justify-center flex-shrink-0">
           <svg width="16" height="16" viewBox="0 0 40 40" fill="none">
-            <path d="M13 10 L13 28 L27 28" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M13 10 L13 28 L27 28" stroke="white" strokeWidth="4"
+              strokeLinecap="round" strokeLinejoin="round"/>
             <circle cx="28" cy="13" r="5" fill="#f97316"/>
           </svg>
         </div>
@@ -100,7 +99,7 @@ export default function Sidebar({ user, locale }: Props) {
       </div>
 
       {/* Business card */}
-      <div className="px-4 py-3 border-b border-slate-100">
+      <div className="px-4 pb-4">
         <div className="flex items-center gap-3 bg-slate-50 rounded-xl px-3 py-2.5">
           <div className="w-8 h-8 rounded-full bg-[#4f46e5] flex items-center justify-center
                           text-white text-xs font-bold flex-shrink-0">
@@ -110,16 +109,16 @@ export default function Sidebar({ user, locale }: Props) {
             <p className="text-sm font-semibold text-[#1e293b] truncate">
               {user.name || user.email}
             </p>
-            <p className="text-xs text-slate-400">Pro Plan</p>
+            <span className="text-[10px] font-bold text-[#4f46e5] bg-indigo-50
+                             px-1.5 py-0.5 rounded-full">
+              Pro Plan
+            </span>
           </div>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="flex-shrink-0 text-slate-300">
-            <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
         </div>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 flex flex-col gap-0.5 px-3 py-3 overflow-y-auto">
+      <nav className="flex-1 flex flex-col gap-0.5 px-3 py-2 overflow-y-auto">
         {navItems.map(item => {
           const active = isActive(item.href, item.exact)
           return (
@@ -144,19 +143,6 @@ export default function Sidebar({ user, locale }: Props) {
           )
         })}
       </nav>
-
-      {/* Language switcher */}
-      <div className="border-t border-slate-100 px-5 py-3">
-        <LanguageSwitcher />
-      </div>
-
-      {/* User email + sign out */}
-      <div className="border-t border-slate-100 px-5 py-3">
-        {user.name && (
-          <p className="text-xs text-slate-400 truncate mb-2">{user.email}</p>
-        )}
-        <SignOutButton />
-      </div>
 
     </aside>
   )
