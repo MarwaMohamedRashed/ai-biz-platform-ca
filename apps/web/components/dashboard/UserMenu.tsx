@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase'
-import LanguageSwitcher from '@/components/LanguageSwitcher'
 
 interface Props {
   initial: string
@@ -57,17 +56,6 @@ export default function UserMenu({ initial, name, email }: Props) {
           <div className="px-4 py-3 border-b border-slate-100">
             <p className="text-xs font-semibold text-[#1e293b] truncate">{name || email}</p>
             {name && <p className="text-[11px] text-slate-400 truncate">{email}</p>}
-          </div>
-
-          {/* Language switcher */}
-          <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"
-              className="text-slate-400 flex-shrink-0">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-              <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
-                stroke="currentColor" strokeWidth="2"/>
-            </svg>
-            <LanguageSwitcher />
           </div>
 
           {/* Sign out */}

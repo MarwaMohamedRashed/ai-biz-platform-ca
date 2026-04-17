@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getTranslations } from 'next-intl/server'
 import ChatInput from '@/components/dashboard/ChatInput'
 import UserMenu from '@/components/dashboard/UserMenu'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 
 function getGreetingKey(): 'morning' | 'afternoon' | 'evening' {
   const hour = new Date().getHours()
@@ -61,22 +62,7 @@ export default async function DashboardPage() {
             <h1 className="text-base font-extrabold text-[#1e293b]">{t('pageTitle')}</h1>
           </div>
           <div className="flex items-center gap-3">
-            <button className="flex items-center gap-1.5 text-xs font-semibold text-slate-500
-                               border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-50 transition-colors">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M12 5v14M5 12l7-7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              History
-            </button>
-            <button className="flex items-center gap-1.5 text-xs font-semibold text-slate-500
-                               border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-50 transition-colors">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M23 4v6h-6M1 20v-6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
-                  stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Refresh
-            </button>
+            <LanguageSwitcher />
             <UserMenu initial={initial} name={fullName} email={user!.email ?? ''} />
           </div>
         </div>
