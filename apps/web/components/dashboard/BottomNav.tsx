@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 
 interface Props {
   locale: string
@@ -9,10 +10,11 @@ interface Props {
 
 export default function BottomNav({ locale }: Props) {
   const pathname = usePathname()
+  const t = useTranslations('dashboard.nav')
 
   const navItems = [
     {
-      label: 'Chat',
+      key: 'chat' as const,
       href: `/${locale}/dashboard`,
       exact: true,
       icon: (active: boolean) => (
@@ -25,7 +27,7 @@ export default function BottomNav({ locale }: Props) {
       ),
     },
     {
-      label: 'Reviews',
+      key: 'reviews' as const,
       href: `/${locale}/dashboard/reviews`,
       exact: false,
       badge: 3,
@@ -39,14 +41,13 @@ export default function BottomNav({ locale }: Props) {
       ),
     },
     {
-      label: 'Bookings',
+      key: 'bookings' as const,
       href: `/${locale}/dashboard/bookings`,
       exact: false,
       icon: (active: boolean) => (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2"
             stroke={active ? '#4f46e5' : '#94a3b8'} strokeWidth="2"
-            strokeLinecap="round" strokeLinejoin="round"
             fill={active ? '#eef2ff' : 'none'}/>
           <line x1="16" y1="2" x2="16" y2="6" stroke={active ? '#4f46e5' : '#94a3b8'} strokeWidth="2" strokeLinecap="round"/>
           <line x1="8" y1="2" x2="8" y2="6" stroke={active ? '#4f46e5' : '#94a3b8'} strokeWidth="2" strokeLinecap="round"/>
@@ -55,7 +56,7 @@ export default function BottomNav({ locale }: Props) {
       ),
     },
     {
-      label: 'Guide',
+      key: 'guide' as const,
       href: `/${locale}/dashboard/guide`,
       exact: false,
       icon: (active: boolean) => (
@@ -96,7 +97,7 @@ export default function BottomNav({ locale }: Props) {
               )}
             </div>
             <span className={`text-[10px] font-semibold ${active ? 'text-[#4f46e5]' : 'text-slate-400'}`}>
-              {item.label}
+              {t(item.key)}
             </span>
           </Link>
         )

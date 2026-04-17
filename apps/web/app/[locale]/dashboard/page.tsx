@@ -1,16 +1,19 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { getTranslations } from 'next-intl/server'
 import ChatInput from '@/components/dashboard/ChatInput'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 
-function getGreeting() {
+function getGreetingKey(): 'morning' | 'afternoon' | 'evening' {
   const hour = new Date().getHours()
-  if (hour < 12) return 'Good morning'
-  if (hour < 17) return 'Good afternoon'
-  return 'Good evening'
+  if (hour < 12) return 'morning'
+  if (hour < 17) return 'afternoon'
+  return 'evening'
 }
 
 export default async function DashboardPage() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
+  const t = await getTranslations('dashboard.chat')
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -23,7 +26,7 @@ export default async function DashboardPage() {
     || 'there'
 
   const initial = firstName[0].toUpperCase()
-  const greeting = getGreeting()
+  const greetingKey = getGreetingKey()
 
   return (
     <div className="flex flex-col h-screen">
@@ -41,15 +44,18 @@ export default async function DashboardPage() {
             <span className="text-[#4f46e5]">Leap</span><span className="text-[#f97316]">One</span>
           </span>
         </div>
-        <div className="w-8 h-8 rounded-full bg-[#4f46e5] flex items-center justify-center
-                        text-white text-xs font-bold">
-          {initial}
+        <div className="flex items-center gap-3">
+          <LanguageSwitcher />
+          <div className="w-8 h-8 rounded-full bg-[#4f46e5] flex items-center justify-center
+                          text-white text-xs font-bold">
+            {initial}
+          </div>
         </div>
       </header>
 
       {/* Desktop page header */}
       <div className="hidden md:flex items-center justify-between px-8 py-5 flex-shrink-0">
-        <h1 className="text-xl font-extrabold text-[#1e293b]">Chat</h1>
+        <h1 className="text-xl font-extrabold text-[#1e293b]">{t('pageTitle')}</h1>
       </div>
 
       {/* Chat messages area */}
@@ -64,9 +70,13 @@ export default async function DashboardPage() {
             </svg>
           </div>
           <div className="flex flex-col gap-3 max-w-lg">
+
+            {/* Greeting */}
             <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-slate-100">
               <p className="text-sm text-[#1e293b]">
-                {greeting}, <span className="font-semibold">{firstName}</span>! 👋 Here&apos;s what needs your attention today:
+                {t(`greeting.${greetingKey}`)},{' '}
+                <span className="font-semibold">{firstName}</span>! 👋{' '}
+                {t('greeting.attention')}
               </p>
             </div>
 
@@ -75,20 +85,18 @@ export default async function DashboardPage() {
                             shadow-sm border border-slate-100 p-4">
               <div className="flex items-start justify-between mb-1.5">
                 <span className="text-[10px] font-bold text-[#f97316] uppercase tracking-wider">
-                  Google Reviews
+                  {t('reviewsCard.label')}
                 </span>
                 <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                  3 pending
+                  3 {t('reviewsCard.badge')}
                 </span>
               </div>
               <p className="text-sm font-semibold text-[#1e293b] mb-1">
-                3 reviews need responses
+                3 {t('reviewsCard.title')}
               </p>
-              <p className="text-xs text-slate-500 mb-3">
-                Latest 2 hours ago — &quot;Great service but the parking was a bit tight…&quot;
-              </p>
+              <p className="text-xs text-slate-500 mb-3">{t('reviewsCard.preview')}</p>
               <button className="text-xs font-semibold text-[#4f46e5] hover:underline">
-                View reviews →
+                {t('reviewsCard.action')}
               </button>
             </div>
 
@@ -97,32 +105,28 @@ export default async function DashboardPage() {
                             shadow-sm border border-slate-100 p-4">
               <div className="flex items-start justify-between mb-1.5">
                 <span className="text-[10px] font-bold text-[#4f46e5] uppercase tracking-wider">
-                  Appointments
+                  {t('bookingsCard.label')}
                 </span>
                 <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                  Today
+                  {t('bookingsCard.badge')}
                 </span>
               </div>
               <p className="text-sm font-semibold text-[#1e293b] mb-1">
-                2 appointments today
+                2 {t('bookingsCard.title')}
               </p>
-              <p className="text-xs text-slate-500 mb-3">
-                Next: 2:00 PM — Sarah M. (Consultation)
-              </p>
+              <p className="text-xs text-slate-500 mb-3">{t('bookingsCard.preview')}</p>
               <button className="text-xs font-semibold text-[#4f46e5] hover:underline">
-                View schedule →
+                {t('bookingsCard.action')}
               </button>
             </div>
 
             {/* Follow-up bubble */}
             <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-slate-100">
-              <p className="text-sm text-slate-500">
-                What would you like to do? I can draft review responses, check your schedule, or answer any questions.
-              </p>
+              <p className="text-sm text-slate-500">{t('followUp')}</p>
             </div>
+
           </div>
         </div>
-
       </div>
 
       {/* Chat input */}

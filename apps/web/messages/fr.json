@@ -55,6 +55,40 @@
       "heading": "Vérifiez vos courriels",
       "body": "Nous avons envoyé un lien de confirmation à votre adresse. Cliquez dessus pour activer votre compte.",
       "backToLogin": "Retour à la connexion"
-    } 
+    }
+  },
+  "dashboard": {
+    "nav": {
+      "chat": "Chat",
+      "reviews": "Avis",
+      "bookings": "Réservations",
+      "guide": "Guide"
+    },
+    "signOut": "Se déconnecter",
+    "chat": {
+      "pageTitle": "Chat",
+      "inputPlaceholder": "Posez une question ou tapez une commande…",
+      "greeting": {
+        "morning": "Bonjour",
+        "afternoon": "Bon après-midi",
+        "evening": "Bonsoir",
+        "attention": "Voici ce qui nécessite votre attention aujourd'hui :"
+      },
+      "reviewsCard": {
+        "label": "Avis Google",
+        "badge": "en attente",
+        "title": "avis nécessitent une réponse",
+        "preview": "Dernier il y a 2 heures — \"Super service mais le stationnement était un peu serré…\"",
+        "action": "Voir les avis →"
+      },
+      "bookingsCard": {
+        "label": "Rendez-vous",
+        "badge": "Aujourd'hui",
+        "title": "rendez-vous aujourd'hui",
+        "preview": "Prochain : 14h00 — Sarah M. (Consultation)",
+        "action": "Voir l'horaire →"
+      },
+      "followUp": "Que souhaitez-vous faire ? Je peux rédiger des réponses aux avis, vérifier votre horaire ou répondre à vos questions."
+    }
   }
 }

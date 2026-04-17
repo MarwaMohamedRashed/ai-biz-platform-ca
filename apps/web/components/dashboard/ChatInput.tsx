@@ -1,9 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 
 export default function ChatInput() {
   const [value, setValue] = useState('')
+  const t = useTranslations('dashboard.chat')
 
   return (
     <div className="px-4 py-3 md:px-8 bg-white border-t border-slate-100">
@@ -29,7 +31,7 @@ export default function ChatInput() {
             type="text"
             value={value}
             onChange={e => setValue(e.target.value)}
-            placeholder="Ask anything or type a command…"
+            placeholder={t('inputPlaceholder')}
             className="flex-1 text-sm text-[#1e293b] bg-transparent outline-none
                        placeholder:text-slate-400" />
 

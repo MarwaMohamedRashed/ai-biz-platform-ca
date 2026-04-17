@@ -56,5 +56,39 @@
       "body": "We sent a confirmation link to your inbox. Click it to activate your account.",
       "backToLogin": "Back to sign in"
     }
+  },
+  "dashboard": {
+    "nav": {
+      "chat": "Chat",
+      "reviews": "Reviews",
+      "bookings": "Bookings",
+      "guide": "Guide"
+    },
+    "signOut": "Sign out",
+    "chat": {
+      "pageTitle": "Chat",
+      "inputPlaceholder": "Ask anything or type a command…",
+      "greeting": {
+        "morning": "Good morning",
+        "afternoon": "Good afternoon",
+        "evening": "Good evening",
+        "attention": "Here's what needs your attention today:"
+      },
+      "reviewsCard": {
+        "label": "Google Reviews",
+        "badge": "pending",
+        "title": "reviews need responses",
+        "preview": "Latest 2 hours ago — \"Great service but the parking was a bit tight…\"",
+        "action": "View reviews →"
+      },
+      "bookingsCard": {
+        "label": "Appointments",
+        "badge": "Today",
+        "title": "appointments today",
+        "preview": "Next: 2:00 PM — Sarah M. (Consultation)",
+        "action": "View schedule →"
+      },
+      "followUp": "What would you like to do? I can draft review responses, check your schedule, or answer any questions."
+    }
   }
 }

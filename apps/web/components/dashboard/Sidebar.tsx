@@ -2,7 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import SignOutButton from './SignOutButton'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 
 interface Props {
   user: { name: string; email: string }
@@ -11,10 +13,11 @@ interface Props {
 
 export default function Sidebar({ user, locale }: Props) {
   const pathname = usePathname()
+  const t = useTranslations('dashboard')
 
   const navItems = [
     {
-      label: 'Chat',
+      key: 'chat' as const,
       href: `/${locale}/dashboard`,
       exact: true,
       icon: (
@@ -25,7 +28,7 @@ export default function Sidebar({ user, locale }: Props) {
       ),
     },
     {
-      label: 'Reviews',
+      key: 'reviews' as const,
       href: `/${locale}/dashboard/reviews`,
       exact: false,
       badge: 3,
@@ -37,12 +40,12 @@ export default function Sidebar({ user, locale }: Props) {
       ),
     },
     {
-      label: 'Bookings',
+      key: 'bookings' as const,
       href: `/${locale}/dashboard/bookings`,
       exact: false,
       icon: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
           <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -50,7 +53,7 @@ export default function Sidebar({ user, locale }: Props) {
       ),
     },
     {
-      label: 'Guide',
+      key: 'guide' as const,
       href: `/${locale}/dashboard/guide`,
       exact: false,
       icon: (
@@ -96,7 +99,7 @@ export default function Sidebar({ user, locale }: Props) {
               }`}
           >
             {item.icon}
-            {item.label}
+            {t(`nav.${item.key}`)}
             {item.badge && (
               <span className="ml-auto w-5 h-5 rounded-full bg-[#f97316] flex items-center justify-center
                                text-[10px] font-bold text-white">
@@ -107,24 +110,29 @@ export default function Sidebar({ user, locale }: Props) {
         ))}
       </nav>
 
-      {/* User + sign out */}
-      <div className="border-t border-white/20 pt-4 mt-4">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center
-                          text-white text-xs font-bold flex-shrink-0">
-            {initial}
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-white truncate">
-              {user.name || user.email}
-            </p>
-            {user.name && (
-              <p className="text-xs text-white/50 truncate">{user.email}</p>
-            )}
-          </div>
+      {/* Language switcher */}
+      <div className="border-t border-white/20 pt-4 mt-4 mb-3">
+        <div className="flex items-center gap-1 text-xs font-semibold">
+          <LanguageSwitcher />
         </div>
-        <SignOutButton />
       </div>
+
+      {/* User + sign out */}
+      <div className="flex items-center gap-3 mb-3">
+        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center
+                        text-white text-xs font-bold flex-shrink-0">
+          {initial}
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-white truncate">
+            {user.name || user.email}
+          </p>
+          {user.name && (
+            <p className="text-xs text-white/50 truncate">{user.email}</p>
+          )}
+        </div>
+      </div>
+      <SignOutButton />
     </aside>
   )
 }

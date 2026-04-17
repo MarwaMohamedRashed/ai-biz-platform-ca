@@ -1,12 +1,13 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useLocale } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase'
 
 export default function SignOutButton() {
   const router = useRouter()
   const locale = useLocale()
+  const t = useTranslations('dashboard')
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -24,7 +25,7 @@ export default function SignOutButton() {
         <polyline points="16 17 21 12 16 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
-      Sign out
+      {t('signOut')}
     </button>
   )
 }
