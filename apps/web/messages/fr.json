@@ -1,0 +1,60 @@
+{
+  "auth": {
+    "login": {
+      "tagline": "Assistant IA pour votre entreprise",
+      "welcomeBack": "Bon retour",
+      "signInSubtitle": "Connectez-vous à votre compte LeapOne",
+      "continueWithGoogle": "Continuer avec Google",
+      "orSignInWith": "ou se connecter par courriel",
+      "emailAddress": "Adresse courriel",
+      "password": "Mot de passe",
+      "forgotPassword": "Mot de passe oublié?",
+      "submit": "Se connecter",
+      "signingIn": "Connexion en cours…",
+      "noAccount": "Pas encore de compte?",
+      "signUpFree": "Essai gratuit"
+    },
+    "branding": {
+      "headline1": "Votre équipe IA pour",
+      "headline2": "les entreprises canadiennes",
+      "description": "Gérez les avis, les réservations et la conformité — tout par simple conversation. Sans tableaux de bord complexes.",
+      "feature1": "IA rédige vos réponses aux avis Google",
+      "feature2": "Clients réservent par SMS — sans application",
+      "feature3": "Liste de conformité pour startups en Ontario",
+      "feature4": "Fonctionne sur téléphone, tablette et ordinateur",
+      "footer": "© 2026 LeapOne · leapone.ca · Pour les entreprises canadiennes"
+    },
+    "signup": {
+    "trialBadge": "14 jours d'essai gratuit · Sans carte de crédit",
+    "createAccount": "Créer votre compte",
+    "subtitle": "Commencez en moins de 5 minutes",
+    "signupWithGoogle": "S'inscrire avec Google",
+    "orUseEmail": "ou utiliser un courriel",
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "workEmail": "Courriel professionnel",
+    "password": "Mot de passe",
+    "terms": "J'accepte les Conditions d'utilisation et la Politique de confidentialité. LeapOne respecte la LPRPDE.",
+    "submit": "Créer un compte gratuit",
+    "alreadyHaveAccount": "Déjà un compte?",
+    "signIn": "Se connecter",
+    "brandHeadline1": "Commencez gratuitement.",
+    "brandHeadline2": "Croissez avec l'IA.",
+    "brandDescription": "Rejoignez les PME canadiennes qui économisent des heures chaque semaine. Essai gratuit de 14 jours, sans carte de crédit.",
+    "brandFeature1": "14 jours d'essai gratuit",
+    "brandFeature2": "Sans carte de crédit",
+    "brandFeature3": "Annulez à tout moment",
+    "brandFeature4": "Configuration en moins de 5 minutes",
+    "signingUp": "Création du compte…",
+    "errorTerms": "Vous devez accepter les conditions et la politique de confidentialité.",
+    "errorPasswordLength": "Le mot de passe doit contenir au moins 8 caractères.",
+    "errorPasswordWeak": "Le mot de passe doit contenir au moins une majuscule et un chiffre.",
+    "errorEmailExists": "Un compte avec ce courriel existe déjà."
+    },
+    "verifyEmail": {
+      "heading": "Vérifiez vos courriels",
+      "body": "Nous avons envoyé un lien de confirmation à votre adresse. Cliquez dessus pour activer votre compte.",
+      "backToLogin": "Retour à la connexion"
+    } 
+  }
+}

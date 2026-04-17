@@ -1,0 +1,60 @@
+{
+  "auth": {
+    "login": {
+      "tagline": "AI assistant for your business",
+      "welcomeBack": "Welcome back",
+      "signInSubtitle": "Sign in to your LeapOne account",
+      "continueWithGoogle": "Continue with Google",
+      "orSignInWith": "or sign in with email",
+      "emailAddress": "Email address",
+      "password": "Password",
+      "forgotPassword": "Forgot password?",
+      "submit": "Sign In",
+      "signingIn": "Signing in…",
+      "noAccount": "Don't have an account?",
+      "signUpFree": "Start free trial"
+    },
+    "branding": {
+      "headline1": "Your AI team for",
+      "headline2": "Canadian business",
+      "description": "Handle reviews, bookings, and compliance — all through simple conversation. No complex dashboards.",
+      "feature1": "AI drafts your Google review responses",
+      "feature2": "Customers book via SMS — no app needed",
+      "feature3": "Ontario startup compliance checklist",
+      "feature4": "Works on phone, tablet, and desktop",
+      "footer": "© 2026 LeapOne · leapone.ca · Made for Canadian businesses"
+    },
+      "signup": {
+      "trialBadge": "14-day free trial · No credit card needed",
+      "createAccount": "Create your account",
+      "subtitle": "Get started in under 5 minutes",
+      "signupWithGoogle": "Sign up with Google",
+      "orUseEmail": "or use email",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "workEmail": "Work email",
+      "password": "Password",
+      "terms": "I agree to the Terms of Service and Privacy Policy. LeapOne complies with PIPEDA.",
+      "submit": "Create Free Account",
+      "alreadyHaveAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "brandHeadline1": "Start free.",
+      "brandHeadline2": "Grow with AI.",
+      "brandDescription": "Join Canadian small businesses saving hours every week. 14-day free trial, no credit card required.",
+      "brandFeature1": "Free 14-day trial",
+      "brandFeature2": "No credit card needed",
+      "brandFeature3": "Cancel anytime",
+      "brandFeature4": "Setup in under 5 minutes",
+      "signingUp": "Creating account…",
+      "errorTerms": "You must accept the terms and privacy policy.",
+      "errorPasswordLength": "Password must be at least 8 characters.",
+      "errorPasswordWeak": "Password must contain at least one uppercase letter and one number.",
+      "errorEmailExists": "An account with this email already exists."
+    },
+    "verifyEmail": {
+      "heading": "Check your email",
+      "body": "We sent a confirmation link to your inbox. Click it to activate your account.",
+      "backToLogin": "Back to sign in"
+    }
+  }
+}
