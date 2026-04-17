@@ -17,7 +17,6 @@ export default async function DashboardLayout({
     redirect(`/${locale}/login`)
   }
 
-  // Fetch profile for name display in sidebar
   const { data: profile } = await supabase
     .from('profiles')
     .select('full_name')
@@ -27,20 +26,25 @@ export default async function DashboardLayout({
   const displayName = profile?.full_name?.trim() || ''
 
   return (
-    <div className="min-h-screen bg-[#f1f5f9] flex">
+    <div className="bg-[#f1f5f9] h-screen flex flex-col md:items-center md:justify-center md:p-8">
 
-      {/* Desktop sidebar */}
-      <Sidebar
-        user={{ name: displayName, email: user.email ?? '' }}
-        locale={locale}
-      />
+      {/* App container — full screen on mobile, centered card on desktop */}
+      <div className="flex flex-1 w-full overflow-hidden
+                      md:flex-none md:max-w-[1200px] md:h-full
+                      md:rounded-2xl md:shadow-xl md:border md:border-slate-200 md:bg-white">
 
-      {/* Main content — pushes right of sidebar on desktop, full width on mobile */}
-      <div className="flex-1 flex flex-col min-w-0 pb-16 md:pb-0">
-        {children}
+        <Sidebar
+          user={{ name: displayName, email: user.email ?? '' }}
+          locale={locale}
+        />
+
+        <main className="flex-1 flex flex-col min-w-0 overflow-hidden pb-16 md:pb-0">
+          {children}
+        </main>
+
       </div>
 
-      {/* Mobile bottom nav */}
+      {/* Mobile bottom nav — fixed, viewport-relative */}
       <BottomNav locale={locale} />
 
     </div>

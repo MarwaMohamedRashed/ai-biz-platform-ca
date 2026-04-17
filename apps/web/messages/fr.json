@@ -88,7 +88,19 @@
         "preview": "Prochain : 14h00 — Sarah M. (Consultation)",
         "action": "Voir l'horaire →"
       },
-      "followUp": "Que souhaitez-vous faire ? Je peux rédiger des réponses aux avis, vérifier votre horaire ou répondre à vos questions."
+      "followUp": "Que souhaitez-vous faire ? Je peux rédiger des réponses aux avis, vérifier votre horaire ou répondre à vos questions.",
+      "thisWeek": {
+        "title": "Cette semaine",
+        "avgRating": "Note moyenne",
+        "responded": "Répondus",
+        "reviewsThisWeek": "avis cette semaine",
+        "appointments": "Rendez-vous",
+        "bookedViaAI": "réservés via IA cette semaine",
+        "quickActions": "Actions rapides",
+        "viewAllReviews": "Voir tous les avis",
+        "addAvailability": "Ajouter des disponibilités",
+        "connectGoogle": "Connecter Google"
+      }
     }
   }
 }

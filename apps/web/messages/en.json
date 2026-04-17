@@ -88,7 +88,19 @@
         "preview": "Next: 2:00 PM — Sarah M. (Consultation)",
         "action": "View schedule →"
       },
-      "followUp": "What would you like to do? I can draft review responses, check your schedule, or answer any questions."
+      "followUp": "What would you like to do? I can draft review responses, check your schedule, or answer any questions.",
+      "thisWeek": {
+        "title": "This Week",
+        "avgRating": "Avg Rating",
+        "responded": "Responded",
+        "reviewsThisWeek": "reviews this week",
+        "appointments": "Appointments",
+        "bookedViaAI": "booked via AI this week",
+        "quickActions": "Quick Actions",
+        "viewAllReviews": "View all reviews",
+        "addAvailability": "Add availability",
+        "connectGoogle": "Connect Google"
+      }
     }
   }
 }
