@@ -92,7 +92,7 @@ The `subscriptions` table uses `stripe_id` for either a Stripe Subscription ID o
 ## i18n and Theme Strategy
 
 - Build with CSS variables from day one (dark mode: swap variable values)
-- Build with i18n-ready string files from day one (French: Phase 3)
+- Build with i18n-ready string files from day one (French: shipped Phase 1)
 - Do NOT hardcode colors or strings in components
 
 ## Infrastructure Cost at Launch

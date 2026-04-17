@@ -8,7 +8,7 @@ All through conversational interfaces that replace complex forms and dashboards.
 - Chat-first UI — AI executes tasks, reduces navigation
 - Mobile-first, works on desktop too
 - Light mode default, dark mode toggle later
-- French language support in Phase 3 (build i18n-ready from day one)
+- French language support — shipped in Phase 1 (was planned Phase 3; Canadian market required it earlier)
 - Cost-efficient — $40–65/month infrastructure at launch
 - AI provider abstraction layer — swap models without rewriting business logic
 
