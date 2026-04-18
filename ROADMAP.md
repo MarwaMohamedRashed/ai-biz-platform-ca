@@ -49,13 +49,13 @@ Last updated: 2026-04-17
 ## 🔄 Current Focus — Auth Completion
 
 ### Forgot/Reset Password
-- [ ] `/auth/reset-callback` route handler (exchanges code, redirects to reset-password page)
-- [ ] Forgot password page (`/[locale]/(auth)/forgot-password`)
-- [ ] `ForgotPasswordForm` component (email input → Supabase resetPasswordForEmail)
-- [ ] Reset password page (`/[locale]/(auth)/reset-password`)
-- [ ] `ResetPasswordForm` component (new password + confirm → supabase.auth.updateUser)
-- [ ] Wire "Forgot password?" link in LoginForm to forgot-password page
-- [ ] EN/FR translations for both pages
+- [x] `/auth/reset-callback` route handler (exchanges code, redirects to reset-password page)
+- [x] Forgot password page (`/[locale]/(auth)/forgot-password`)
+- [x] `ForgotPasswordForm` component (email input → Supabase resetPasswordForEmail)
+- [x] Reset password page (`/[locale]/(auth)/reset-password`)
+- [x] `ResetPasswordForm` component (new password + confirm → supabase.auth.updateUser)
+- [x] "Forgot password?" link in LoginForm already wired correctly
+- [x] EN/FR translations for both pages
 
 ### Profile Page
 - [ ] Profile page (`/[locale]/dashboard/profile`)
