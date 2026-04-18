@@ -16,7 +16,10 @@ Last updated: 2026-04-17
 - [x] Next.js 15 with App Router, Tailwind CSS
 - [x] Supabase project created and connected
 - [x] `next-intl` EN/FR translations — shipped early (was planned Phase 3, done in Phase 1)
-- [x] Landing page (leapone.ca content, not yet deployed)
+- [x] Landing page built (`apps/landing/index.html`) — hero, features, how-it-works, waitlist CTA
+- [x] Landing page deployed to **Vercel** and live at **leapone.ca**
+- [x] DNS configured: A record (`@` → `216.198.79.1`), CNAME (`www` → `cname.vercel-dns.com`)
+- [x] leapone.ca verified as authorized domain in Google Cloud Console
 
 ### Authentication
 - [x] Email/password sign up (with email confirmation)
@@ -79,8 +82,10 @@ Last updated: 2026-04-17
 ## 📋 Phase 1 Remaining — AI Review Responder
 
 ### Google Business Profile API
-- [ ] **Apply for OAuth app verification NOW** — approval takes 1–4 weeks (hard blocker)
-- [ ] Google OAuth scopes for Business Profile API
+- [x] **Applied for OAuth app verification** — submitted, waiting for Google approval (1–4 weeks)
+- [x] OAuth consent screen configured in Google Cloud Console
+- [ ] Approval received from Google ← waiting
+- [ ] Add Business Profile API scopes once approved
 - [ ] Sync reviews from Google API → `reviews` table
 - [ ] Store tokens in Supabase Vault (`review_connections` table)
 
@@ -116,7 +121,7 @@ Weeks 13–18 in original plan.
 
 | Item | Status | Action needed |
 |---|---|---|
-| Google Business Profile API | Not applied | Apply NOW — 1–4 week approval window |
+| Google Business Profile API | ⏳ Submitted, awaiting approval | No action needed — just wait |
 | WhatsApp Business API | Not applied | Apply by Week 3–4 |
 | `businesses` table | Not created in Supabase | Run migration before building onboarding |
 | Supabase email rate limit | Free tier ~3–4 emails/hr | Use real email accounts, not throwaway accounts for testing |
@@ -131,7 +136,8 @@ Weeks 13–18 in original plan.
 | Supabase | ✅ Active | Free tier, leapone project |
 | Google Cloud Console | ✅ Project created | leapone project |
 | Google OAuth (login) | ✅ Working | User sign in only |
-| Google Business Profile API | ❌ Not applied | Hard blocker for Phase 1 core feature |
+| Google Business Profile API | ⏳ Applied, waiting | Submitted — approval 1–4 weeks |
+| Vercel (landing page) | ✅ Live at leapone.ca | DNS configured, domain verified |
 | Stripe | ❌ Not started | Needed before first paying customer |
 | Vercel | ❌ Not deployed | Frontend deployment pending |
 | Railway | ❌ Not started | FastAPI backend not built yet |
