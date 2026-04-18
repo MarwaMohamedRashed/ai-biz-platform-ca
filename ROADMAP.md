@@ -87,7 +87,10 @@ Last updated: 2026-04-17
 - [x] **Applied for OAuth app verification** — submitted, waiting for Google approval (1–4 weeks)
 - [x] OAuth consent screen configured in Google Cloud Console
 - [ ] Approval received from Google ← waiting
-- [ ] Add Business Profile API scopes once approved
+- [ ] Approval received from Google for OAuth consent screen ← waiting
+- [ ] **Investigate `mybusinessreviews` API** — not found in Cloud Console Library; may require separate access application (potential blocker)
+- [ ] `mybusinessaccountmanagement` API enabled but quota value = 0 — needs quota allocated
+- [ ] Add Business Profile API scopes once access confirmed
 - [ ] Sync reviews from Google API → `reviews` table
 - [ ] Store tokens in Supabase Vault (`review_connections` table)
 
