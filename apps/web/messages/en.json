@@ -55,6 +55,27 @@
       "heading": "Check your email",
       "body": "We sent a confirmation link to your inbox. Click it to activate your account.",
       "backToLogin": "Back to sign in"
+    },
+    "forgotPassword": {
+    "heading": "Forgot your password?",
+    "subtitle": "Enter your email and we'll send you a reset link.",
+    "emailLabel": "Email address",
+    "submit": "Send reset link",
+    "sending": "Sending…",
+    "sentTitle": "Check your email",
+    "sentBody": "We sent a password reset link to your inbox. It expires in 1 hour.",
+    "backToLogin": "Back to sign in"
+    },
+    "resetPassword": {
+      "heading": "Set a new password",
+      "subtitle": "Choose a strong password for your account.",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm password",
+      "submit": "Update password",
+      "saving": "Updating…",
+      "errorLength": "Password must be at least 8 characters.",
+      "errorWeak": "Password must contain at least one uppercase letter and one number.",
+      "errorMatch": "Passwords do not match."
     }
   },
   "dashboard": {
