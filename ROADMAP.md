@@ -20,7 +20,7 @@ Last updated: 2026-04-17
 - [x] Landing page deployed to **Vercel** — GitHub repo connected, auto-deploys on every push to main
 - [x] DNS configured: A record (`@` → `216.198.79.1`), CNAME (`www` → `cname.vercel-dns.com`)
 - [x] leapone.ca verified as authorized domain in Google Cloud Console
-- [ ] Confirm leapone.ca custom domain is added inside Vercel dashboard settings (checklist showed it as pending)
+- [x] leapone.ca added in Vercel dashboard — Valid Configuration, set as Production. Vercel subdomain redirects 307 → leapone.ca
 - [ ] Deploy Next.js app (`apps/web`) to Vercel — currently only landing page is deployed
 
 ### Authentication
