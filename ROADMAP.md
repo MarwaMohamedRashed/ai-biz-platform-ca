@@ -88,7 +88,7 @@ Last updated: 2026-04-17
 - [x] OAuth consent screen configured in Google Cloud Console
 - [ ] Approval received from Google ← waiting
 - [ ] Approval received from Google for OAuth consent screen ← waiting
-- [ ] **Investigate `mybusinessreviews` API** — not found in Cloud Console Library; may require separate access application (potential blocker)
+- [ ] **`mybusinessreviews` API** — restricted API, intentionally not in public Library. Only appears after Google grants project access. Application submitted — waiting for approval.
 - [ ] `mybusinessaccountmanagement` API enabled but quota value = 0 — needs quota allocated
 - [ ] Add Business Profile API scopes once access confirmed
 - [ ] Sync reviews from Google API → `reviews` table
