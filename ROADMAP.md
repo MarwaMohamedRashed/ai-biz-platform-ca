@@ -108,9 +108,13 @@ Last updated: 2026-04-17
 
 ### Payments & Infrastructure
 - [ ] Stripe integration (CAD, recurring billing, trial period)
-- [ ] Deploy frontend to Vercel
+- [ ] Deploy Next.js app to Vercel
 - [ ] Deploy FastAPI to Railway
-- [ ] Resend email setup (transactional emails)
+- [ ] Resend email setup with leapone.ca domain (replaces Supabase free tier email)
+- [ ] Supabase pre-launch checklist:
+  - [ ] Add `https://leapone.ca/**` to Redirect URLs (keep `http://localhost:3001/**` too)
+  - [ ] Change Site URL from `http://localhost:3001` to `https://leapone.ca`
+  - [ ] Switch Supabase email to custom SMTP via Resend
 
 ---
 
