@@ -17,9 +17,11 @@ Last updated: 2026-04-17
 - [x] Supabase project created and connected
 - [x] `next-intl` EN/FR translations — shipped early (was planned Phase 3, done in Phase 1)
 - [x] Landing page built (`apps/landing/index.html`) — hero, features, how-it-works, waitlist CTA
-- [x] Landing page deployed to **Vercel** and live at **leapone.ca**
+- [x] Landing page deployed to **Vercel** — GitHub repo connected, auto-deploys on every push to main
 - [x] DNS configured: A record (`@` → `216.198.79.1`), CNAME (`www` → `cname.vercel-dns.com`)
 - [x] leapone.ca verified as authorized domain in Google Cloud Console
+- [ ] Confirm leapone.ca custom domain is added inside Vercel dashboard settings (checklist showed it as pending)
+- [ ] Deploy Next.js app (`apps/web`) to Vercel — currently only landing page is deployed
 
 ### Authentication
 - [x] Email/password sign up (with email confirmation)
