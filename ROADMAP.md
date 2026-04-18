@@ -129,7 +129,7 @@ Weeks 13–18 in original plan.
 | Google Business Profile API | ⏳ Submitted, awaiting approval | No action needed — just wait |
 | WhatsApp Business API | Not applied | Apply by Week 3–4 |
 | `businesses` table | Not created in Supabase | Run migration before building onboarding |
-| Supabase email rate limit | Free tier ~3–4 emails/hr | Use real email accounts, not throwaway accounts for testing |
+| Supabase email rate limit | Free tier ~3–4 emails/hr. **Pre-launch decision needed:** upgrade to Supabase Pro ($25/mo) OR set up custom SMTP via Resend with leapone.ca domain (recommended — keeps cost low, branded emails). Do not ship to real users on free tier email limits. |
 | FastAPI backend | Not started | Needed for AI features |
 
 ---
