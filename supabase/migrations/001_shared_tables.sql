@@ -38,8 +38,10 @@ CREATE TRIGGER on_auth_user_created
     FOR EACH ROW EXECUTE FUNCTION handle_new_user();
 
 -- ─── Businesses ───────────────────────────────────────────────────────────────
--- One owner (user_id) can have one business now.
--- business_members table (below) supports expanding to teams in Phase 2.
+-- user_id = the user who created the business (used for INSERT policy only).
+-- Access control for SELECT/UPDATE uses business_members, not user_id directly.
+-- This means one user can own or be a member of multiple businesses.
+-- A trigger (handle_new_business) auto-creates the owner row in business_members.
 CREATE TABLE businesses (
     id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id      UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -55,11 +57,13 @@ CREATE TABLE businesses (
     updated_at   TIMESTAMPTZ DEFAULT now()
 );
 
--- One business per user for Phase 1. Remove this index in Phase 2 to allow multi-location.
-CREATE UNIQUE INDEX businesses_user_id_idx ON businesses(user_id);
+-- NOTE: No unique index on user_id — one user can own multiple businesses.
+-- (unique index was removed by migration 003_multi_business_support.sql)
 
--- ─── Business Members (Phase 2 team support) ─────────────────────────────────
--- Deferred to Phase 2 but defined now so FK references are ready.
+-- ─── Business Members ────────────────────────────────────────────────────────
+-- Source of truth for who has access to which business.
+-- Created automatically by trigger when a business is inserted.
+-- Phase 2: used for team invitations (admin/member roles).
 -- title: the person's role within the business (e.g. "Owner", "Manager", "Receptionist")
 CREATE TYPE member_role AS ENUM ('owner', 'admin', 'member');
 
@@ -143,25 +147,41 @@ ALTER TABLE notifications    ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users see own profile" ON profiles
     FOR ALL USING (auth.uid() = id);
 
-CREATE POLICY "Users see own business" ON businesses
-    FOR ALL USING (auth.uid() = user_id);
+-- Businesses: INSERT uses user_id check; SELECT/UPDATE use business_members
+-- (supports multi-business — a user can own or belong to many businesses)
+CREATE POLICY "Users can create businesses" ON businesses
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Members can view their businesses" ON businesses
+    FOR SELECT USING (
+        id IN (SELECT business_id FROM business_members WHERE user_id = auth.uid())
+    );
+
+CREATE POLICY "Owners can update their businesses" ON businesses
+    FOR UPDATE USING (
+        id IN (
+            SELECT business_id FROM business_members
+            WHERE user_id = auth.uid() AND role IN ('owner', 'admin')
+        )
+    );
 
 CREATE POLICY "Users see own memberships" ON business_members
     FOR ALL USING (auth.uid() = user_id);
 
+-- Downstream tables: access via business_members (not businesses.user_id)
 CREATE POLICY "Users see own subscriptions" ON subscriptions
     FOR ALL USING (
-        business_id IN (SELECT id FROM businesses WHERE user_id = auth.uid())
+        business_id IN (SELECT business_id FROM business_members WHERE user_id = auth.uid())
     );
 
 CREATE POLICY "Users see own conversations" ON conversations
     FOR ALL USING (
-        business_id IN (SELECT id FROM businesses WHERE user_id = auth.uid())
+        business_id IN (SELECT business_id FROM business_members WHERE user_id = auth.uid())
     );
 
 CREATE POLICY "Users see own notifications" ON notifications
     FOR ALL USING (
-        business_id IN (SELECT id FROM businesses WHERE user_id = auth.uid())
+        business_id IN (SELECT business_id FROM business_members WHERE user_id = auth.uid())
     );
 
 -- ─── Auto-update updated_at timestamps ───────────────────────────────────────

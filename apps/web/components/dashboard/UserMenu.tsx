@@ -57,7 +57,18 @@ export default function UserMenu({ initial, name, email }: Props) {
             <p className="text-xs font-semibold text-[#1e293b] truncate">{name || email}</p>
             {name && <p className="text-[11px] text-slate-400 truncate">{email}</p>}
           </div>
-
+          {/* Profile link */}
+          <button
+            onClick={() => { router.push(`/${locale}/dashboard/profile`); setOpen(false) }}
+            className="flex items-center gap-2 w-full px-4 py-3 text-sm text-slate-600
+                      hover:bg-slate-50 transition-colors text-left">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="2"/>
+              <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+            {t('profile.menuLink')}
+          </button>
           {/* Sign out */}
           <button
             onClick={handleSignOut}

@@ -69,8 +69,10 @@ Google OAuth tokens are stored in **Supabase Vault**, not as plain database colu
 ## User and Business Model
 
 - One Supabase Auth user = one `profiles` row (auto-created by trigger)
-- One user can own one business in Phase 1 (enforced by unique index)
-- `business_members` table exists for Phase 2 team expansion — no migration needed later
+- One user can own **multiple businesses** — no unique index on `businesses.user_id`
+- Access control for all business data goes through `business_members`, not `businesses.user_id` directly
+- When a business is created, a trigger auto-inserts an owner row into `business_members`
+- `business_members` also supports Phase 2 team invitations (admin/member roles)
 - Business title (Owner, Manager, etc.) lives in `business_members.title`, not in `profiles`
 
 ## Payment Model

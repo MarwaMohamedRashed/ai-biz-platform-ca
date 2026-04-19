@@ -86,6 +86,17 @@
       "guide": "Guide"
     },
     "signOut": "Sign out",
+     "profile": {
+        "menuLink": "Profile",
+        "heading": "Your Profile",
+        "subtitle": "Manage your account information",
+        "fullName": "Full name",
+        "email": "Email address",
+        "emailHint": "Email cannot be changed here",
+        "save": "Save changes",
+        "saving": "Saving…",
+        "saved": "Saved"
+      },
     "chat": {
       "pageTitle": "Chat",
       "inputPlaceholder": "Ask anything or type a command…",
@@ -95,6 +106,7 @@
         "evening": "Good evening",
         "attention": "Here's what needs your attention today:"
       },
+     
       "reviewsCard": {
         "label": "Google Reviews",
         "badge": "pending",

@@ -5,7 +5,7 @@
 - **End every session:** ask Claude to update this file with what was completed
 - This is the single source of truth for progress. The other docs describe *decisions*; this tracks *done vs. not done*
 
-Last updated: 2026-04-17
+Last updated: 2026-04-19
 
 ---
 
@@ -38,31 +38,39 @@ Last updated: 2026-04-17
 - [x] Desktop: centered container card on grey background (matches login/signup style)
 - [x] Left sidebar: white, logo + business card + nav items + indigo active states
 - [x] Mobile bottom nav: 4 tabs (Chat / Reviews / Bookings / Guide)
-- [x] User menu: avatar top-right, dropdown with sign out
+- [x] User menu: avatar top-right, dropdown with sign out + profile link
 - [x] EN/FR switcher: always visible in header top-right (not buried in menu)
 - [x] Chat home page: AI greeting + action cards (Reviews, Bookings) + chat input
 - [x] Right stats panel (desktop): avg rating, responded count, appointments, quick actions
 - [x] All dashboard text translated in EN and FR
 
----
-
-## 🔄 Current Focus — Auth Completion
-
 ### Forgot/Reset Password
-- [x] `/auth/reset-callback` route handler (exchanges code, redirects to reset-password page)
+- [x] `/auth/reset-callback` — client-side page using `verifyOtp` (token_hash flow, works across browsers)
 - [x] Forgot password page (`/[locale]/(auth)/forgot-password`)
 - [x] `ForgotPasswordForm` component (email input → Supabase resetPasswordForEmail)
 - [x] Reset password page (`/[locale]/(auth)/reset-password`)
 - [x] `ResetPasswordForm` component (new password + confirm → supabase.auth.updateUser)
-- [x] "Forgot password?" link in LoginForm already wired correctly
+- [x] After password reset: signs out + redirects to login (security best practice)
+- [x] Supabase email template updated to use `token_hash` flow (fixes cross-browser PKCE issue)
 - [x] EN/FR translations for both pages
 
 ### Profile Page
-- [ ] Profile page (`/[locale]/dashboard/profile`)
-- [ ] Update full name
-- [ ] Update avatar (Phase 1: initials only, no upload yet)
-- [ ] Add profile link to UserMenu dropdown
-- [ ] EN/FR translations
+- [x] Profile page (`/[locale]/dashboard/profile`)
+- [x] Update full name (syncs to both `auth.users` metadata and `profiles` table)
+- [x] Avatar: Google profile photo for OAuth users, initials fallback for email users
+- [x] Email shown as read-only with hint
+- [x] Profile link in UserMenu dropdown (translated EN/FR)
+- [x] EN/FR translations
+
+### Route Protection
+- [x] `proxy.ts` — protects all `/[locale]/dashboard/**` routes (Next.js 16 uses proxy.ts not middleware.ts)
+- [x] Unauthenticated requests redirected to `/[locale]/login` before page renders
+- [x] Session tokens refreshed automatically on every dashboard request
+- [x] next-intl locale routing combined in same proxy file
+
+### Database
+- [x] All shared tables applied: businesses, business_members, subscriptions, conversations, notifications
+- [x] Multi-business support: unique index removed, RLS updated to use `business_members`, trigger auto-creates owner row on business insert
 
 ---
 
@@ -71,7 +79,8 @@ Last updated: 2026-04-17
 > ⚠️ Critical gap: new users sign up and land on a dashboard with fake hardcoded data.
 > They have no entry in the `businesses` table. Onboarding must run before the dashboard.
 
-- [ ] Create `businesses` table migration in Supabase (schema already designed in `docs/database-schema.md`)
+- [x] `businesses` table + all shared tables applied (migration 001)
+- [x] Multi-business support: unique index removed, RLS updated to use `business_members`, trigger auto-creates owner row (migration 003)
 - [ ] Post-signup redirect logic: if no business → onboarding, if business exists → dashboard
 - [ ] Onboarding Step 1: Business info (name, city, type chips, employee range)
 - [ ] Onboarding Step 2: Connect Google Business Profile (OAuth button + permissions list)
@@ -115,6 +124,32 @@ Last updated: 2026-04-17
   - [ ] Add `https://leapone.ca/**` to Redirect URLs (keep `http://localhost:3001/**` too)
   - [ ] Change Site URL from `http://localhost:3001` to `https://leapone.ca`
   - [ ] Switch Supabase email to custom SMTP via Resend
+
+---
+
+## 🔒 Must-Resolve Before Go-Live — Subscription & Access Control
+
+> These items were flagged as critical. None are built yet. Must all be resolved before real users are onboarded.
+
+### Trial & Subscription Enforcement
+- [ ] Add `trial_ends_at` and `subscription_status` column to `subscriptions` table — values: `trial`, `active`, `expired`, `cancelled`
+- [ ] When trial period ends (14 days): block access to paid features, show upgrade prompt
+- [ ] Prevent a user from starting a new 14-day trial if they have already used one (check by email or Stripe customer ID, not just user ID — covers account deletion + re-signup)
+- [ ] Subscription cancellation flow: user can cancel from settings, access continues until end of billing period
+
+### Payment Flow
+- [ ] Decision needed: when does the payment screen appear?
+  - Option A: At end of 14-day trial (access gates trigger → user is prompted)
+  - Option B: User can proactively upgrade during trial (e.g. "Upgrade" button in sidebar)
+  - Recommendation: both — proactive upgrade + hard gate at trial end
+- [ ] Stripe Checkout session: what plan/price to show, CAD currency, trial already used flag
+- [ ] Post-payment webhook: update `subscription_status` to `active`, set `billing_cycle_end`
+- [ ] Payment failure handling: notify user, grace period before access cut
+
+### Route Protection (Auth + Subscription)
+- [ ] Middleware: protect ALL `/dashboard/**` routes — redirect unauthenticated users to `/login` immediately, before any page renders
+- [ ] Subscription gate middleware or layout check: if `subscription_status = expired` → redirect to `/upgrade` page instead of dashboard
+- [ ] The `/upgrade` page itself needs to be built (Stripe Checkout trigger)
 
 ---
 
@@ -171,6 +206,6 @@ Weeks 13–18 in original plan.
 | Migration | File | Status |
 |---|---|---|
 | profiles table + trigger | (run manually in SQL editor) | ✅ Applied |
-| businesses table | `supabase/migrations/001_shared_tables.sql` | ❌ Not yet applied |
-| subscriptions, conversations, notifications | same file | ❌ Not yet applied |
+| businesses, business_members, subscriptions, conversations, notifications | `supabase/migrations/001_shared_tables.sql` | ✅ Applied |
+| Multi-business support — removed unique index, updated RLS to use business_members, added on_business_created trigger | `supabase/migrations/003_multi_business_support.sql` | ✅ Applied |
 | review_connections, reviews, review_responses | `supabase/migrations/002_phase1_reviews.sql` | ❌ Not yet applied |

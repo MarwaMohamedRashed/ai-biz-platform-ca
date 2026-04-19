@@ -26,12 +26,12 @@ Extends `auth.users`. Created automatically by trigger on sign-up.
 ---
 
 ### `businesses`
-One business per user in Phase 1.
+Supports one user owning multiple businesses. `user_id` is the creator reference used only for INSERT access control — all read/update access is controlled through `business_members`.
 
 | Column | Type | Notes |
 |---|---|---|
 | id | UUID PK | |
-| user_id | UUID FK | References auth.users(id) |
+| user_id | UUID FK | References auth.users(id) — creator/primary owner reference |
 | name | TEXT | Business display name |
 | type | TEXT | e.g. 'salon', 'restaurant', 'plumber' |
 | address | TEXT | |
@@ -43,12 +43,14 @@ One business per user in Phase 1.
 | created_at | TIMESTAMPTZ | |
 | updated_at | TIMESTAMPTZ | Auto-updated by trigger |
 
-**Unique index:** `(user_id)` — one business per user. Remove in Phase 2 for multi-location.
+**No unique index on `user_id`** — one user can own multiple businesses.
+
+**Trigger:** `on_business_created` — when a business is inserted, automatically creates a `business_members` row with `role = 'owner'` for the creating user. This keeps membership in sync without requiring app code to do it manually.
 
 ---
 
 ### `business_members`
-Team member access — defined now, activated in Phase 2.
+Source of truth for user-business access. A row here means the user can access that business. Created automatically by trigger on business insert (owner row). Also used for team invitations in Phase 2.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -226,16 +228,18 @@ Competitor comparison data from public APIs (Google Places, Yelp). NOT customer 
 | Table | Policy |
 |---|---|
 | profiles | User sees/edits own profile only |
-| businesses | User sees/edits own business only |
+| businesses | INSERT: `user_id = auth.uid()` · SELECT: via `business_members` · UPDATE: via `business_members` with owner/admin role |
 | business_members | User sees own membership rows |
-| subscriptions | User sees subscriptions for own business |
-| conversations | User sees conversations for own business |
-| notifications | User sees notifications for own business |
-| review_connections | User sees connections for own business |
-| reviews | User sees reviews for own business |
+| subscriptions | Via `business_members` — supports multi-business |
+| conversations | Via `business_members` — supports multi-business |
+| notifications | Via `business_members` — supports multi-business |
+| review_connections | Via `business_members` — supports multi-business |
+| reviews | Via `business_members` — supports multi-business |
 | review_responses | User sees responses for own reviews |
-| review_insights | User sees insights for own business |
-| market_benchmarks | User sees benchmarks for own business |
+| review_insights | Via `business_members` — supports multi-business |
+| market_benchmarks | Via `business_members` — supports multi-business |
+
+**Access control pattern:** All tables that belong to a business use `business_id IN (SELECT business_id FROM business_members WHERE user_id = auth.uid())`. This means a user automatically gets access to all businesses they are a member of — whether they own one or many.
 
 ---
 

@@ -41,7 +41,8 @@ export default function ResetPasswordForm() {
       return
     }
 
-    router.push(`/${locale}/dashboard`)
+    await supabase.auth.signOut()
+    router.push(`/${locale}/login`)
   }
 
   return (
