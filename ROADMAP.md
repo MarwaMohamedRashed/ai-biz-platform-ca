@@ -17,12 +17,12 @@ Build all of this now — by the time it's done, Google approval will likely hav
 | Sprint | Work | Sessions | Dependency |
 |--------|------|----------|------------|
 | **A** | Confirm password on sign-up + session timeout (Supabase config) + trial record on onboarding | 1 | None |
-| **B** | Reviews detail panel UI (AI draft + edit + approve/discard) + seed data | 1–2 | None |
-| **C** | Legal pages — Terms of Service + Privacy Policy EN/FR + CASL consent | 1–2 | None |
-| **D** | Deploy Next.js app to Vercel + Supabase pre-launch URL config + Resend email | 1–2 | None |
-| **E** | Stripe account + SDK + checkout + webhook + billing page | 2–3 | None |
-| **F** | Subscription enforcement (trial gate in proxy, upgrade redirect) | 1 | E |
-| **G** | FastAPI backend — AI engine + review response generation endpoint | 2–3 | None |
+| **B** | Reviews detail panel UI (shell + seed data — AI draft placeholder) | 1–2 | None |
+| **C** | FastAPI backend — AI engine + review response generation + wire into Reviews UI | 2–3 | B |
+| **D** | Legal pages — Terms of Service + Privacy Policy EN/FR + CASL consent | 1–2 | None |
+| **E** | Deploy Next.js app to Vercel + Supabase pre-launch URL config + Resend email | 1–2 | D |
+| **F** | Stripe account + SDK + checkout + webhook + billing page | 2–3 | E |
+| **G** | Subscription enforcement (trial gate in proxy, upgrade redirect) | 1 | F |
 | **H** | Wire real Google review sync + post responses back | 1–2 | Google API approval |
 
 > Sprint H is the only one blocked. Everything else can ship before Google approves.
