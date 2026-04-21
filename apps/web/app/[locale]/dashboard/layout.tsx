@@ -16,12 +16,39 @@ export default async function DashboardLayout({
   if (!user) {
     redirect(`/${locale}/login`)
   }
+  // If user has no business, send them to onboarding
+  const { data: businesses } = await supabase
+    .from('businesses')
+    .select('id, onboarding_completed')
+    .limit(1)
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name')
-    .eq('id', user.id)
+  if (!businesses || businesses.length === 0 || !businesses[0].onboarding_completed) {
+  redirect(`/${locale}/onboarding`)
+  }
+  const businessId = businesses[0].id
+
+  const { data: subscription } = await supabase
+    .from('subscriptions')
+    .select('status')
+    .eq('business_id', businessId)
+    .order('created_at', { ascending: false })
+    .limit(1)
     .single()
+
+  const planStatus = subscription?.status ?? 'trialing'
+
+  const { data: pendingReviews } = await supabase
+  .from('reviews')
+  .select('id')
+  .eq('status', 'pending')
+
+  const pendingCount = pendingReviews?.length ?? 0
+  
+  const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single()
 
   const displayName = profile?.full_name?.trim() || ''
 
@@ -36,6 +63,8 @@ export default async function DashboardLayout({
         <Sidebar
           user={{ name: displayName, email: user.email ?? '' }}
           locale={locale}
+          pendingCount={pendingCount}
+          planStatus={planStatus}
         />
 
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden pb-16 md:pb-0">

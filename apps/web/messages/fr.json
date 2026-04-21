@@ -79,11 +79,35 @@
     }
   },
   "dashboard": {
+    "reviews": {
+      "title": "Avis",
+      "tabs": {
+        "all": "Tous",
+        "pending": "En attente",
+        "responded": "Répondus",
+        "ignored": "Ignorés"
+      },
+      "empty": "Aucun avis dans cette catégorie.",
+      "respond": "Répondre",
+      "viewResponse": "Voir la réponse",
+      "statusBadge": {
+        "pending": "En attente",
+        "responded": "Répondu",
+        "ignored": "Ignoré"
+      },
+      "dateToday": "Aujourd'hui",
+      "dateYesterday": "Hier",
+      "dateDaysAgo": "Il y a {count} jours"
+    },
     "nav": {
       "chat": "Chat",
       "reviews": "Avis",
       "bookings": "Réservations",
       "guide": "Guide"
+    },
+    "planStatus": {
+      "trialing": "Essai gratuit",
+      "active": "Forfait Pro"
     },
     "signOut": "Se déconnecter",
     
@@ -135,5 +159,53 @@
         "connectGoogle": "Connecter Google"
       }
     }
+  },
+  "onboarding": {
+  "stepper": {
+    "step1": "Infos entreprise",
+    "step2": "Connecter Google",
+    "step3": "Configuration",
+    "step4": "C'est parti"
+  },
+  "step1": {
+    "heading": "Parlez-nous de votre entreprise",
+    "subtitle": "Cela nous aide à configurer votre tableau de bord",
+    "businessName": "Nom de l'entreprise",
+    "businessType": "Type d'entreprise",
+    "country": "Pays",
+    "city": "Ville",
+    "provinceState": "Province / État",
+    "next": "Continuer",
+    "saving": "Enregistrement…",
+    "types": {
+      "restaurant": "Restaurant",
+      "salon": "Salon",
+      "retail": "Commerce",
+      "plumber": "Plombier",
+      "cafe": "Café",
+      "other": "Autre"
+    },
+    "customType": "Décrivez votre entreprise",
+    "customTypePlaceholder": "ex. studio photo, gym, conseil"
+  },
+  "step2": {
+    "heading": "Connecter Google Business Profile",
+    "subtitle": "Pour répondre aux avis, nous avons besoin d'accès à votre compte Google Business",
+    "permission1": "Lire vos avis Google",
+    "permission2": "Publier des réponses aux avis",
+    "permission3": "Accéder à vos informations d'entreprise",
+    "connect": "Connecter Google Business Profile",
+    "comingSoon": "Connexion Google — bientôt disponible",
+    "skip": "Passer pour l'instant"
+  },
+  "step3": {
+    "heading": "Configuration de votre tableau de bord",
+    "body": "Nous préparons tout pour vous…"
+  },
+  "step4": {
+    "heading": "Tout est prêt",
+    "body": "Votre tableau de bord est prêt. Commencez à gérer vos avis avec l'IA.",
+    "cta": "Accéder au tableau de bord"
   }
+ }
 }

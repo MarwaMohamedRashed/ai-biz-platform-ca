@@ -3,6 +3,8 @@ import { getTranslations } from 'next-intl/server'
 import ChatInput from '@/components/dashboard/ChatInput'
 import UserMenu from '@/components/dashboard/UserMenu'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
+import Link from 'next/link'
+import { getLocale } from 'next-intl/server'
 
 function getGreetingKey(): 'morning' | 'afternoon' | 'evening' {
   const hour = new Date().getHours()
@@ -22,6 +24,17 @@ export default async function DashboardPage() {
     .eq('id', user!.id)
     .single()
 
+  const { data: reviewRows } = await supabase
+    .from('reviews')
+    .select('rating, status')
+
+  const ratings = (reviewRows ?? []).filter(r => r.rating !== null).map(r => r.rating as number)
+  const avgRating = ratings.length > 0
+    ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)
+    : '—'
+  const pendingCount = (reviewRows ?? []).filter(r => r.status === 'pending').length
+  const respondedCount = (reviewRows ?? []).filter(r => r.status === 'responded').length
+  
   const fullName = profile?.full_name?.trim() || ''
   const firstName = fullName.split(' ')[0]
     || user!.email?.split('@')[0]
@@ -29,6 +42,7 @@ export default async function DashboardPage() {
 
   const initial = firstName[0].toUpperCase()
   const greetingKey = getGreetingKey()
+  const locale = await getLocale()
 
   return (
     <div className="flex h-full">
@@ -97,20 +111,18 @@ export default async function DashboardPage() {
                     {t('reviewsCard.label')}
                   </span>
                   <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                    3 {t('reviewsCard.badge')}
+                    {pendingCount} {t('reviewsCard.badge')}
                   </span>
                 </div>
                 <p className="text-sm font-semibold text-[#1e293b] mb-1">
-                  3 {t('reviewsCard.title')}
+                  {pendingCount} {t('reviewsCard.title')}
                 </p>
                 <p className="text-xs text-slate-500 mb-3">{t('reviewsCard.preview')}</p>
                 <div className="flex items-center gap-2">
-                  <button className="text-xs font-semibold bg-[#4f46e5] text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors">
+                  <Link href={`/${locale}/dashboard/reviews`}
+                    className="text-xs font-semibold bg-[#4f46e5] text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors">
                     {t('reviewsCard.action')}
-                  </button>
-                  <button className="text-xs font-semibold text-slate-500 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors">
-                    Later
-                  </button>
+                  </Link>
                 </div>
               </div>
 
@@ -129,9 +141,10 @@ export default async function DashboardPage() {
                   2 {t('bookingsCard.title')}
                 </p>
                 <p className="text-xs text-slate-500 mb-3">{t('bookingsCard.preview')}</p>
-                <button className="text-xs font-semibold bg-[#4f46e5] text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors">
+                <Link href={`/${locale}/dashboard/bookings`}
+                  className="text-xs font-semibold bg-[#4f46e5] text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors">
                   {t('bookingsCard.action')}
-                </button>
+                </Link>
               </div>
 
               {/* Follow-up bubble */}
@@ -171,14 +184,13 @@ export default async function DashboardPage() {
               <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">
                 {t('thisWeek.avgRating')}
               </p>
-              <p className="text-xl font-bold text-[#f97316]">4.8★</p>
-              <p className="text-[10px] text-green-600 font-medium">+0.2 vs last week</p>
+              <p className="text-xl font-bold text-[#f97316]">{avgRating}★</p>
             </div>
             <div>
               <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">
                 {t('thisWeek.responded')}
               </p>
-              <p className="text-xl font-bold text-green-600">12</p>
+              <p className="text-xl font-bold text-green-600">{respondedCount}</p>
               <p className="text-[10px] text-slate-400">{t('thisWeek.reviewsThisWeek')}</p>
             </div>
           </div>
@@ -198,7 +210,7 @@ export default async function DashboardPage() {
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
             {t('thisWeek.quickActions')}
           </p>
-          <button className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl
+          <Link href={`/${locale}/dashboard/reviews`} className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl
                              border border-slate-200 text-xs font-semibold text-[#1e293b]
                              hover:bg-slate-50 transition-colors text-left">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -206,7 +218,7 @@ export default async function DashboardPage() {
                 stroke="#f97316" strokeWidth="2" fill="none"/>
             </svg>
             {t('thisWeek.viewAllReviews')}
-          </button>
+          </Link>
           <button className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl
                              border border-slate-200 text-xs font-semibold text-[#1e293b]
                              hover:bg-slate-50 transition-colors text-left">

@@ -49,6 +49,7 @@ CREATE TABLE businesses (
     type         TEXT NOT NULL,    -- e.g. 'salon', 'restaurant', 'plumber'
     address      TEXT,
     city         TEXT,
+    country      TEXT DEFAULT 'Canada',
     province     TEXT DEFAULT 'ON',
     phone        TEXT,
     email        TEXT,

@@ -79,11 +79,35 @@
     }
   },
   "dashboard": {
+    "reviews": {
+      "title": "Reviews",
+      "tabs": {
+        "all": "All",
+        "pending": "Pending",
+        "responded": "Responded",
+        "ignored": "Ignored"
+      },
+      "empty": "No reviews in this category.",
+      "respond": "Respond",
+      "viewResponse": "View Response",
+      "statusBadge": {
+        "pending": "Pending",
+        "responded": "Responded",
+        "ignored": "Ignored"
+      },
+      "dateToday": "Today",
+      "dateYesterday": "Yesterday",
+      "dateDaysAgo": "{count} days ago"
+    },
     "nav": {
       "chat": "Chat",
       "reviews": "Reviews",
       "bookings": "Bookings",
       "guide": "Guide"
+    },
+    "planStatus": {
+      "trialing": "Free Trial",
+      "active": "Pro Plan"
     },
     "signOut": "Sign out",
      "profile": {
@@ -135,5 +159,53 @@
         "connectGoogle": "Connect Google"
       }
     }
+  },
+  "onboarding": {
+  "stepper": {
+    "step1": "Business Info",
+    "step2": "Connect Google",
+    "step3": "Setting Up",
+    "step4": "All Set"
+  },
+  "step1": {
+    "heading": "Tell us about your business",
+    "subtitle": "This helps us set up your dashboard correctly",
+    "businessName": "Business name",
+    "businessType": "Business type",
+    "country": "Country",
+    "city": "City",
+    "provinceState": "Province / State",
+    "next": "Continue",
+    "saving": "Saving…",
+    "types": {
+      "restaurant": "Restaurant",
+      "salon": "Salon",
+      "retail": "Retail",
+      "plumber": "Plumber",
+      "cafe": "Café",
+      "other": "Other"
+    },
+    "customType": "Describe your business",
+    "customTypePlaceholder": "e.g. photography studio, gym, consulting"
+  },
+  "step2": {
+    "heading": "Connect Google Business Profile",
+    "subtitle": "To respond to reviews, we need access to your Google Business account",
+    "permission1": "Read your Google reviews",
+    "permission2": "Post responses to reviews",
+    "permission3": "Access your business information",
+    "connect": "Connect Google Business Profile",
+    "comingSoon": "Google connection — coming soon",
+    "skip": "Skip for now"
+  },
+  "step3": {
+    "heading": "Setting up your dashboard",
+    "body": "Getting everything ready for you…"
+  },
+  "step4": {
+    "heading": "You're all set",
+    "body": "Your dashboard is ready. Start managing your reviews with AI.",
+    "cta": "Go to dashboard"
   }
+ }
 }

@@ -5,7 +5,7 @@
 - **End every session:** ask Claude to update this file with what was completed
 - This is the single source of truth for progress. The other docs describe *decisions*; this tracks *done vs. not done*
 
-Last updated: 2026-04-19
+Last updated: 2026-04-19 (session 4)
 
 ---
 
@@ -71,22 +71,23 @@ Last updated: 2026-04-19
 ### Database
 - [x] All shared tables applied: businesses, business_members, subscriptions, conversations, notifications
 - [x] Multi-business support: unique index removed, RLS updated to use `business_members`, trigger auto-creates owner row on business insert
+- [x] `country` column added to `businesses` (migration 004)
+- [x] `onboarding_completed` boolean column added to `businesses` (migration 005, default false)
+
+### Onboarding Flow
+- [x] Post-signup redirect: if no business or `onboarding_completed = false` → onboarding; if complete → dashboard
+- [x] Onboarding Step 1: Business info (name, city, type chips, country dropdown, province/state)
+  - [x] "Other" type shows custom text input for business type
+- [x] Onboarding Step 2: Connect Google Business Profile (permissions list, Skip option)
+- [x] Onboarding Step 3: Syncing spinner (auto-advances after 2s)
+- [x] Onboarding Step 4: Success → marks `onboarding_completed = true` → go to dashboard
+- [x] Step resumption: if user stopped mid-onboarding (has business, `onboarding_completed = false`), resume at Step 2 on next login
+- [x] Desktop layout: left indigo stepper panel + right content panel
+- [x] EN/FR translations for all 4 steps
 
 ---
 
-## 📋 Next Up — Onboarding (REQUIRED before real users)
-
-> ⚠️ Critical gap: new users sign up and land on a dashboard with fake hardcoded data.
-> They have no entry in the `businesses` table. Onboarding must run before the dashboard.
-
-- [x] `businesses` table + all shared tables applied (migration 001)
-- [x] Multi-business support: unique index removed, RLS updated to use `business_members`, trigger auto-creates owner row (migration 003)
-- [ ] Post-signup redirect logic: if no business → onboarding, if business exists → dashboard
-- [ ] Onboarding Step 1: Business info (name, city, type chips, employee range)
-- [ ] Onboarding Step 2: Connect Google Business Profile (OAuth button + permissions list)
-- [ ] Onboarding Step 3: Syncing spinner + progress
-- [ ] Onboarding Step 4: Success → go to dashboard
-- [ ] Desktop layout: left stepper panel (indigo) + right content (see `docs/ui-decisions.md`)
+## 📋 Next Up — Phase 1 Core Features
 
 ---
 
@@ -131,8 +132,16 @@ Last updated: 2026-04-19
 
 > These items were flagged as critical. None are built yet. Must all be resolved before real users are onboarded.
 
+### Session Security
+- [ ] Session timeout / inactivity limit — users should not stay logged in indefinitely
+  - Option A: Supabase Auth Settings → set JWT expiry (access token) + refresh token duration (e.g. 8h access token, 30 day refresh) — zero code change, just a Supabase config
+  - Option B: App-level idle timeout — after X minutes of inactivity, auto sign-out via JS timer
+  - Recommendation: Option A first (quick, covers most cases), Option B later if tighter security is needed (e.g. for business-sensitive data)
+
 ### Trial & Subscription Enforcement
-- [ ] Add `trial_ends_at` and `subscription_status` column to `subscriptions` table — values: `trial`, `active`, `expired`, `cancelled`
+- [x] Subscription table schema complete — tracks full lifecycle: trial, first payment, billing periods, cancellation, payment failure
+- [x] Columns: `stripe_customer_id`, `stripe_price_id`, `subscription_starts`, `current_period_start/end`, `cancel_at_period_end`, `canceled_at`, `past_due_since`
+- [ ] Onboarding completion creates trial subscription record (`product=reviews`, `status=trialing`, `trial_ends=now+14days`)
 - [ ] When trial period ends (14 days): block access to paid features, show upgrade prompt
 - [ ] Prevent a user from starting a new 14-day trial if they have already used one (check by email or Stripe customer ID, not just user ID — covers account deletion + re-signup)
 - [ ] Subscription cancellation flow: user can cancel from settings, access continues until end of billing period
@@ -150,6 +159,25 @@ Last updated: 2026-04-19
 - [ ] Middleware: protect ALL `/dashboard/**` routes — redirect unauthenticated users to `/login` immediately, before any page renders
 - [ ] Subscription gate middleware or layout check: if `subscription_status = expired` → redirect to `/upgrade` page instead of dashboard
 - [ ] The `/upgrade` page itself needs to be built (Stripe Checkout trigger)
+
+---
+
+## ⚖️ Legal & Compliance — Required Before Real Users
+
+### User Agreement
+- [ ] Terms of Service page — EN and FR versions
+- [ ] Privacy Policy page — EN and FR versions
+- [ ] User must check "I agree to Terms of Service and Privacy Policy" checkbox during signup
+- [ ] Agreement version + timestamp stored in `profiles` table (so you have a record of what version they agreed to)
+- [ ] Dedicated session to review and finalize legal language before go-live
+
+### User Consent & Communication Preferences
+- [ ] Consent to contact (email, SMS) captured during onboarding or signup — required under CASL (Canada's Anti-Spam Legislation)
+- [ ] `contact_consent` column on `profiles` or separate `consent_log` table — stores: consent given (bool), channel (email/sms), timestamp, IP address
+- [ ] Unsubscribe tracking — if a user unsubscribes from any communication, mark them so they are never contacted again
+- [ ] Unsubscribe link in all outgoing emails (required by CASL)
+- [ ] Admin view: show consent status per user so you can prove compliance if challenged
+  > ⚠️ CASL is strict — fines up to $10M CAD for violations. Do not send marketing emails without express consent.
 
 ---
 
@@ -198,6 +226,8 @@ Weeks 13–18 in original plan.
 | Sidebar style | Dark indigo gradient | White with indigo accents | Better for daily-use working environment |
 | EN/FR in UI | Buried in menu | Always visible in header | Bilingual app — must be discoverable |
 | History/Refresh buttons | In mockup | Removed | Non-functional UI is worse than no UI — add when feature is built |
+| Onboarding province field | Dropdown (CA only) | Free text labeled "Province / State" | App is open to non-Canadian businesses |
+| Onboarding country field | Not planned | Added as dropdown (default: Canada) | Can't assume all users are Canadian |
 
 ---
 
@@ -207,5 +237,8 @@ Weeks 13–18 in original plan.
 |---|---|---|
 | profiles table + trigger | (run manually in SQL editor) | ✅ Applied |
 | businesses, business_members, subscriptions, conversations, notifications | `supabase/migrations/001_shared_tables.sql` | ✅ Applied |
+| review_connections, reviews, review_responses, review_insights, market_benchmarks | `supabase/migrations/002_phase1_reviews.sql` | ✅ Applied |
 | Multi-business support — removed unique index, updated RLS to use business_members, added on_business_created trigger | `supabase/migrations/003_multi_business_support.sql` | ✅ Applied |
-| review_connections, reviews, review_responses | `supabase/migrations/002_phase1_reviews.sql` | ❌ Not yet applied |
+| Add `country` column to businesses | `supabase/migrations/004_add_country_to_businesses.sql` | ✅ Applied |
+| Add `onboarding_completed` boolean to businesses | run manually in SQL editor | ✅ Applied |
+| Subscription billing columns — `stripe_customer_id`, `stripe_price_id`, `subscription_starts`, `current_period_start`, `current_period_end`, `cancel_at_period_end`, `canceled_at`, `past_due_since` | run manually in SQL editor | ✅ Applied |
