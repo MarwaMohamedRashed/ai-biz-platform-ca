@@ -5,7 +5,7 @@
 - **End every session:** ask Claude to update this file with what was completed
 - This is the single source of truth for progress. The other docs describe *decisions*; this tracks *done vs. not done*
 
-Last updated: 2026-04-19 (session 4)
+Last updated: 2026-04-21 (session 5)
 
 ---
 
@@ -32,6 +32,7 @@ Last updated: 2026-04-19 (session 4)
 - [x] Verify email page
 - [x] Auth error banner (handles `otp_expired` and other hash errors)
 - [x] Form validations: terms, password strength, duplicate email detection
+- [ ] Confirm password field on sign-up form — prevents lockout from typos (small UI change + match validation)
 
 ### Dashboard Shell
 - [x] Dashboard layout with auth guard (redirects to login if no session)
@@ -117,7 +118,21 @@ Last updated: 2026-04-19 (session 4)
 - [ ] Replace hardcoded review data with real Supabase queries
 
 ### Payments & Infrastructure
-- [ ] Stripe integration (CAD, recurring billing, trial period)
+- [ ] **Stripe setup** (must complete before billing screen can be built):
+  - [ ] Create Stripe account (use leapone.ca business email)
+  - [ ] Create Product + Price in Stripe dashboard (CAD, monthly recurring, e.g. $29/mo)
+  - [ ] Store Price ID in `.env` (`STRIPE_PRICE_ID`)
+  - [ ] Install Stripe SDK (`stripe` + `@stripe/stripe-js`)
+  - [ ] Create Stripe Customer on onboarding completion (store `stripe_customer_id` in subscriptions table — column already exists)
+  - [ ] Stripe Checkout session API route (`/api/stripe/checkout`) — creates session for customer, returns URL
+  - [ ] Stripe webhook endpoint (`/api/stripe/webhook`) — handles `checkout.session.completed`, `invoice.paid`, `customer.subscription.deleted`
+  - [ ] Webhook updates `subscriptions` table: status, billing dates, cancel flag
+- [ ] **Billing / Upgrade page** (`/[locale]/dashboard/billing`):
+  - [ ] Show current plan (trial days remaining OR active billing cycle)
+  - [ ] "Upgrade to Pro" button → triggers Stripe Checkout session → redirects to Stripe-hosted payment page
+  - [ ] Post-payment success redirect back to `/dashboard/billing` with confirmation message
+  - [ ] Proactive upgrade button in sidebar during trial (links to billing page)
+  - [ ] Hard gate at trial end: if `status = trialing` and `trial_ends` passed → redirect to billing page instead of dashboard
 - [ ] Deploy Next.js app to Vercel
 - [ ] Deploy FastAPI to Railway
 - [ ] Resend email setup with leapone.ca domain (replaces Supabase free tier email)
@@ -147,13 +162,8 @@ Last updated: 2026-04-19 (session 4)
 - [ ] Subscription cancellation flow: user can cancel from settings, access continues until end of billing period
 
 ### Payment Flow
-- [ ] Decision needed: when does the payment screen appear?
-  - Option A: At end of 14-day trial (access gates trigger → user is prompted)
-  - Option B: User can proactively upgrade during trial (e.g. "Upgrade" button in sidebar)
-  - Recommendation: both — proactive upgrade + hard gate at trial end
-- [ ] Stripe Checkout session: what plan/price to show, CAD currency, trial already used flag
-- [ ] Post-payment webhook: update `subscription_status` to `active`, set `billing_cycle_end`
-- [ ] Payment failure handling: notify user, grace period before access cut
+- [ ] Payment failure handling: notify user via email, grace period (3 days) before access cut
+- [ ] Prevent re-using trial: check by Stripe customer ID or email on new sign-up, not just user ID
 
 ### Route Protection (Auth + Subscription)
 - [ ] Middleware: protect ALL `/dashboard/**` routes — redirect unauthenticated users to `/login` immediately, before any page renders
