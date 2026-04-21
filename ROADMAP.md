@@ -9,6 +9,26 @@ Last updated: 2026-04-21 (session 5)
 
 ---
 
+## 🗓️ Next Sessions Plan — While Waiting for Google API
+
+Google API approval is pending (1–4 weeks). Everything below is independent of it.
+Build all of this now — by the time it's done, Google approval will likely have arrived.
+
+| Sprint | Work | Sessions | Dependency |
+|--------|------|----------|------------|
+| **A** | Confirm password on sign-up + session timeout (Supabase config) + trial record on onboarding | 1 | None |
+| **B** | Deploy Next.js app to Vercel + Supabase pre-launch URL config + Resend email | 1–2 | None |
+| **C** | Stripe account + SDK + checkout + webhook + billing page | 2–3 | None |
+| **D** | Subscription enforcement (trial gate in proxy, upgrade redirect) | 1 | C |
+| **E** | Legal pages — Terms of Service + Privacy Policy EN/FR + CASL consent | 1–2 | None |
+| **F** | Reviews detail panel UI (AI draft + edit + approve/discard) + seed data | 1–2 | None |
+| **G** | FastAPI backend — AI engine + review response generation endpoint | 2–3 | None |
+| **H** | Wire real Google review sync + post responses back | 1–2 | Google API approval |
+
+> Sprint H is the only one blocked. Everything else can ship before Google approves.
+
+---
+
 ## ✅ Completed
 
 ### Infrastructure & Setup
@@ -156,7 +176,7 @@ Last updated: 2026-04-21 (session 5)
 ### Trial & Subscription Enforcement
 - [x] Subscription table schema complete — tracks full lifecycle: trial, first payment, billing periods, cancellation, payment failure
 - [x] Columns: `stripe_customer_id`, `stripe_price_id`, `subscription_starts`, `current_period_start/end`, `cancel_at_period_end`, `canceled_at`, `past_due_since`
-- [ ] Onboarding completion creates trial subscription record (`product=reviews`, `status=trialing`, `trial_ends=now+14days`)
+- [ ] Onboarding completion creates trial subscription record (`product=reviews`, `status=trialing`, `trial_ends=now+14days`) ← **Sprint A**
 - [ ] When trial period ends (14 days): block access to paid features, show upgrade prompt
 - [ ] Prevent a user from starting a new 14-day trial if they have already used one (check by email or Stripe customer ID, not just user ID — covers account deletion + re-signup)
 - [ ] Subscription cancellation flow: user can cancel from settings, access continues until end of billing period
