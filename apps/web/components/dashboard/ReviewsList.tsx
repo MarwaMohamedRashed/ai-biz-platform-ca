@@ -108,7 +108,7 @@ export default function ReviewsList({ reviews }: { reviews: Review[] }) {
                     {initial}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-[#1e293b]">{review.author ?? 'Anonymous'}</p>
+                    <p className="text-sm font-semibold text-[#1e293b]">{review.author ?? t('anonymous')}</p>
                     <p className="text-[10px] text-slate-400">
                       {review.review_date ? formatDate(review.review_date) : ''}
                     </p>
@@ -130,7 +130,7 @@ export default function ReviewsList({ reviews }: { reviews: Review[] }) {
               {/* Response preview */}
              {review.status === 'responded' && review.review_responses?.[0]?.final_response && (
                 <div className="bg-slate-50 rounded-xl px-3 py-2 border-l-2 border-[#4f46e5]">
-                  <p className="text-[10px] font-bold text-[#4f46e5] mb-1">Your response</p>
+                  <p className="text-[10px] font-bold text-[#4f46e5] mb-1">{t('yourResponse')}</p>
                   <p className="text-xs text-slate-500 line-clamp-2">
                     {review.review_responses[0].final_response}
                   </p>

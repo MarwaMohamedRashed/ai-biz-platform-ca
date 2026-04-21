@@ -74,7 +74,7 @@ export default async function DashboardLayout({
       </div>
 
       {/* Mobile bottom nav — fixed, viewport-relative */}
-      <BottomNav locale={locale} />
+      <BottomNav locale={locale} pendingCount={pendingCount} />
 
     </div>
   )

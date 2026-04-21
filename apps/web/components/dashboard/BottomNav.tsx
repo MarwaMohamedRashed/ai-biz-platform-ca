@@ -6,9 +6,10 @@ import { useTranslations } from 'next-intl'
 
 interface Props {
   locale: string
+  pendingCount: number
 }
 
-export default function BottomNav({ locale }: Props) {
+export default function BottomNav({ locale, pendingCount }: Props) {
   const pathname = usePathname()
   const t = useTranslations('dashboard.nav')
 
@@ -30,7 +31,7 @@ export default function BottomNav({ locale }: Props) {
       key: 'reviews' as const,
       href: `/${locale}/dashboard/reviews`,
       exact: false,
-      badge: 3,
+      badge: pendingCount,
       icon: (active: boolean) => (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"

@@ -97,7 +97,9 @@
       },
       "dateToday": "Today",
       "dateYesterday": "Yesterday",
-      "dateDaysAgo": "{count} days ago"
+      "dateDaysAgo": "{count} days ago",
+      "anonymous": "Anonymous",
+      "yourResponse": "Your response"
     },
     "nav": {
       "chat": "Chat",
