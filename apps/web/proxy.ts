@@ -11,7 +11,8 @@ export default async function proxy(request: NextRequest) {
   const isDashboard = /^\/(en|fr)\/dashboard/.test(pathname)
 
   if (isDashboard) {
-    let response = NextResponse.next({ request })
+    const locale = pathname.startsWith('/fr') ? 'fr' : 'en'
+    const intlResponse = intlMiddleware(request)
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,9 +26,8 @@ export default async function proxy(request: NextRequest) {
             cookiesToSet.forEach(({ name, value }) =>
               request.cookies.set(name, value)
             )
-            response = NextResponse.next({ request })
             cookiesToSet.forEach(({ name, value, options }) =>
-              response.cookies.set(name, value, options)
+              intlResponse.cookies.set(name, value, options)
             )
           }
         }
@@ -37,11 +37,10 @@ export default async function proxy(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-      const locale = pathname.startsWith('/fr') ? 'fr' : 'en'
       return NextResponse.redirect(new URL(`/${locale}/login`, request.url))
     }
 
-    return response
+    return intlResponse
   }
 
   return intlMiddleware(request)
