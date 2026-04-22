@@ -15,6 +15,7 @@ export default function SignupForm() {
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [terms, setTerms] = useState(false)
@@ -37,6 +38,10 @@ export default function SignupForm() {
 
     if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
         setError(t('errorPasswordWeak'))
+        return
+    }
+    if (password !== confirmPassword) {
+        setError(t('errorPasswordMatch'))
         return
     }
 
@@ -64,6 +69,7 @@ export default function SignupForm() {
         setLoading(false)
         return
     }
+    
 
     router.push(`/${locale}/verify-email`)
   }
@@ -124,6 +130,18 @@ export default function SignupForm() {
                         <input type="password" autoComplete="new-password"
                             value={password}
                             onChange={e => setPassword(e.target.value)}
+                        className="w-full px-3.5 py-[11px] border-[1.5px] border-slate-200 rounded-[10px]
+                                    text-sm text-[#1e293b] bg-[#f8fafc]
+                                    focus:outline-none focus:border-[#4f46e5] focus:bg-white transition-colors" />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                        {t('confirmPassword')}
+                        </label>
+                        <input type="password" autoComplete="new-password"
+                            value={confirmPassword}
+                            onChange={e => setConfirmPassword(e.target.value)}
                         className="w-full px-3.5 py-[11px] border-[1.5px] border-slate-200 rounded-[10px]
                                     text-sm text-[#1e293b] bg-[#f8fafc]
                                     focus:outline-none focus:border-[#4f46e5] focus:bg-white transition-colors" />

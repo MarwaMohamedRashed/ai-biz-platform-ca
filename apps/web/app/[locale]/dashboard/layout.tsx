@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getLocale } from 'next-intl/server'
 import Sidebar from '@/components/dashboard/Sidebar'
 import BottomNav from '@/components/dashboard/BottomNav'
+import IdleTimeout from '@/components/dashboard/IdleTimeout'
 
 export default async function DashboardLayout({
   children,
@@ -69,6 +70,7 @@ export default async function DashboardLayout({
 
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden pb-16 md:pb-0">
           {children}
+          <IdleTimeout />
         </main>
 
       </div>

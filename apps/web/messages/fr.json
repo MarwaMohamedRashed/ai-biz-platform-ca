@@ -49,7 +49,9 @@
     "errorTerms": "Vous devez accepter les conditions et la politique de confidentialité.",
     "errorPasswordLength": "Le mot de passe doit contenir au moins 8 caractères.",
     "errorPasswordWeak": "Le mot de passe doit contenir au moins une majuscule et un chiffre.",
-    "errorEmailExists": "Un compte avec ce courriel existe déjà."
+    "errorEmailExists": "Un compte avec ce courriel existe déjà.",
+    "confirmPassword": "Confirmer le mot de passe",
+    "errorPasswordMatch": "Les mots de passe ne correspondent pas."
     },
     "verifyEmail": {
       "heading": "Vérifiez vos courriels",

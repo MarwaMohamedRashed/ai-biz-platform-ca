@@ -49,7 +49,9 @@
       "errorTerms": "You must accept the terms and privacy policy.",
       "errorPasswordLength": "Password must be at least 8 characters.",
       "errorPasswordWeak": "Password must contain at least one uppercase letter and one number.",
-      "errorEmailExists": "An account with this email already exists."
+      "errorEmailExists": "An account with this email already exists.",
+      "confirmPassword": "Confirm password",
+      "errorPasswordMatch": "Passwords do not match."
     },
     "verifyEmail": {
       "heading": "Check your email",
