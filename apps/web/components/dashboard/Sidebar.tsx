@@ -135,7 +135,7 @@ export default function Sidebar({ user, locale, pendingCount, planStatus }: Prop
             >
               {item.icon(active)}
               {t(`nav.${item.key}`)}
-              {item.badge && (
+              {(item.badge ?? 0) > 0 && (
                 <span className="ml-auto w-5 h-5 rounded-full bg-[#f97316] flex items-center justify-center
                                  text-[10px] font-bold text-white">
                   {item.badge}

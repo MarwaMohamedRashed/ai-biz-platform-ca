@@ -90,7 +90,7 @@ export default function BottomNav({ locale, pendingCount }: Props) {
             className="flex-1 flex flex-col items-center justify-center py-2 gap-1 relative">
             <div className="relative">
               {item.icon(active)}
-              {item.badge && !active && (
+              {(item.badge ?? 0) > 0 && !active && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#f97316]
                                  flex items-center justify-center text-[9px] font-bold text-white">
                   {item.badge}
