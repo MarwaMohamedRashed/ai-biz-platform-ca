@@ -8,10 +8,10 @@ interface Props {
   user: { name: string; email: string }
   locale: string
   pendingCount: number
-  planStatus: string
+  planTier: 'starter' | 'pro' | 'business'
 }
 
-export default function Sidebar({ user, locale, pendingCount, planStatus }: Props) {
+export default function Sidebar({ user, locale, pendingCount, planTier }: Props) {
   const pathname = usePathname()
   const t = useTranslations('dashboard')
 
@@ -113,7 +113,7 @@ export default function Sidebar({ user, locale, pendingCount, planStatus }: Prop
             </p>
             <span className="text-[10px] font-bold text-[#4f46e5] bg-indigo-50
                              px-1.5 py-0.5 rounded-full">
-              {t(`planStatus.${planStatus}`)}
+              {t(`planTier.${planTier}`)}
             </span>
           </div>
         </div>

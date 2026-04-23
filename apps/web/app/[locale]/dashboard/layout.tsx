@@ -30,13 +30,13 @@ export default async function DashboardLayout({
 
   const { data: subscription } = await supabase
     .from('subscriptions')
-    .select('status')
+    .select('status, plan_tier')
     .eq('business_id', businessId)
     .order('created_at', { ascending: false })
     .limit(1)
     .single()
 
-  const planStatus = subscription?.status ?? 'trialing'
+  const planTier = (subscription?.plan_tier ?? 'starter') as 'starter' | 'pro' | 'business'
 
   const { data: pendingReviews } = await supabase
   .from('reviews')
@@ -65,7 +65,7 @@ export default async function DashboardLayout({
           user={{ name: displayName, email: user.email ?? '' }}
           locale={locale}
           pendingCount={pendingCount}
-          planStatus={planStatus}
+          planTier={planTier}
         />
 
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden pb-16 md:pb-0">

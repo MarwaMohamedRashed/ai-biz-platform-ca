@@ -81,6 +81,11 @@
     }
   },
   "dashboard": {
+    "planTier": {
+      "starter":  "Starter",
+      "pro":      "Pro",
+      "business": "Business"
+    },
     "reviews": {
       "title": "Reviews",
       "tabs": {

@@ -5,7 +5,7 @@
 - **End every session:** ask Claude to update this file with what was completed
 - This is the single source of truth for progress. The other docs describe *decisions*; this tracks *done vs. not done*
 
-Last updated: 2026-04-21 (session 5)
+Last updated: 2026-04-22 (session 6)
 
 ---
 
@@ -16,7 +16,7 @@ Build all of this now — by the time it's done, Google approval will likely hav
 
 | Sprint | Work | Sessions | Dependency |
 |--------|------|----------|------------|
-| **A** | Confirm password on sign-up + session timeout (Supabase config) + trial record on onboarding | 1 | None |
+| ~~**A**~~ | ~~Confirm password on sign-up + session timeout + trial record on onboarding~~ + subscription model redesign | ✅ Done | None |
 | **B** | Reviews detail panel UI (shell + seed data — AI draft placeholder) | 1–2 | None |
 | **C** | FastAPI backend — AI engine + review response generation + wire into Reviews UI | 2–3 | B |
 | **D** | Legal pages — Terms of Service + Privacy Policy EN/FR + CASL consent | 1–2 | None |
@@ -52,7 +52,7 @@ Build all of this now — by the time it's done, Google approval will likely hav
 - [x] Verify email page
 - [x] Auth error banner (handles `otp_expired` and other hash errors)
 - [x] Form validations: terms, password strength, duplicate email detection
-- [ ] Confirm password field on sign-up form — prevents lockout from typos (small UI change + match validation)
+- [x] Confirm password field on sign-up form — prevents lockout from typos (small UI change + match validation)
 
 ### Dashboard Shell
 - [x] Dashboard layout with auth guard (redirects to login if no session)
@@ -168,15 +168,12 @@ Build all of this now — by the time it's done, Google approval will likely hav
 > These items were flagged as critical. None are built yet. Must all be resolved before real users are onboarded.
 
 ### Session Security
-- [ ] Session timeout / inactivity limit — users should not stay logged in indefinitely
-  - Option A: Supabase Auth Settings → set JWT expiry (access token) + refresh token duration (e.g. 8h access token, 30 day refresh) — zero code change, just a Supabase config
-  - Option B: App-level idle timeout — after X minutes of inactivity, auto sign-out via JS timer
-  - Recommendation: Option A first (quick, covers most cases), Option B later if tighter security is needed (e.g. for business-sensitive data)
+- [x] Session timeout / inactivity limit — **1-hour idle timeout implemented** (`IdleTimeout.tsx` client component, listens to mouse/keyboard/scroll/touch events, auto signs out + redirects to login on inactivity)
 
 ### Trial & Subscription Enforcement
 - [x] Subscription table schema complete — tracks full lifecycle: trial, first payment, billing periods, cancellation, payment failure
 - [x] Columns: `stripe_customer_id`, `stripe_price_id`, `subscription_starts`, `current_period_start/end`, `cancel_at_period_end`, `canceled_at`, `past_due_since`
-- [ ] Onboarding completion creates trial subscription record (`product=reviews`, `status=trialing`, `trial_ends=now+14days`)
+- [x] Onboarding completion creates trial subscription record (`plan_tier=starter`, `status=trialing`, `trial_ends=now+14days`)
 - [ ] When trial period ends (14 days): block access to paid features, show upgrade prompt
 - [ ] Prevent a user from starting a new 14-day trial if they have already used one (check by email or Stripe customer ID, not just user ID — covers account deletion + re-signup)
 - [ ] Subscription cancellation flow: user can cancel from settings, access continues until end of billing period
@@ -258,6 +255,9 @@ Weeks 13–18 in original plan.
 | History/Refresh buttons | In mockup | Removed | Non-functional UI is worse than no UI — add when feature is built |
 | Onboarding province field | Dropdown (CA only) | Free text labeled "Province / State" | App is open to non-Canadian businesses |
 | Onboarding country field | Not planned | Added as dropdown (default: Canada) | Can't assume all users are Canadian |
+| Subscription model | Per-product (one row per product per business) | Bundled tiers: Starter (Reviews), Pro (Reviews+Bookings), Business (all three) | SMB owners want simple pricing, not per-product billing |
+| Phase 1 pricing tiers | Multiple tiers from launch | Single tier (Starter) for Phase 1 only | Only Reviews ships in Phase 1 — no basis to charge more. Pro/Business unlock when Bookings/Guide launch |
+| Trial tier | N/A | Starter (14 days) | Matches the only active Phase 1 tier |
 
 ---
 
@@ -272,3 +272,4 @@ Weeks 13–18 in original plan.
 | Add `country` column to businesses | `supabase/migrations/004_add_country_to_businesses.sql` | ✅ Applied |
 | Add `onboarding_completed` boolean to businesses | run manually in SQL editor | ✅ Applied |
 | Subscription billing columns — `stripe_customer_id`, `stripe_price_id`, `subscription_starts`, `current_period_start`, `current_period_end`, `cancel_at_period_end`, `canceled_at`, `past_due_since` | run manually in SQL editor | ✅ Applied |
+| Bundled tier model — drop `product` col, convert `plan_tier` text→enum (`starter\|pro\|business`), replace `stripe_id` with `stripe_subscription_id`, partial unique index one-active-per-business | `supabase/migrations/005_bundled_tier_subscription.sql` | ✅ Applied |

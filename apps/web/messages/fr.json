@@ -81,6 +81,11 @@
     }
   },
   "dashboard": {
+    "planTier": {
+      "starter":  "Débutant",
+      "pro":      "Pro",
+      "business": "Entreprise"
+    },
     "reviews": {
       "title": "Avis",
       "tabs": {

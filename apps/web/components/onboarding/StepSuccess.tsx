@@ -33,7 +33,7 @@ export default function StepSuccess({ businessName, userName }: Props) {
 
     await supabase.from('subscriptions').insert({
       business_id: businessId,
-      product: 'reviews',
+      plan_tier: 'starter',
       status: 'trialing',
       trial_ends: trialEnds.toISOString()
     })
