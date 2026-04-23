@@ -5,7 +5,7 @@
 - **End every session:** ask Claude to update this file with what was completed
 - This is the single source of truth for progress. The other docs describe *decisions*; this tracks *done vs. not done*
 
-Last updated: 2026-04-22 (session 6)
+Last updated: 2026-04-23 (session 7)
 
 ---
 
@@ -17,7 +17,7 @@ Build all of this now — by the time it's done, Google approval will likely hav
 | Sprint | Work | Sessions | Dependency |
 |--------|------|----------|------------|
 | ~~**A**~~ | ~~Confirm password on sign-up + session timeout + trial record on onboarding~~ + subscription model redesign | ✅ Done | None |
-| **B** | Reviews detail panel UI (shell + seed data — AI draft placeholder) | 1–2 | None |
+| ~~**B**~~ | ~~Reviews detail panel UI (shell + seed data — AI draft placeholder)~~ + insights card + insights page | ✅ Done | None |
 | **C** | FastAPI backend — AI engine + review response generation + wire into Reviews UI | 2–3 | B |
 | **D** | Legal pages — Terms of Service + Privacy Policy EN/FR + CASL consent | 1–2 | None |
 | **E** | Deploy Next.js app to Vercel + Supabase pre-launch URL config + Resend email | 1–2 | D |
@@ -133,9 +133,13 @@ Build all of this now — by the time it's done, Google approval will likely hav
 - [ ] Post approved response back to Google
 
 ### Reviews Feature (Frontend)
-- [ ] Reviews tab page (list view with filter tabs)
-- [ ] Review detail panel (AI draft + edit + approve/discard)
-- [ ] Replace hardcoded review data with real Supabase queries
+- [x] Reviews tab page (list view with filter tabs)
+- [x] Review detail panel — slide-in panel, full review text, AI draft placeholder, reply textarea, approve/ignore buttons
+- [x] InsightsCard on chat home — period selector, metric row, strengths/weaknesses preview, link to full page
+- [x] Insights page (`/dashboard/insights`) — full layout with period selector, strengths/weaknesses columns, summary section
+- [ ] Wire approve/ignore buttons to Supabase (Sprint C)
+- [ ] Replace hardcoded review data with real Supabase queries (Sprint C)
+- [ ] Fill InsightsCard and InsightsPage with real AI-generated data (Sprint C)
 
 ### Payments & Infrastructure
 - [ ] **Stripe setup** (must complete before billing screen can be built):
@@ -248,6 +252,9 @@ Weeks 13–18 in original plan.
 
 | Decision | Original Plan | What We Did | Why |
 |---|---|---|---|
+| Insights placement | Not planned | Card on chat home (teaser) + dedicated `/dashboard/insights` page | Card gives quick briefing; full page has room for detailed breakdown |
+| Insights period filter | Not planned | Pre-computed fixed periods (30d/90d/6m/all) | Covers 95% of use cases, instant load — on-demand custom ranges deferred to Phase 2 |
+|---|---|---|---|
 | EN/FR translations | Phase 3 | Done in Phase 1 | Canadian market — French users need it from day one |
 | Dashboard layout | Full-screen | Centered card (like login) | Consistent design, more professional feel |
 | Sidebar style | Dark indigo gradient | White with indigo accents | Better for daily-use working environment |
@@ -271,5 +278,6 @@ Weeks 13–18 in original plan.
 | Multi-business support — removed unique index, updated RLS to use business_members, added on_business_created trigger | `supabase/migrations/003_multi_business_support.sql` | ✅ Applied |
 | Add `country` column to businesses | `supabase/migrations/004_add_country_to_businesses.sql` | ✅ Applied |
 | Add `onboarding_completed` boolean to businesses | run manually in SQL editor | ✅ Applied |
+| Replace `common_topics` with `strengths TEXT[]` + `weaknesses TEXT[]` in review_insights | `supabase/migrations/006_review_insights_strengths_weaknesses.sql` | ✅ Applied |
 | Subscription billing columns — `stripe_customer_id`, `stripe_price_id`, `subscription_starts`, `current_period_start`, `current_period_end`, `cancel_at_period_end`, `canceled_at`, `past_due_since` | run manually in SQL editor | ✅ Applied |
 | Bundled tier model — drop `product` col, convert `plan_tier` text→enum (`starter\|pro\|business`), replace `stripe_id` with `stripe_subscription_id`, partial unique index one-active-per-business | `supabase/migrations/005_bundled_tier_subscription.sql` | ✅ Applied |
