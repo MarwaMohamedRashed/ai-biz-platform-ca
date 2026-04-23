@@ -5,6 +5,7 @@ import UserMenu from '@/components/dashboard/UserMenu'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import Link from 'next/link'
 import { getLocale } from 'next-intl/server'
+import InsightsCard from '@/components/dashboard/InsightsCard'
 
 function getGreetingKey(): 'morning' | 'afternoon' | 'evening' {
   const hour = new Date().getHours()
@@ -146,6 +147,8 @@ export default async function DashboardPage() {
                   {t('bookingsCard.action')}
                 </Link>
               </div>
+              {/* Insights card */}
+              <InsightsCard />
 
               {/* Follow-up bubble */}
               <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-slate-100">

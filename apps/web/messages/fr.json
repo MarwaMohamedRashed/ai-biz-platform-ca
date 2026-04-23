@@ -81,6 +81,26 @@
     }
   },
   "dashboard": {
+    "insights": {
+      "label": "APERÇU DE L'ENTREPRISE",
+      "periods": {
+        "30d": "30 derniers jours",
+        "90d": "3 derniers mois",
+        "6m": "6 derniers mois",
+        "all": "Tout"
+      },
+      "emptyTitle": "Aucun aperçu pour l'instant",
+      "emptyBody": "Les aperçus apparaîtront ici une fois vos avis Google synchronisés.",
+      "viewFull": "Voir l'aperçu complet →",
+      "strengths": "Ce qui fonctionne",
+      "weaknesses": "À améliorer",
+      "avgRating": "Note moy.",
+      "reviewCount": "Avis",
+      "summaryTitle": "Résumé",
+      "emptyStrengths": "Les points forts apparaîtront une fois les avis synchronisés.",
+      "emptyWeaknesses": "Les améliorations apparaîtront une fois les avis synchronisés.",
+      "emptySummary": "Le résumé IA apparaîtra une fois les avis synchronisés."
+    },
     "planTier": {
       "starter":  "Débutant",
       "pro":      "Pro",
@@ -93,6 +113,16 @@
         "pending": "En attente",
         "responded": "Répondus",
         "ignored": "Ignorés"
+      },
+      "detail": {
+        "aiDraft": "Brouillon IA",
+        "aiDraftPlaceholder": "Le brouillon IA apparaîtra une fois les avis Google connectés.",
+        "yourReply": "Votre réponse",
+        "replyPlaceholder": "Rédigez ou modifiez votre réponse...",
+        "approve": "Approuver et envoyer",
+        "ignore": "Ignorer",
+        "close": "Fermer",
+        "alreadyResponded": "Réponse envoyée"
       },
       "empty": "Aucun avis dans cette catégorie.",
       "respond": "Répondre",

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
+import ReviewDetail from '@/components/dashboard/ReviewDetail'
 
 type ReviewResponse = {
   id: string
@@ -41,6 +42,7 @@ const STATUS_COLORS: Record<string, string> = {
 export default function ReviewsList({ reviews }: { reviews: Review[] }) {
   const t = useTranslations('dashboard.reviews')
   const [activeTab, setActiveTab] = useState<Tab>('all')
+  const [selectedReview, setSelectedReview] = useState<Review | null>(null)
   const locale = useLocale()
 
   function formatDate(dateStr: string) {
@@ -97,8 +99,10 @@ export default function ReviewsList({ reviews }: { reviews: Review[] }) {
         {filtered.map(review => {
           const initial = (review.author ?? '?')[0].toUpperCase()
           return (
-            <div key={review.id}
-              className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col gap-2">
+           <div key={review.id}
+              onClick={() => setSelectedReview(review)}
+              className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col gap-2
+                        cursor-pointer hover:border-indigo-200 transition-colors">
 
               {/* Author row */}
               <div className="flex items-center justify-between gap-2">
@@ -137,17 +141,16 @@ export default function ReviewsList({ reviews }: { reviews: Review[] }) {
                 </div>
               )}
 
-              {/* Action */}
-              {review.status === 'pending' && (
-                <button className="self-start text-xs font-semibold bg-[#4f46e5] text-white
-                                   px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors">
-                  {t('respond')}
-                </button>
-              )}
             </div>
           )
         })}
       </div>
+      {selectedReview && (
+      <ReviewDetail
+        review={selectedReview}
+        onClose={() => setSelectedReview(null)}
+      />
+)}
     </div>
   )
 }

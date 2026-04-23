@@ -81,6 +81,26 @@
     }
   },
   "dashboard": {
+    "insights": {
+      "label": "BUSINESS INSIGHTS",
+      "periods": {
+        "30d": "Last 30 days",
+        "90d": "Last 3 months",
+        "6m": "Last 6 months",
+        "all": "All time"
+      },
+      "emptyTitle": "No insights yet",
+      "emptyBody": "Insights will appear here once your reviews are synced from Google.",
+      "viewFull": "View full insights →",
+      "strengths": "What's working",
+      "weaknesses": "Needs attention",
+      "avgRating": "Avg. rating",
+      "reviewCount": "Reviews",
+      "summaryTitle": "Summary",
+      "emptyStrengths": "Strengths will appear once reviews are synced.",
+      "emptyWeaknesses": "Improvements will appear once reviews are synced.",
+      "emptySummary": "AI summary will appear once reviews are synced."
+    },
     "planTier": {
       "starter":  "Starter",
       "pro":      "Pro",
@@ -93,6 +113,16 @@
         "pending": "Pending",
         "responded": "Responded",
         "ignored": "Ignored"
+      },
+      "detail": {
+        "aiDraft": "AI Draft",
+        "aiDraftPlaceholder": "AI draft will appear here once Google Reviews is connected.",
+        "yourReply": "Your Reply",
+        "replyPlaceholder": "Write or edit your response...",
+        "approve": "Approve & Send",
+        "ignore": "Ignore",
+        "close": "Close",
+        "alreadyResponded": "Response sent"
       },
       "empty": "No reviews in this category.",
       "respond": "Respond",
