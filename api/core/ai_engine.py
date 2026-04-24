@@ -19,14 +19,16 @@ import logging
 from typing import Optional
 from openai import AsyncOpenAI
 import google.generativeai as genai
+import anthropic
 
 logger = logging.getLogger(__name__)
 
 # ─── Provider config ──────────────────────────────────────────────────────────
 # Set AI_PROVIDER=openai or AI_PROVIDER=gemini in your .env file
-AI_PROVIDER  = os.getenv("AI_PROVIDER", "openai")
+AI_PROVIDER = os.getenv("AI_PROVIDER", "claude")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
 
 
 class AIEngine:
@@ -45,8 +47,12 @@ class AIEngine:
         elif self.provider == "gemini":
             genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
             self._gemini = genai.GenerativeModel(GEMINI_MODEL)
+        elif self.provider == "claude":
+            self._claude = anthropic.AsyncAnthropic(
+                api_key=os.getenv("ANTHROPIC_API_KEY")
+            )
         else:
-            raise ValueError(f"Unknown AI_PROVIDER: {self.provider}. Use 'openai' or 'gemini'.")
+            raise ValueError(f"Unknown AI_PROVIDER: {self.provider}. Use 'openai', 'gemini', or 'claude'.")
 
         logger.info(f"AI engine initialised — provider: {self.provider}")
 
@@ -75,6 +81,8 @@ class AIEngine:
                 return await self._generate_openai(prompt, system_prompt, max_tokens, temperature)
             elif self.provider == "gemini":
                 return await self._generate_gemini(prompt, system_prompt, max_tokens, temperature)
+            elif self.provider == "claude":
+                return await self._generate_claude(prompt, system_prompt, max_tokens, temperature)
         except Exception as e:
             logger.error(f"AI generation failed [{self.provider}]: {e}")
             raise
@@ -109,7 +117,18 @@ class AIEngine:
             ),
         )
         return response.text.strip()
-
+    # ─── Claude implementation ─────────────────────────────────────────────────
+    async def _generate_claude(
+        self, prompt: str, system_prompt: Optional[str], max_tokens: int, temperature: float
+    ) -> str:
+        messages = [{"role": "user", "content": prompt}]
+        response = await self._claude.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=max_tokens,
+            system=system_prompt or "",
+            messages=messages,
+        )
+        return response.content[0].text.strip()
 
 # ─── Singleton instance (like a registered DI service) ───────────────────────
 # Import this in your route handlers: from core.ai_engine import ai_engine

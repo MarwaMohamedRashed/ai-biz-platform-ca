@@ -3,7 +3,9 @@ AI Business Platform — FastAPI Backend
 Entry point: uvicorn main:app --reload
 Auto-generated docs: http://localhost:8000/docs  (like Swagger in ASP.NET)
 """
+from dotenv import load_dotenv
 
+load_dotenv()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -11,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from reviews.router import router as reviews_router
 from bookings.router import router as bookings_router
 from startup.router import router as startup_router
+
 
 app = FastAPI(
     title="AI Business Platform API",

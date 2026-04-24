@@ -55,18 +55,17 @@ async def get_business_by_user(user_id: str) -> dict | None:
     return result.data
 
 
-async def get_active_subscription(business_id: str, product: str) -> dict | None:
+async def get_active_subscription(business_id: str) -> dict | None:
     """
-    Check if a business has an active subscription to a product.
-    product: 'reviews' | 'bookings' | 'startup'
+    Check if a business has an active subscription.
+    Bundled tier model — any active/trialing subscription grants access.
     """
     result = (
         supabase_admin.table("subscriptions")
         .select("*")
         .eq("business_id", business_id)
-        .eq("product", product)
-        .eq("status", "active")
-        .single()
+        .in_("status", ["trialing", "active"])
+        .limit(1)
         .execute()
     )
-    return result.data
+    return result.data[0] if result.data else None

@@ -52,7 +52,7 @@ async def list_reviews(
         raise HTTPException(status_code=404, detail="Business profile not found")
 
     # Check subscription is active
-    subscription = await get_active_subscription(business["id"], "reviews")
+    subscription = await get_active_subscription(business["id"])
     if not subscription:
         raise HTTPException(status_code=403, detail="No active review responder subscription")
 
