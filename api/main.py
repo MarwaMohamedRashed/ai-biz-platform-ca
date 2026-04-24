@@ -4,8 +4,8 @@ Entry point: uvicorn main:app --reload
 Auto-generated docs: http://localhost:8000/docs  (like Swagger in ASP.NET)
 """
 from dotenv import load_dotenv
-
 load_dotenv()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -45,7 +45,6 @@ app.include_router(startup_router,  prefix="/api/v1/startup",  tags=["startup"])
 async def health_check():
     """Railway and Vercel use this to confirm the service is running."""
     return {"status": "ok", "service": "ai-biz-platform-api"}
-
 
 # ─── Run directly (development only) ─────────────────────────────────────────
 if __name__ == "__main__":

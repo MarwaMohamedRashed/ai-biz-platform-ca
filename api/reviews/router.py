@@ -17,6 +17,8 @@ from pydantic import BaseModel
 from core.auth import get_current_user
 from core.database import supabase_admin, get_business_by_user, get_active_subscription
 from core.ai_engine import generate_review_response
+import logging
+logger = logging.getLogger(__name__)
 
 # ─── Router (equivalent to [ApiController] + [Route("api/v1/reviews")] in C#) ─
 router = APIRouter()
@@ -95,13 +97,25 @@ async def generate_response(
 
     review = review_result.data
 
-    # Call AI engine (never call OpenAI directly — always go through ai_engine)
+      # Fetch business settings (falls back to defaults if no row exists)
+    settings_result = (
+        supabase_admin.table("business_settings")
+        .select("*")
+        .eq("business_id", business["id"])
+        .limit(1)
+        .execute()
+    )
+    settings = settings_result.data[0] if settings_result.data else {}
+
+    # Call AI engine with full context
     ai_draft = await generate_review_response(
         review_text=review["text"],
         reviewer_name=review["author"],
         rating=review["rating"],
         business_name=business["name"],
         business_type=business["type"],
+        business_settings=settings,
+        review_date=review.get("review_date"),
     )
 
     # Save the draft to the database
@@ -113,6 +127,133 @@ async def generate_response(
 
     return {"ai_draft": ai_draft, "review_id": request.review_id}
 
+class RegenerateRequest(BaseModel):
+    review_id: str
+    instructions: str  # e.g. "Make it shorter", "Be more apologetic"
+
+
+@router.post("/regenerate-response")
+async def regenerate_response(
+    request: RegenerateRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    POST /api/v1/reviews/regenerate-response
+    Re-generates the AI draft using additional instructions from the owner.
+    """
+    business = await get_business_by_user(current_user["id"])
+    if not business:
+        raise HTTPException(status_code=404, detail="Business profile not found")
+
+    review_result = (
+        supabase_admin.table("reviews")
+        .select("*")
+        .eq("id", request.review_id)
+        .eq("business_id", business["id"])
+        .single()
+        .execute()
+    )
+    if not review_result.data:
+        raise HTTPException(status_code=404, detail="Review not found")
+
+    review = review_result.data
+
+    settings_result = (
+        supabase_admin.table("business_settings")
+        .select("*")
+        .eq("business_id", business["id"])
+        .limit(1)
+        .execute()
+    )
+    settings = settings_result.data[0] if settings_result.data else {}
+
+    # Append owner instructions to the review text context
+    enriched_text = f"{review['text']}\n\nOwner instruction: {request.instructions}"
+
+    ai_draft = await generate_review_response(
+        review_text=enriched_text,
+        reviewer_name=review["author"],
+        rating=review["rating"],
+        business_name=business["name"],
+        business_type=business["type"],
+        business_settings=settings,
+        review_date=review.get("review_date"),
+    )
+
+    supabase_admin.table("review_responses").upsert({
+        "review_id": request.review_id,
+        "ai_draft":  ai_draft,
+        "status":    "draft",
+    }).execute()
+
+    return {"ai_draft": ai_draft, "review_id": request.review_id}
+
+@router.post("/auto-draft-all")
+async def auto_draft_all(
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    POST /api/v1/reviews/auto-draft-all
+    Generates AI drafts for all pending reviews that don't have one yet.
+    Called on app load or on a schedule — owner then approves from the queue.
+    """
+    business = await get_business_by_user(current_user["id"])
+    if not business:
+        raise HTTPException(status_code=404, detail="Business profile not found")
+
+    subscription = await get_active_subscription(business["id"])
+    if not subscription:
+        raise HTTPException(status_code=403, detail="No active subscription")
+
+    settings_result = (
+        supabase_admin.table("business_settings")
+        .select("*")
+        .eq("business_id", business["id"])
+        .limit(1)
+        .execute()
+    )
+    settings = settings_result.data[0] if settings_result.data else {}
+
+    if not settings.get("auto_draft_enabled", True):
+        return {"message": "Auto-draft is disabled for this business", "drafted": 0}
+
+    # Fetch pending reviews that have no draft yet
+    reviews_result = (
+        supabase_admin.table("reviews")
+        .select("*, review_responses(*)")
+        .eq("business_id", business["id"])
+        .eq("status", "pending")
+        .execute()
+    )
+
+    pending = [
+        r for r in (reviews_result.data or [])
+        if not r.get("review_responses")
+    ]
+
+    drafted = 0
+    for review in pending:
+        try:
+            ai_draft = await generate_review_response(
+                review_text=review["text"],
+                reviewer_name=review["author"],
+                rating=review["rating"],
+                business_name=business["name"],
+                business_type=business["type"],
+                business_settings=settings,
+                review_date=review.get("review_date"),
+            )
+            supabase_admin.table("review_responses").upsert({
+                "review_id": review["id"],
+                "ai_draft":  ai_draft,
+                "status":    "draft",
+            }).execute()
+            drafted += 1
+        except Exception as e:
+            logger.error(f"Failed to draft review {review['id']}: {e}")
+            continue
+
+    return {"message": f"Drafted {drafted} reviews", "drafted": drafted}
 
 @router.post("/responses/{review_id}/approve")
 async def approve_response(

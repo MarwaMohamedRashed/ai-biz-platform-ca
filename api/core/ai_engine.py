@@ -161,24 +161,100 @@ async def generate_review_response(
     rating: int,
     business_name: str,
     business_type: str,
+    business_settings: dict = None,
+    review_date: str = None,
 ) -> str:
-    """Phase 1: Generate a response to a Google review."""
-    sentiment = "positive" if rating >= 4 else "negative" if rating <= 2 else "mixed"
-    prompt = f"""
-Business: {business_name} ({business_type})
-Reviewer: {reviewer_name}
+    """Generate a response to a Google review using business settings."""
+
+    settings = business_settings or {}
+    tone        = settings.get('tone_preference', 'casual')
+    language    = settings.get('response_language', 'match_reviewer')
+    length      = settings.get('response_length', 'medium')
+    cta_on      = settings.get('cta_enabled', True)
+    cta_custom  = settings.get('cta_custom_text', '')
+    delay_on    = settings.get('delay_acknowledgment', False)
+    description = settings.get('business_description', '')
+
+    # ── Tone instruction ──────────────────────────────────────────────────────
+    tone_map = {
+        'casual':       'Write in a warm, friendly, conversational tone.',
+        'professional': 'Write in a formal, polished, professional tone.',
+        'playful':      'Write in a fun, energetic tone with light humour where appropriate.',
+    }
+    tone_instruction = tone_map.get(tone, tone_map['casual'])
+
+    # ── Length instruction ────────────────────────────────────────────────────
+    length_map = {
+        'short':  'Keep the response under 75 words.',
+        'medium': 'Keep the response between 75 and 150 words.',
+        'long':   'Write a thorough response of 150 to 250 words.',
+    }
+    length_instruction = length_map.get(length, length_map['medium'])
+
+    # ── Language instruction ──────────────────────────────────────────────────
+    language_map = {
+        'match_reviewer': 'Detect the language of the review and respond in the same language.',
+        'english':        'Always respond in English.',
+        'french':         'Always respond in French.',
+        'both':           'Respond in both English and French, English first.',
+    }
+    language_instruction = language_map.get(language, language_map['match_reviewer'])
+
+    # ── Delay acknowledgment ──────────────────────────────────────────────────
+    delay_instruction = ''
+    if delay_on and review_date:
+        from datetime import datetime, timezone
+        try:
+            reviewed_at = datetime.fromisoformat(review_date.replace('Z', '+00:00'))
+            days_old = (datetime.now(timezone.utc) - reviewed_at).days
+            if days_old > 3:
+                delay_instruction = f'This review is {days_old} days old. Begin with a brief, sincere apology for the delayed response.'
+        except Exception:
+            pass
+
+    # ── CTA instruction ───────────────────────────────────────────────────────
+    cta_instruction = ''
+    if cta_on:
+        if cta_custom:
+            cta_instruction = f'End with this call to action: "{cta_custom}"'
+        elif rating >= 4:
+            cta_instruction = 'End with a warm invitation to return and a subtle suggestion to share the experience with friends or family.'
+        elif rating == 3:
+            cta_instruction = 'End with a genuine invitation to return, expressing that you would love the chance to earn their full satisfaction.'
+        else:
+            cta_instruction = 'End with a direct and sincere invitation to contact the business to resolve their concerns.'
+
+    # ── Build system prompt ───────────────────────────────────────────────────
+    system_prompt = f"""You are a customer service specialist writing Google review responses 
+on behalf of {business_name}, a {business_type} in Canada.
+
+{f'About the business: {description}' if description else ''}
+
+Rules:
+- {tone_instruction}
+- {length_instruction}
+- {language_instruction}
+- Always thank the reviewer by name if provided.
+- Never be defensive. Acknowledge concerns with empathy.
+- Never make specific legal or financial promises.
+- Use Canadian spelling (e.g. colour, centre, apologise).
+{f'- {delay_instruction}' if delay_instruction else ''}
+{f'- {cta_instruction}' if cta_instruction else ''}"""
+
+    # ── Build prompt ──────────────────────────────────────────────────────────
+    sentiment = 'positive' if rating >= 4 else 'negative' if rating <= 2 else 'mixed'
+    prompt = f"""Reviewer: {reviewer_name or 'a customer'}
 Rating: {rating}/5 stars ({sentiment})
 Review: {review_text}
 
-Write a professional response to this review on behalf of {business_name}.
-"""
+Write a response on behalf of {business_name}."""
+
     return await ai_engine.generate(
         prompt=prompt,
-        system_prompt=REVIEW_SYSTEM_PROMPT,
-        max_tokens=200,
+        system_prompt=system_prompt,
+        max_tokens=300,
         temperature=0.7,
     )
-
 
 async def generate_booking_reply(
     customer_message: str,
