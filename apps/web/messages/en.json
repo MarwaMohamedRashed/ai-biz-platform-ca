@@ -122,7 +122,10 @@
         "approve": "Approve & Send",
         "ignore": "Ignore",
         "close": "Close",
-        "alreadyResponded": "Response sent"
+        "alreadyResponded": "Response sent",
+        "generating": "Generating draft…",
+        "regenerate": "Regenerate",
+        "regeneratePlaceholder": "e.g. Make it shorter, be more apologetic"
       },
       "empty": "No reviews in this category.",
       "respond": "Respond",

@@ -1,11 +1,13 @@
 'use client'
-
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase'
 import { useTranslations, useLocale } from 'next-intl'
 import ReviewDetail from '@/components/dashboard/ReviewDetail'
 
 type ReviewResponse = {
   id: string
+  ai_draft: string | null
   final_response: string | null
   status: string
 }
@@ -44,6 +46,23 @@ export default function ReviewsList({ reviews }: { reviews: Review[] }) {
   const [activeTab, setActiveTab] = useState<Tab>('all')
   const [selectedReview, setSelectedReview] = useState<Review | null>(null)
   const locale = useLocale()
+
+  const router = useRouter()
+
+  useEffect(() => {
+    const hasPending = reviews.some(r => r.status === 'pending')
+    if (!hasPending) return
+
+    async function autoDraft() {
+      const { data: { session } } = await createClient().auth.getSession()
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/reviews/auto-draft-all`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session?.access_token}` },
+      })
+      router.refresh()
+    }
+    autoDraft()
+  }, [])
 
   function formatDate(dateStr: string) {
     const date = new Date(dateStr)

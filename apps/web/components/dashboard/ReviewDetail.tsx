@@ -1,10 +1,12 @@
 'use client'
-
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase'
 import { useTranslations, useLocale } from 'next-intl'
 
 type ReviewResponse = {
   id: string
+  ai_draft: string | null
   final_response: string | null
   status: string
 }
@@ -45,7 +47,71 @@ export default function ReviewDetail({ review, onClose }: Props) {
   const locale = useLocale()
   const existingResponse = review.review_responses?.[0]?.final_response ?? ''
   const [reply, setReply] = useState(existingResponse)
+  const router = useRouter()
+  const [aiDraft, setAiDraft]           = useState<string | null>(review.review_responses?.[0]?.ai_draft ?? null)
+  const [draftLoading, setDraftLoading] = useState(false)
+  const [instructions, setInstructions] = useState('')
+  const [regenLoading, setRegenLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  async function apiCall(path: string, body: object) {
+    const { data: { session } } = await createClient().auth.getSession()
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session?.access_token}`,
+      },
+      body: JSON.stringify(body),
+    })
+    return res.json()
+  }
 
+  useEffect(() => {
+    if (review.status !== 'pending' || aiDraft) return
+    setDraftLoading(true)
+    apiCall('/api/v1/reviews/generate-response', { review_id: review.id })
+      .then(data => {
+        if (data.ai_draft) {
+          setAiDraft(data.ai_draft)
+          setReply(data.ai_draft)
+        }
+      })
+      .finally(() => setDraftLoading(false))
+  }, [review.id])
+
+  async function handleRegenerate() {
+    if (!instructions.trim()) return
+    setRegenLoading(true)
+    const data = await apiCall('/api/v1/reviews/regenerate-response', {
+      review_id: review.id,
+      instructions,
+    })
+    if (data.ai_draft) {
+      setAiDraft(data.ai_draft)
+      setReply(data.ai_draft)
+      setInstructions('')
+    }
+    setRegenLoading(false)
+  }
+
+  async function handleApprove() {
+    if (!reply.trim()) return
+    setIsSubmitting(true)
+    await apiCall(`/api/v1/reviews/responses/${review.id}/approve`, {
+      review_id: review.id,
+      final_response: reply,
+    })
+    setIsSubmitting(false)
+    router.refresh()
+    onClose()
+  }
+
+  async function handleIgnore() {
+    const supabase = createClient()
+    await supabase.from('reviews').update({ status: 'ignored' }).eq('id', review.id)
+    router.refresh()
+    onClose()
+  }
   const initial = (review.author ?? '?')[0].toUpperCase()
 
   function formatDate(dateStr: string) {
@@ -114,8 +180,36 @@ export default function ReviewDetail({ review, onClose }: Props) {
           <div>
             <p className="text-xs font-bold text-[#4f46e5] mb-2">✦ {t('detail.aiDraft')}</p>
             <div className="bg-indigo-50 rounded-xl px-3 py-2.5 border border-indigo-100">
-              <p className="text-xs text-slate-500 italic">{t('detail.aiDraftPlaceholder')}</p>
+              {draftLoading ? (
+                <p className="text-xs text-indigo-400 italic">{t('detail.generating')}</p>
+              ) : aiDraft ? (
+                <p className="text-xs text-slate-700 leading-relaxed">{aiDraft}</p>
+              ) : (
+                <p className="text-xs text-slate-500 italic">{t('detail.aiDraftPlaceholder')}</p>
+              )}
             </div>
+
+            {/* Regenerate row — only when a draft exists */}
+            {aiDraft && !draftLoading && review.status === 'pending' && (
+              <div className="mt-2 flex gap-2">
+                <input
+                  type="text"
+                  value={instructions}
+                  onChange={e => setInstructions(e.target.value)}
+                  placeholder={t('detail.regeneratePlaceholder')}
+                  className="flex-1 px-3 py-1.5 border border-slate-200 rounded-lg text-xs
+                            focus:outline-none focus:border-[#4f46e5] transition-colors"
+                />
+                <button
+                  onClick={handleRegenerate}
+                  disabled={regenLoading || !instructions.trim()}
+                  className="px-3 py-1.5 bg-indigo-100 text-[#4f46e5] text-xs font-semibold
+                            rounded-lg hover:bg-indigo-200 transition-colors disabled:opacity-50"
+                >
+                  {regenLoading ? '…' : t('detail.regenerate')}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Reply box */}
@@ -146,16 +240,17 @@ export default function ReviewDetail({ review, onClose }: Props) {
         {review.status === 'pending' && (
           <div className="flex gap-2 px-4 py-3 border-t border-slate-100 flex-shrink-0">
             <button
+              onClick={handleApprove}
+              disabled={!reply.trim() || isSubmitting}
               className="flex-1 py-2.5 bg-[#4f46e5] text-white text-xs font-semibold
-                         rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50"
-              disabled={!reply.trim()}
+                        rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50"
             >
-              {t('detail.approve')}
+              {isSubmitting ? '…' : t('detail.approve')}
             </button>
             <button
-              onClick={onClose}
+              onClick={handleIgnore}
               className="px-4 py-2.5 bg-slate-100 text-slate-600 text-xs font-semibold
-                         rounded-xl hover:bg-slate-200 transition-colors">
+                        rounded-xl hover:bg-slate-200 transition-colors">
               {t('detail.ignore')}
             </button>
           </div>

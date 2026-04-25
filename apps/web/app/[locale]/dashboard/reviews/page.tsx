@@ -22,7 +22,7 @@ export default async function ReviewsPage() {
     .from('reviews')
     .select(`
       id, author, rating, text, review_date, status,
-      review_responses ( id, final_response, status )
+      review_responses ( id, ai_draft, final_response, status )
     `)
     .order('review_date', { ascending: false })
 

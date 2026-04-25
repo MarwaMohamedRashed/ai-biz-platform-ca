@@ -122,7 +122,10 @@
         "approve": "Approuver et envoyer",
         "ignore": "Ignorer",
         "close": "Fermer",
-        "alreadyResponded": "Réponse envoyée"
+        "alreadyResponded": "Réponse envoyée",
+        "generating": "Génération en cours…",
+        "regenerate": "Régénérer",
+        "regeneratePlaceholder": "Ex. : Raccourcir, être plus conciliant"
       },
       "empty": "Aucun avis dans cette catégorie.",
       "respond": "Répondre",
