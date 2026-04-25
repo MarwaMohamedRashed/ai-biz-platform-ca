@@ -76,24 +76,29 @@ export default function ReviewDetail({ review, onClose }: Props) {
           setReply(data.ai_draft)
         }
       })
+      .catch(() => setAiDraft(null))
       .finally(() => setDraftLoading(false))
   }, [review.id])
 
   async function handleRegenerate() {
     if (!instructions.trim()) return
     setRegenLoading(true)
-    const data = await apiCall('/api/v1/reviews/regenerate-response', {
-      review_id: review.id,
-      instructions,
-    })
-    if (data.ai_draft) {
-      setAiDraft(data.ai_draft)
-      setReply(data.ai_draft)
-      setInstructions('')
+    try {
+      const data = await apiCall('/api/v1/reviews/regenerate-response', {
+        review_id: review.id,
+        instructions,
+      })
+      if (data?.ai_draft) {
+        setAiDraft(data.ai_draft)
+        setReply(data.ai_draft)
+        setInstructions('')
+      }
+    } catch {
+      // network error — keep existing draft
+    } finally {
+      setRegenLoading(false)
     }
-    setRegenLoading(false)
   }
-
   async function handleApprove() {
     if (!reply.trim()) return
     setIsSubmitting(true)
