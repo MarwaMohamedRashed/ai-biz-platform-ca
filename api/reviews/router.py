@@ -123,7 +123,7 @@ async def generate_response(
         "review_id":  request.review_id,
         "ai_draft":   ai_draft,
         "status":     "draft",
-    }).execute()
+    }, on_conflict="review_id").execute()
 
     return {"ai_draft": ai_draft, "review_id": request.review_id}
 
@@ -184,7 +184,7 @@ async def regenerate_response(
         "review_id": request.review_id,
         "ai_draft":  ai_draft,
         "status":    "draft",
-    }).execute()
+    }, on_conflict="review_id").execute()
 
     return {"ai_draft": ai_draft, "review_id": request.review_id}
 
@@ -247,7 +247,7 @@ async def auto_draft_all(
                 "review_id": review["id"],
                 "ai_draft":  ai_draft,
                 "status":    "draft",
-            }).execute()
+            }, on_conflict="review_id").execute()
             drafted += 1
         except Exception as e:
             logger.error(f"Failed to draft review {review['id']}: {e}")

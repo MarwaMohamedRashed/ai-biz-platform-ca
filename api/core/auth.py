@@ -17,9 +17,12 @@ How it works:
 """
 
 import os
+import logging
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from supabase import create_client
+
+logger = logging.getLogger(__name__)
 
 SUPABASE_URL      = os.getenv("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
@@ -34,15 +37,6 @@ async def get_current_user(
     """
     Validates the JWT token from the request header.
     Use as a dependency in any route that requires authentication.
-
-    C#/.NET equivalent:
-        [Authorize]
-        public IActionResult MyEndpoint() { var user = User; }
-
-    FastAPI equivalent:
-        @router.get("/my-endpoint")
-        async def my_endpoint(current_user = Depends(get_current_user)):
-            user_id = current_user["id"]
     """
     token = credentials.credentials
 
@@ -61,7 +55,10 @@ async def get_current_user(
             "email": user_response.user.email,
         }
 
-    except Exception:
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Auth validation error: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
