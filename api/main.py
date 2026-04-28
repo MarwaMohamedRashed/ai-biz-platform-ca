@@ -13,7 +13,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from reviews.router import router as reviews_router
 from bookings.router import router as bookings_router
 from startup.router import router as startup_router
-
+from insights.router import router as insights_router
+from settings.router import router as settings_router
 
 app = FastAPI(
     title="AI Business Platform API",
@@ -38,6 +39,8 @@ app.add_middleware(
 app.include_router(reviews_router,  prefix="/api/v1/reviews",  tags=["reviews"])
 app.include_router(bookings_router, prefix="/api/v1/bookings", tags=["bookings"])
 app.include_router(startup_router,  prefix="/api/v1/startup",  tags=["startup"])
+app.include_router(insights_router,  prefix="/api/v1/insights",  tags=["insights"])
+app.include_router(settings_router,  prefix="/api/v1/settings",  tags=["settings"])
 
 
 # ─── Health check ─────────────────────────────────────────────────────────────

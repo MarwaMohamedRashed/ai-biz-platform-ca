@@ -216,7 +216,7 @@ async def generate_review_response(
     cta_instruction = ''
     if cta_on:
         if cta_custom:
-            cta_instruction = f'End with this call to action: "{cta_custom}"'
+            cta_instruction = f'Additional instruction: {cta_custom}'
         elif rating >= 4:
             cta_instruction = 'End with a warm invitation to return and a subtle suggestion to share the experience with friends or family.'
         elif rating == 3:
@@ -284,3 +284,49 @@ Reply to continue booking the appointment.
         max_tokens=120,
         temperature=0.5,
     )
+
+async def generate_insights(
+    reviews: list[dict],
+    business_name: str,
+    business_type: str,
+    language: str,
+) -> dict:
+    """Analyse a list of reviews and return structured insights as a dict."""
+
+    if not reviews:
+        return {"strengths": [], "weaknesses": [], "summary": "", "sentiment_score": 0.0}
+
+    reviews_text = "\n".join([
+        f"- {r.get('rating', '?')}/5 stars: {r.get('text', '')}"
+        for r in reviews[:50]
+    ])
+        #Map Language to the one supported by the AI engine (en → English, fr → French, es → Spanish, etc.)
+    language_names = {
+    'fr': 'French',
+    'en': 'English',
+    }
+    language_label = language_names.get(language, 'English')
+
+    prompt = f"""Analyse these Google reviews for {business_name} ({business_type}) and return a JSON object with exactly these keys:
+- "strengths": array of 3-5 short phrases (what customers consistently praise)
+- "weaknesses": array of 2-4 short phrases (what customers consistently criticise)
+- "summary": 2-3 sentence plain-language summary for the business owner
+- "sentiment_score": float from -1.0 (very negative) to 1.0 (very positive)
+
+Reviews:
+{reviews_text}
+Respond entirely in {language_label}.
+Return ONLY valid JSON, no extra text."""
+
+    system = "You are a business analyst. Return only valid JSON with no markdown formatting."
+
+    raw = await ai_engine.generate(
+        prompt=prompt,
+        system_prompt=system,
+        max_tokens=600,
+        temperature=0.3,
+    )
+
+    import json, re
+    cleaned = re.sub(r'^```(?:json)?\s*|\s*```$', '', raw.strip(), flags=re.MULTILINE)
+    return json.loads(cleaned)

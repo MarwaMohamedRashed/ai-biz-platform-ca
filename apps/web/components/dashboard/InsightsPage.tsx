@@ -1,15 +1,60 @@
 'use client'
-
-import { useState } from 'react'
-import { useTranslations } from 'next-intl'
+import { useEffect, useState } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
+import { createClient } from '@/lib/supabase'
 
 type Period = '30d' | '90d' | '6m' | 'all'
 
 export default function InsightsPage() {
   const t = useTranslations('dashboard.insights')
   const [period, setPeriod] = useState<Period>('30d')
+  const locale = useLocale()
 
   const periods: Period[] = ['30d', '90d', '6m', 'all']
+  const [avgRating, setAvgRating] = useState<number | null>(null)
+  const [reviewCount, setReviewCount] = useState<number | null>(null)
+  const [strengths, setStrengths] = useState<string[]>([])
+  const [summary, setSummary] = useState<string>('')
+  const [weaknesses, setWeaknesses] = useState<string[]>([])
+  const [draftLoading, setDraftLoading] = useState(false)
+
+ 
+  async function apiCall(path: string, body: object) {
+      const { data: { session } } = await createClient().auth.getSession()
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${path}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify(body),
+      })
+      return res.json()
+    }
+      useEffect(() => {
+      setDraftLoading(true)
+      apiCall('/api/v1/insights/generate-insights', { period: period, language: locale })
+        .then(data => {
+          //ai_result , "review_count": review_count, "avg_rating": avg_rating
+          //Store the response in state: avgRating, reviewCount, strengths, weaknesses, summary, loading
+          if (data.insights) {
+
+            setStrengths(data.insights.strengths || [])
+            setWeaknesses(data.insights.weaknesses || [])
+            setSummary(data.insights.summary || '') 
+          }
+          if (data.avg_rating) setAvgRating(data.avg_rating)
+          if (data.review_count) setReviewCount(data.review_count)
+        })
+        .catch(() => {
+          setStrengths([])
+          setWeaknesses([])
+          setSummary('')
+          setAvgRating(null)
+          setReviewCount(null)
+        })
+        .finally(() => setDraftLoading(false))
+    }, [period])
 
   return (
     <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4">
@@ -32,11 +77,11 @@ export default function InsightsPage() {
       <div className="grid grid-cols-2 gap-3 mb-6">
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-3 text-center">
           <p className="text-xs text-slate-400 mb-1">{t('avgRating')}</p>
-          <p className="text-2xl font-bold text-[#f97316]">—</p>
+          <p className="text-2xl font-bold text-[#1e293b]">{draftLoading ? '…' : (avgRating ?? '—')}</p>
         </div>
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-3 text-center">
           <p className="text-xs text-slate-400 mb-1">{t('reviewCount')}</p>
-          <p className="text-2xl font-bold text-[#1e293b]">—</p>
+          <p className="text-2xl font-bold text-[#1e293b]">{draftLoading ? '…' : (reviewCount ?? '—')}</p>
         </div>
       </div>
 
@@ -44,13 +89,25 @@ export default function InsightsPage() {
       <div className="grid md:grid-cols-2 gap-4 mb-6">
 
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-          <p className="text-xs font-bold text-green-600 mb-3">✓ {t('strengths')}</p>
-          <p className="text-xs text-slate-400 italic">{t('emptyStrengths')}</p>
+          <p className="text-sm font-semibold text-green-600 mb-3">✓ {t('strengths')}</p>
+          {strengths.length > 0 ? (
+            <ul className="text-sm text-slate-700 list-disc list-outside pl-4 space-y-1">
+              {strengths.map((strength, i) => <li key={i}>{strength}</li>)}
+            </ul>
+          ) : (
+            <p className="text-xs text-slate-400 italic">{t('emptyStrengths')}</p>
+          )}
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-          <p className="text-xs font-bold text-rose-500 mb-3">✗ {t('weaknesses')}</p>
-          <p className="text-xs text-slate-400 italic">{t('emptyWeaknesses')}</p>
+          <p className="text-sm font-semibold text-rose-500 mb-3">✗ {t('weaknesses')}</p>
+           {weaknesses.length > 0 ? (
+            <ul className="text-sm text-slate-700 list-disc list-outside pl-4 space-y-1">
+              {weaknesses.map((weakness, i) => <li key={i}>{weakness}</li>)}
+            </ul>
+          ) : (
+            <p className="text-xs text-slate-400 italic">{t('emptyWeaknesses')}</p>
+          )}
         </div>
 
       </div>
@@ -58,7 +115,9 @@ export default function InsightsPage() {
       {/* Summary */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
         <p className="text-xs font-bold text-[#1e293b] mb-2">{t('summaryTitle')}</p>
-        <p className="text-xs text-slate-400 italic">{t('emptySummary')}</p>
+        <p className={`${summary ? 'text-sm text-slate-700' : 'text-xs text-slate-400 italic'}`}>
+          {summary || t('emptySummary')}
+        </p>
       </div>
 
     </div>

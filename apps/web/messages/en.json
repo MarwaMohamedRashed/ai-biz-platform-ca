@@ -141,11 +141,49 @@
       "anonymous": "Anonymous",
       "yourResponse": "Your response"
     },
+    "settings": {
+      "title": "Settings",
+      "toneLabel": "Response Tone",
+      "toneOptions": {
+        "casual": "Casual & Friendly",
+        "professional": "Professional",
+        "playful": "Playful & Fun"
+      },
+      "languageLabel": "Response Language",
+      "languageOptions": {
+        "match_reviewer": "Match reviewer's language",
+        "english": "Always English",
+        "french": "Always French",
+        "both": "Both English & French"
+      },
+      "lengthLabel": "Response Length",
+      "lengthOptions": {
+        "short": "Short (under 75 words)",
+        "medium": "Medium (75–150 words)",
+        "long": "Long (150–250 words)"
+      },
+      "descriptionLabel": "Business Description",
+      "descriptionPlaceholder": "Tell the AI about your business — specialties, values, what makes you unique...",
+      "autoDraftLabel": "Auto-draft responses when reviews arrive",
+      "autoDraftHint": "The AI prepares a draft response as soon as a review arrives, ready for your approval.",
+      "ctaCustomLabel": "Custom instructions",
+      "ctaCustomPlaceholder": "e.g. Mention our loyalty program, or invite customers to book online at leapone.ca",
+      "ctaCustomHint": "Optional guidance the AI uses when writing responses — it will weave it in naturally.",
+      "ctaEnabledLabel": "Include a closing invitation at the end of responses",
+      "ctaEnabledHint": "Adds an encouraging final sentence inviting the customer to return or share their experience.",
+      "delayLabel": "Acknowledge when responding to old reviews (3+ days)",
+      "delayHint": "If a review is more than 3 days old, the AI will open with a brief apology for the delayed response.",
+      "save": "Save Settings",
+      "saving": "Saving…",
+      "saved": "Settings saved",
+      "errorSave": "Failed to save settings"
+    },
     "nav": {
       "chat": "Chat",
       "reviews": "Reviews",
       "bookings": "Bookings",
-      "guide": "Guide"
+      "guide": "Guide",
+      "settings": "Settings"
     },
     "planStatus": {
       "trialing": "Free Trial",

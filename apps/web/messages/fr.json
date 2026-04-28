@@ -141,11 +141,49 @@
       "anonymous": "Anonyme",
       "yourResponse": "Votre réponse"
     },
+    "settings": {
+      "title": "Paramètres",
+      "toneLabel": "Ton des réponses",
+      "toneOptions": {
+        "casual": "Décontracté et amical",
+        "professional": "Professionnel",
+        "playful": "Enjoué et amusant"
+      },
+      "languageLabel": "Langue des réponses",
+      "languageOptions": {
+        "match_reviewer": "Même langue que l'avis",
+        "english": "Toujours en anglais",
+        "french": "Toujours en français",
+        "both": "Anglais et français"
+      },
+      "lengthLabel": "Longueur des réponses",
+      "lengthOptions": {
+        "short": "Courte (moins de 75 mots)",
+        "medium": "Moyenne (75–150 mots)",
+        "long": "Longue (150–250 mots)"
+      },
+      "descriptionLabel": "Description de l'entreprise",
+      "descriptionPlaceholder": "Décrivez votre entreprise à l'IA — spécialités, valeurs, ce qui vous distingue...",
+      "autoDraftLabel": "Générer automatiquement les réponses à la réception des avis",
+      "autoDraftHint": "L'IA prépare un brouillon de réponse dès la réception d'un avis, prêt pour votre approbation.",
+      "ctaCustomLabel": "Instructions personnalisées",
+      "ctaCustomPlaceholder": "p. ex. Mentionner notre programme de fidélité, ou inviter à réserver en ligne",
+      "ctaCustomHint": "Indications facultatives que l'IA intègre naturellement dans les réponses.",
+      "ctaEnabledLabel": "Inclure une invitation finale à la fin des réponses",
+      "ctaEnabledHint": "Ajoute une phrase d'encouragement invitant le client à revenir ou à partager son expérience.",
+      "delayLabel": "Reconnaître le délai lors de réponses tardives (3 jours et plus)",
+      "delayHint": "Si un avis a plus de 3 jours, l'IA commencera par une brève excuse pour la réponse tardive.",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saved": "Paramètres enregistrés",
+      "errorSave": "Échec de l'enregistrement"
+    },
     "nav": {
       "chat": "Chat",
       "reviews": "Avis",
       "bookings": "Réservations",
-      "guide": "Guide"
+      "guide": "Guide",
+      "settings": "Paramètres"
     },
     "planStatus": {
       "trialing": "Essai gratuit",
