@@ -53,6 +53,7 @@ export default function ReviewDetail({ review, onClose }: Props) {
   const [instructions, setInstructions] = useState('')
   const [regenLoading, setRegenLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  
   async function apiCall(path: string, body: object) {
     const { data: { session } } = await createClient().auth.getSession()
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${path}`, {
