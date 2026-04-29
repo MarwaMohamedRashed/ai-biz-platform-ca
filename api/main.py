@@ -15,6 +15,7 @@ from bookings.router import router as bookings_router
 from startup.router import router as startup_router
 from insights.router import router as insights_router
 from settings.router import router as settings_router
+from google_auth.router import router as google_auth_router
 
 app = FastAPI(
     title="AI Business Platform API",
@@ -23,11 +24,14 @@ app = FastAPI(
 )
 
 # ─── CORS (equivalent to app.UseCors() in ASP.NET) ───────────────────────────
+import os
+WEB_BASE_URL = os.getenv("WEB_BASE_URL", "http://localhost:3000")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",        # Local Next.js dev
-        "https://your-domain.vercel.app",  # Production frontend
+        "http://localhost:3000",
+        WEB_BASE_URL,
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -41,6 +45,7 @@ app.include_router(bookings_router, prefix="/api/v1/bookings", tags=["bookings"]
 app.include_router(startup_router,  prefix="/api/v1/startup",  tags=["startup"])
 app.include_router(insights_router,  prefix="/api/v1/insights",  tags=["insights"])
 app.include_router(settings_router,  prefix="/api/v1/settings",  tags=["settings"])
+app.include_router(google_auth_router, prefix="/api/v1/google-auth", tags=["google-auth"])
 
 
 # ─── Health check ─────────────────────────────────────────────────────────────
