@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LeapOne — AI Assistant for Canadian Small Businesses</title>
-  <meta name="description" content="LeapOne helps Canadian small businesses save time and look professional with AI-powered tools for review management, appointment booking, and startup guidance." />
+  <title>LeapOne — AI Visibility for Canadian Small Businesses</title>
+  <meta name="description" content="Find out if AI search engines can find your business. LeapOne audits your AI visibility, generates content to fix the gaps, and tracks your progress every month." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -63,10 +63,7 @@
       position: relative;
     }
 
-    .logo-icon svg {
-      width: 22px;
-      height: 22px;
-    }
+    .logo-icon svg { width: 22px; height: 22px; }
 
     .logo-wordmark {
       font-size: 1.25rem;
@@ -129,52 +126,53 @@
       margin: 0 auto 2.5rem;
     }
 
-    .waitlist-form {
+    .hero-cta {
       display: flex;
-      gap: 0.75rem;
+      gap: 1rem;
       justify-content: center;
       flex-wrap: wrap;
-      max-width: 460px;
-      margin: 0 auto;
     }
-
-    .waitlist-form input {
-      flex: 1;
-      min-width: 220px;
-      padding: 0.75rem 1rem;
-      border: 1.5px solid var(--border);
-      border-radius: 10px;
-      font-family: inherit;
-      font-size: 0.9375rem;
-      color: var(--text);
-      background: var(--white);
-      outline: none;
-      transition: border-color 0.15s;
-    }
-
-    .waitlist-form input:focus { border-color: var(--indigo); }
-    .waitlist-form input::placeholder { color: #94a3b8; }
 
     .btn-primary {
-      padding: 0.75rem 1.5rem;
+      padding: 0.875rem 2rem;
       background: var(--indigo);
       color: var(--white);
       border: none;
       border-radius: 10px;
       font-family: inherit;
-      font-size: 0.9375rem;
+      font-size: 1rem;
       font-weight: 600;
       cursor: pointer;
       transition: background 0.15s;
       white-space: nowrap;
+      text-decoration: none;
+      display: inline-block;
     }
 
     .btn-primary:hover { background: var(--indigo-dark); }
 
+    .btn-secondary {
+      padding: 0.875rem 2rem;
+      background: var(--white);
+      color: var(--text);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.15s;
+      white-space: nowrap;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn-secondary:hover { border-color: var(--indigo); color: var(--indigo); }
+
     .hero-note {
       font-size: 0.8125rem;
       color: var(--text-muted);
-      margin-top: 0.875rem;
+      margin-top: 1rem;
     }
 
     /* ── SOCIAL PROOF ── */
@@ -219,7 +217,7 @@
       color: var(--text-muted);
     }
 
-    /* ── HOW IT WORKS ── */
+    /* ── SECTIONS ── */
     .section {
       padding: 5rem 2rem;
       max-width: 1100px;
@@ -255,7 +253,7 @@
     /* ── FEATURES ── */
     .features-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 1.5rem;
     }
 
@@ -286,21 +284,6 @@
     .feature-icon.indigo { background: var(--indigo-light); }
     .feature-icon.orange { background: var(--orange-light); }
 
-    .feature-card .phase-badge {
-      display: inline-block;
-      font-size: 0.6875rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      padding: 0.2rem 0.6rem;
-      border-radius: 100px;
-      margin-bottom: 0.75rem;
-    }
-
-    .phase-badge.p1 { background: #dcfce7; color: #15803d; }
-    .phase-badge.p2 { background: #e0f2fe; color: #0369a1; }
-    .phase-badge.p3 { background: #fef9c3; color: #a16207; }
-
     .feature-card h3 {
       font-size: 1.125rem;
       font-weight: 700;
@@ -313,16 +296,14 @@
       line-height: 1.65;
     }
 
-    /* ── HOW IT WORKS STEPS ── */
+    /* ── HOW IT WORKS ── */
     .steps {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 2rem;
     }
 
-    .step {
-      text-align: center;
-    }
+    .step { text-align: center; }
 
     .step-number {
       width: 48px;
@@ -338,15 +319,31 @@
       margin: 0 auto 1rem;
     }
 
-    .step h3 {
-      font-size: 1rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
+    .step h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .step p { font-size: 0.9rem; color: var(--text-muted); }
+
+    /* ── PROBLEM STATEMENT ── */
+    .problem-box {
+      background: var(--indigo-light);
+      border: 1.5px solid #c7d2fe;
+      border-radius: 16px;
+      padding: 2.5rem;
+      max-width: 800px;
+      margin: 0 auto 3.5rem;
+      text-align: center;
     }
 
-    .step p {
-      font-size: 0.9rem;
-      color: var(--text-muted);
+    .problem-box h3 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--indigo-dark);
+      margin-bottom: 0.75rem;
+    }
+
+    .problem-box p {
+      color: #3730a3;
+      font-size: 1rem;
+      line-height: 1.7;
     }
 
     /* ── CTA BANNER ── */
@@ -371,27 +368,20 @@
       margin: 0 auto 2rem;
     }
 
-    .cta-banner .waitlist-form input {
-      background: rgba(255,255,255,0.15);
-      border-color: rgba(255,255,255,0.3);
-      color: var(--white);
-    }
-
-    .cta-banner .waitlist-form input::placeholder { color: rgba(255,255,255,0.6); }
-    .cta-banner .waitlist-form input:focus { border-color: rgba(255,255,255,0.8); }
-
     .btn-white {
-      padding: 0.75rem 1.5rem;
+      padding: 0.875rem 2rem;
       background: var(--white);
       color: var(--indigo);
       border: none;
       border-radius: 10px;
       font-family: inherit;
-      font-size: 0.9375rem;
+      font-size: 1rem;
       font-weight: 700;
       cursor: pointer;
       transition: opacity 0.15s;
       white-space: nowrap;
+      text-decoration: none;
+      display: inline-block;
     }
 
     .btn-white:hover { opacity: 0.9; }
@@ -448,28 +438,11 @@
       gap: 0.5rem;
     }
 
-    /* ── SUCCESS MESSAGE ── */
-    .success-msg {
-      display: none;
-      color: #15803d;
-      background: #dcfce7;
-      border: 1px solid #bbf7d0;
-      border-radius: 10px;
-      padding: 0.75rem 1.25rem;
-      font-size: 0.9rem;
-      font-weight: 500;
-      margin-top: 1rem;
-      max-width: 460px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
     /* ── RESPONSIVE ── */
     @media (max-width: 640px) {
       nav { padding: 1rem 1.25rem; }
       .hero { padding: 3.5rem 1.25rem 3rem; }
       .section { padding: 3.5rem 1.25rem; }
-      .pricing-section { padding: 3.5rem 1.25rem; }
       .cta-banner { padding: 3.5rem 1.25rem; }
       .footer-inner { flex-direction: column; }
     }
@@ -488,7 +461,7 @@
     </div>
     <span class="logo-wordmark">Leap<span>One</span></span>
   </a>
-  <span class="badge">Coming Soon — Canada</span>
+  <span class="badge">Beta — Canada</span>
 </nav>
 
 <!-- HERO -->
@@ -496,14 +469,12 @@
   <div class="hero-flag">
     🍁 Built for Canadian Small Businesses
   </div>
-  <h1>Let AI handle the tasks that<br/><em>slow your business down</em></h1>
-  <p>LeapOne gives your business an AI assistant that manages reviews, books appointments, and guides you through compliance — so you can focus on what you do best.</p>
-  <form class="waitlist-form" id="heroForm" onsubmit="joinWaitlist(event, 'heroSuccess')">
-    <input type="email" placeholder="Enter your business email" required />
-    <button type="submit" class="btn-primary">Join the Waitlist</button>
-  </form>
-  <p class="hero-note">Free 30-day trial when we launch · No credit card required</p>
-  <div class="success-msg" id="heroSuccess">You're on the list! We'll email you when LeapOne launches.</div>
+  <h1>AI search engines are the<br/>new Google.<br/><em>Is your business visible?</em></h1>
+  <p>When customers ask ChatGPT or Perplexity for the best business in your city, do you appear? LeapOne audits your AI visibility, generates content to fix the gaps, and tracks your progress every month.</p>
+  <div class="hero-cta">
+    <a href="mailto:hello@leapone.ca?subject=Early Access Request" class="btn-primary">Get Early Access →</a>
+  </div>
+  <p class="hero-note">Beta launching soon · No credit card required</p>
 </section>
 
 <!-- SOCIAL PROOF -->
@@ -511,8 +482,8 @@
   <p>Built specifically for Canada</p>
   <div class="proof-items">
     <div class="proof-item">
-      <strong>6</strong>
-      <span>Time zones supported</span>
+      <strong>3+</strong>
+      <span>AI engines audited</span>
     </div>
     <div class="proof-item">
       <strong>FR/EN</strong>
@@ -529,30 +500,39 @@
   </div>
 </div>
 
-<!-- FEATURES -->
+<!-- PROBLEM -->
 <section class="section">
+  <div class="problem-box">
+    <h3>The new search nobody told you about</h3>
+    <p>Millions of Canadians now ask ChatGPT, Perplexity, and Google AI which businesses to choose.
+    These AI engines decide who to recommend based on what they can find about your business online.
+    Most small businesses are invisible — and they don't even know it.</p>
+  </div>
+
   <p class="section-label">What LeapOne Does</p>
-  <h2 class="section-title">Three tools. One platform. Zero complexity.</h2>
-  <p class="section-sub">Start with what you need today. Add more as your business grows. Each tool works on its own.</p>
+  <h2 class="section-title">Audit. Fix. Track. Repeat.</h2>
+  <p class="section-sub">LeapOne tells you if AI search engines can find your business, generates everything you need to fix it, and tracks your progress every month.</p>
 
   <div class="features-grid">
     <div class="feature-card">
-      <div class="feature-icon indigo">⭐</div>
-      <span class="phase-badge p1">Available at Launch</span>
-      <h3>AI Review Responder</h3>
-      <p>LeapOne reads your Google reviews and writes professional responses for you. Review, approve with one tap, and post — in under 30 seconds per review. Never leave a review unanswered again.</p>
+      <div class="feature-icon indigo">🔍</div>
+      <h3>AI Presence Audit</h3>
+      <p>We query ChatGPT, Perplexity, and Google AI Overview for your business category and city. You see exactly which searches you appear in — and which ones your competitors are winning.</p>
     </div>
     <div class="feature-card">
-      <div class="feature-icon indigo">📅</div>
-      <span class="phase-badge p2">Coming Phase 2</span>
-      <h3>AI Booking Assistant</h3>
-      <p>Customers book appointments by texting your business. The AI handles confirmations, reminders, and rescheduling automatically via SMS and WhatsApp — no phone tag needed.</p>
+      <div class="feature-icon indigo">📊</div>
+      <h3>AI Visibility Score</h3>
+      <p>Get a clear score from 0 to 100 with a plain-English explanation of why you rank where you do. No guessing. No jargon. Just the specific gaps holding you back.</p>
     </div>
     <div class="feature-card">
-      <div class="feature-icon orange">📋</div>
-      <span class="phase-badge p3">Coming Phase 3</span>
-      <h3>Ontario Startup Guide</h3>
-      <p>An AI-powered compliance checklist that walks you through every registration, licence, and filing requirement for new Ontario businesses. Plain English. Step by step.</p>
+      <div class="feature-icon orange">✍️</div>
+      <h3>Content Generator</h3>
+      <p>LeapOne writes everything you need to improve your score — an optimized business description, FAQ content, schema markup, and social media bios. Ready to copy and paste.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon orange">📈</div>
+      <h3>Monthly Monitoring</h3>
+      <p>Your score is re-audited every month. Get alerted when you start appearing for new searches, when competitors overtake you, and when new opportunities open up.</p>
     </div>
   </div>
 </section>
@@ -561,29 +541,29 @@
 <section style="background: var(--bg); padding: 5rem 2rem; border-top: 1px solid var(--border);">
   <div style="max-width: 900px; margin: 0 auto;">
     <p class="section-label">How It Works</p>
-    <h2 class="section-title">Up and running in minutes</h2>
-    <p class="section-sub">No technical setup. No training required. Open the app and your AI assistant is ready.</p>
+    <h2 class="section-title">Visible in minutes. Improving every month.</h2>
+    <p class="section-sub">No technical setup. No agency needed. Just tell us about your business and we handle the rest.</p>
 
     <div class="steps">
       <div class="step">
         <div class="step-number">1</div>
-        <h3>Connect your Google account</h3>
-        <p>Sign in with Google to connect your Business Profile. Takes 60 seconds.</p>
+        <h3>Tell us about your business</h3>
+        <p>Enter your business name, city, and the services you offer. Takes two minutes.</p>
       </div>
       <div class="step">
         <div class="step-number">2</div>
-        <h3>Your AI reads your reviews</h3>
-        <p>LeapOne syncs your reviews and drafts professional responses overnight.</p>
+        <h3>We audit 3 AI engines</h3>
+        <p>LeapOne queries ChatGPT, Perplexity, and Google AI Overview using real searches your customers make.</p>
       </div>
       <div class="step">
         <div class="step-number">3</div>
-        <h3>Review and approve</h3>
-        <p>Open the app each morning. Read the AI draft, edit if you want, tap Approve.</p>
+        <h3>See your score and gaps</h3>
+        <p>Your AI Visibility Score, which competitors appear instead of you, and exactly why.</p>
       </div>
       <div class="step">
         <div class="step-number">4</div>
-        <h3>Posted to Google instantly</h3>
-        <p>Your response goes live on Google Business Profile automatically.</p>
+        <h3>Get content to fix it</h3>
+        <p>LeapOne generates the descriptions, FAQs, and structured data you need — with a step-by-step guide on where to put them.</p>
       </div>
     </div>
   </div>
@@ -591,15 +571,10 @@
 
 <!-- CTA -->
 <section class="cta-banner">
-  <h2>Be the first business in Canada<br/>to run on AI</h2>
-  <p>Join the waitlist and get 60 days free when LeapOne launches — available to waitlist members only.</p>
-  <form class="waitlist-form" id="ctaForm" onsubmit="joinWaitlist(event, 'ctaSuccess')" style="margin: 0 auto;">
-    <input type="email" placeholder="Your business email" required />
-    <button type="submit" class="btn-white">Get Early Access</button>
-  </form>
-  <div class="success-msg" id="ctaSuccess" style="background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); color: white;">
-    You're on the list! We'll be in touch before launch.
-  </div>
+  <h2>Stop being invisible to AI search.</h2>
+  <p>Join the beta and be among the first Canadian businesses to know — and improve — their AI search visibility.</p>
+  <a href="mailto:hello@leapone.ca?subject=Early Access Request" class="btn-white">Get Early Access →</a>
+  <p style="margin-top: 1rem; font-size: 0.875rem; opacity: 0.7;">Beta launching soon · No credit card required</p>
 </section>
 
 <!-- FOOTER -->
@@ -615,7 +590,7 @@
         </div>
         <span class="logo-wordmark">Leap<span>One</span></span>
       </div>
-      <p>AI tools for Canadian small businesses.<br/>leapone.ca · Canada 🍁</p>
+      <p>AI visibility tools for Canadian small businesses.<br/>leapone.ca · Canada 🍁</p>
     </div>
     <div class="footer-links">
       <a href="mailto:hello@leapone.ca">hello@leapone.ca</a>
@@ -628,17 +603,6 @@
     <span>Compliant with PIPEDA · Proudly Canadian</span>
   </div>
 </footer>
-
-<script>
-  function joinWaitlist(e, successId) {
-    e.preventDefault();
-    const form = e.target;
-    const success = document.getElementById(successId);
-    form.style.display = 'none';
-    success.style.display = 'block';
-    // TODO: wire up to a real email capture (Resend / Supabase) when backend is ready
-  }
-</script>
 
 </body>
 </html>
