@@ -29,6 +29,7 @@ export default function StepBusinessInfo({ userId, onComplete }: Props) {
   const [error, setError] = useState('')
   const [customType, setCustomType] = useState('')
   const [services, setServices] = useState('')
+  const [website, setWebsite] = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -44,7 +45,8 @@ export default function StepBusinessInfo({ userId, onComplete }: Props) {
     country,
     city,
     province: province || null,
-    services: services || null
+    services: services || null,
+    website: website || null
   })
 
   setLoading(false)
@@ -81,6 +83,18 @@ export default function StepBusinessInfo({ userId, onComplete }: Props) {
           className="border border-slate-200 rounded-xl px-4 py-3 text-sm text-[#1e293b]
                      outline-none focus:border-[#4f46e5] transition-colors" />
       </div>
+      {/* Website */}
+      <div className="flex flex-col gap-1.5">
+      <label className="text-sm font-medium text-[#1e293b]">{t('websiteLabel')}</label>
+      <input
+        type="url"
+        value={website}
+        onChange={e => setWebsite(e.target.value)}
+        placeholder="https://yourbusiness.com"
+        className="border border-slate-200 rounded-xl px-4 py-3 text-sm text-[#1e293b]
+                  outline-none focus:border-[#4f46e5] transition-colors" />
+      <p className="text-xs text-slate-400">{t('websiteHint')}</p>
+    </div>
 
       {/* Business type chips */}
       <div className="flex flex-col gap-2">

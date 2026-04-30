@@ -281,7 +281,9 @@
       "other": "Autre"
     },
     "customType": "Décrivez votre entreprise",
-    "customTypePlaceholder": "ex. studio photo, gym, conseil"
+    "customTypePlaceholder": "ex. studio photo, gym, conseil",
+    "websiteLabel": "Site web",
+    "websiteHint": "Optionnel — utilisé pour vérifier si les moteurs de recherche IA citent votre site"
   },
   "step2": {
     "heading": "Connecter Google Business Profile",
