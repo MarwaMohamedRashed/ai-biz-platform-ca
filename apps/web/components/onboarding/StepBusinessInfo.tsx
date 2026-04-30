@@ -28,6 +28,7 @@ export default function StepBusinessInfo({ userId, onComplete }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [customType, setCustomType] = useState('')
+  const [services, setServices] = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -42,7 +43,8 @@ export default function StepBusinessInfo({ userId, onComplete }: Props) {
     type: type === 'other' ? customType : type,
     country,
     city,
-    province: province || null
+    province: province || null,
+    services: services || null
   })
 
   setLoading(false)
@@ -149,6 +151,17 @@ export default function StepBusinessInfo({ userId, onComplete }: Props) {
             className="border border-slate-200 rounded-xl px-4 py-3 text-sm text-[#1e293b]
                        outline-none focus:border-[#4f46e5] transition-colors" />
         </div>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium text-[#1e293b]">{t('servicesLabel')}</label>
+        <textarea
+          value={services}
+          onChange={e => setServices(e.target.value)}
+          rows={3}
+          placeholder={t('servicesPlaceholder')}
+          className="border border-slate-200 rounded-xl px-4 py-3 text-sm text-[#1e293b]
+                    outline-none focus:border-[#4f46e5] transition-colors resize-none" />
+        <p className="text-xs text-slate-400">{t('servicesHint')}</p>
       </div>
 
       <button

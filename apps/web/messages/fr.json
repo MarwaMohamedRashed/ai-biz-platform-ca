@@ -15,13 +15,13 @@
       "signUpFree": "Essai gratuit"
     },
     "branding": {
-      "headline1": "Votre équipe IA pour",
-      "headline2": "les entreprises canadiennes",
-      "description": "Gérez les avis, les réservations et la conformité — tout par simple conversation. Sans tableaux de bord complexes.",
-      "feature1": "IA rédige vos réponses aux avis Google",
-      "feature2": "Clients réservent par SMS — sans application",
-      "feature3": "Liste de conformité pour startups en Ontario",
-      "feature4": "Fonctionne sur téléphone, tablette et ordinateur",
+      "headline1": "L'IA remplace Google.",
+      "headline2": "Votre entreprise est-elle visible?",
+      "description": "LeapOne audite votre présence sur ChatGPT, Perplexity et Google IA — puis génère tout ce qu'il faut pour apparaître.",
+      "feature1": "Audit de présence IA sur 3 moteurs de recherche",
+      "feature2": "Score de visibilité IA avec comparaison concurrents",
+      "feature3": "Générateur de contenu : descriptions, FAQ, schema",
+      "feature4": "Suivi mensuel et historique de progression",
       "footer": "© 2026 LeapOne · leapone.ca · Pour les entreprises canadiennes"
     },
     "signup": {
@@ -226,6 +226,20 @@
         "action": "Voir l'horaire →"
       },
       "followUp": "Que souhaitez-vous faire ? Je peux rédiger des réponses aux avis, vérifier votre horaire ou répondre à vos questions.",
+      "aeoCard": {
+        "label": "Audit de visibilité IA",
+        "badge": "Bientôt disponible",
+        "title": "Découvrez si les moteurs de recherche IA trouvent votre entreprise",
+        "description": "LeapOne audite votre présence sur ChatGPT, Perplexity et Google IA — puis génère tout ce qu'il faut pour améliorer votre score.",
+        "cta": "Compléter votre profil d'entreprise →"
+      },
+      "aeoPanel": {
+        "title": "Visibilité IA",
+        "scoreLabel": "Score de visibilité",
+        "noAudit": "Aucun audit effectué",
+        "notChecked": "Non vérifié",
+        "setupCta": "Configurer le profil →"
+      },
       "thisWeek": {
         "title": "Cette semaine",
         "avgRating": "Note moyenne",
@@ -243,18 +257,19 @@
   "onboarding": {
   "stepper": {
     "step1": "Infos entreprise",
-    "step2": "Connecter Google",
-    "step3": "Configuration",
-    "step4": "C'est parti"
+    "step2": "C'est parti"
   },
   "step1": {
     "heading": "Parlez-nous de votre entreprise",
-    "subtitle": "Cela nous aide à configurer votre tableau de bord",
+    "subtitle": "Cela nous aide à auditer votre visibilité sur les moteurs de recherche IA",
     "businessName": "Nom de l'entreprise",
     "businessType": "Type d'entreprise",
     "country": "Pays",
     "city": "Ville",
     "provinceState": "Province / État",
+    "servicesLabel": "Services offerts",
+    "servicesPlaceholder": "ex. coupes de cheveux, balayage, coiffure nuptiale, traitement kératine",
+    "servicesHint": "Optionnel — nous aide à vous donner des résultats d'audit plus précis",
     "next": "Continuer",
     "saving": "Enregistrement…",
     "types": {

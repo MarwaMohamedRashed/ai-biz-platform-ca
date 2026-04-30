@@ -15,13 +15,13 @@
       "signUpFree": "Start free trial"
     },
     "branding": {
-      "headline1": "Your AI team for",
-      "headline2": "Canadian business",
-      "description": "Handle reviews, bookings, and compliance — all through simple conversation. No complex dashboards.",
-      "feature1": "AI drafts your Google review responses",
-      "feature2": "Customers book via SMS — no app needed",
-      "feature3": "Ontario startup compliance checklist",
-      "feature4": "Works on phone, tablet, and desktop",
+      "headline1": "AI search is the new Google.",
+      "headline2": "Is your business visible?",
+      "description": "LeapOne audits your business across ChatGPT, Perplexity, and Google AI — then generates everything you need to show up.",
+      "feature1": "AI Presence Audit across 3 search engines",
+      "feature2": "AI Visibility Score with competitor comparison",
+      "feature3": "Content generator: descriptions, FAQs, schema",
+      "feature4": "Monthly monitoring and progress tracking",
       "footer": "© 2026 LeapOne · leapone.ca · Made for Canadian businesses"
     },
       "signup": {
@@ -226,6 +226,20 @@
         "action": "View schedule →"
       },
       "followUp": "What would you like to do? I can draft review responses, check your schedule, or answer any questions.",
+      "aeoCard": {
+        "label": "AI Visibility Audit",
+        "badge": "Coming soon",
+        "title": "Find out if AI search engines can find your business",
+        "description": "LeapOne will audit your presence on ChatGPT, Perplexity, and Google AI Overview — then generate everything you need to improve your score.",
+        "cta": "Complete your business profile →"
+      },
+      "aeoPanel": {
+        "title": "AI Visibility",
+        "scoreLabel": "Visibility Score",
+        "noAudit": "No audit run yet",
+        "notChecked": "Not checked",
+        "setupCta": "Set up profile →"
+      },
       "thisWeek": {
         "title": "This Week",
         "avgRating": "Avg Rating",
@@ -243,18 +257,19 @@
   "onboarding": {
   "stepper": {
     "step1": "Business Info",
-    "step2": "Connect Google",
-    "step3": "Setting Up",
-    "step4": "All Set"
+    "step2": "All Set"
   },
   "step1": {
     "heading": "Tell us about your business",
-    "subtitle": "This helps us set up your dashboard correctly",
+    "subtitle": "This helps us audit your AI search visibility accurately",
     "businessName": "Business name",
     "businessType": "Business type",
     "country": "Country",
     "city": "City",
     "provinceState": "Province / State",
+    "servicesLabel": "Services offered",
+    "servicesPlaceholder": "e.g. haircuts, balayage, bridal hair, keratin treatment",
+    "servicesHint": "Optional — helps us give you more accurate audit results",
     "next": "Continue",
     "saving": "Saving…",
     "types": {

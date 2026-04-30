@@ -3,9 +3,10 @@
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import StepBusinessInfo from './StepBusinessInfo'
-import StepConnectGoogle from './StepConnectGoogle'
-import StepSyncing from './StepSyncing'
 import StepSuccess from './StepSuccess'
+// Phase 3 — restore when Google/Meta API approved (~July 2026)
+// import StepConnectGoogle from './StepConnectGoogle'
+// import StepSyncing from './StepSyncing'
 
 interface Props {
   userId: string
@@ -20,7 +21,7 @@ export default function OnboardingFlow({ userId, userName, initialStep }: Props)
   const [businessName, setBusinessName] = useState('')
   const t = useTranslations('onboarding.stepper')
 
-  const steps = [t('step1'), t('step2'), t('step3'), t('step4')]
+  const steps = [t('step1'), t('step2')]
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
@@ -55,14 +56,12 @@ export default function OnboardingFlow({ userId, userName, initialStep }: Props)
             />
           )}
           {step === 2 && (
-            <StepConnectGoogle onSkip={() => setStep(3)} />
+            <StepSuccess businessName={businessName} userName={userName} />
           )}
-          {step === 3 && (
-            <StepSyncing onComplete={() => setStep(4)} />
-          )}
-          {step === 4 && (
-            <StepSuccess businessName={businessName}  userName={userName} />
-          )}
+          {/* Phase 3 — restore when Google/Meta API approved (~July 2026)
+          {step === 3 && <StepConnectGoogle onSkip={() => setStep(3)} />}
+          {step === 4 && <StepSyncing onComplete={() => setStep(4)} />}
+          */}
         </div>
       </div>
 

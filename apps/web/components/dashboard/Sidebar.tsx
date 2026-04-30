@@ -7,11 +7,11 @@ import { useTranslations } from 'next-intl'
 interface Props {
   user: { name: string; email: string }
   locale: string
-  pendingCount: number
+  pendingCount?: number
   planTier: 'starter' | 'pro' | 'business'
 }
 
-export default function Sidebar({ user, locale, pendingCount, planTier }: Props) {
+export default function Sidebar({ user, locale, planTier }: Props) {
   const pathname = usePathname()
   const t = useTranslations('dashboard')
 
@@ -29,52 +29,10 @@ export default function Sidebar({ user, locale, pendingCount, planTier }: Props)
         </svg>
       ),
     },
-    {
-      key: 'reviews' as const,
-      href: `/${locale}/dashboard/reviews`,
-      exact: false,
-      badge: pendingCount,
-      icon: (active: boolean) => (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
-            stroke={active ? '#4f46e5' : '#64748b'} strokeWidth="2"
-            strokeLinecap="round" strokeLinejoin="round"
-            fill={active ? '#eef2ff' : 'none'}/>
-        </svg>
-      ),
-    },
-    {
-      key: 'bookings' as const,
-      href: `/${locale}/dashboard/bookings`,
-      exact: false,
-      icon: (active: boolean) => (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"
-            stroke={active ? '#4f46e5' : '#64748b'} strokeWidth="2"
-            fill={active ? '#eef2ff' : 'none'}/>
-          <line x1="16" y1="2" x2="16" y2="6" stroke={active ? '#4f46e5' : '#64748b'} strokeWidth="2" strokeLinecap="round"/>
-          <line x1="8" y1="2" x2="8" y2="6" stroke={active ? '#4f46e5' : '#64748b'} strokeWidth="2" strokeLinecap="round"/>
-          <line x1="3" y1="10" x2="21" y2="10" stroke={active ? '#4f46e5' : '#64748b'} strokeWidth="2" strokeLinecap="round"/>
-        </svg>
-      ),
-    },
-    {
-      key: 'guide' as const,
-      href: `/${locale}/dashboard/guide`,
-      exact: false,
-      icon: (active: boolean) => (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"
-            stroke={active ? '#4f46e5' : '#64748b'} strokeWidth="2"
-            strokeLinecap="round" strokeLinejoin="round"
-            fill={active ? '#eef2ff' : 'none'}/>
-          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"
-            stroke={active ? '#4f46e5' : '#64748b'} strokeWidth="2"
-            strokeLinecap="round" strokeLinejoin="round"
-            fill={active ? '#eef2ff' : 'none'}/>
-        </svg>
-      ),
-    },
+    // Phase 3 — restore when Google/Meta API approved (~July 2026)
+    // { key: 'reviews', href: `/${locale}/dashboard/reviews`, exact: false, badge: pendingCount, icon: ... },
+    // { key: 'bookings', href: `/${locale}/dashboard/bookings`, exact: false, icon: ... },
+    // { key: 'guide',    href: `/${locale}/dashboard/guide`,    exact: false, icon: ... },
     {
       key: 'settings' as const,
       href: `/${locale}/dashboard/settings`,
@@ -149,12 +107,6 @@ export default function Sidebar({ user, locale, pendingCount, planTier }: Props)
             >
               {item.icon(active)}
               {t(`nav.${item.key}`)}
-              {(item.badge ?? 0) > 0 && (
-                <span className="ml-auto w-5 h-5 rounded-full bg-[#f97316] flex items-center justify-center
-                                 text-[10px] font-bold text-white">
-                  {item.badge}
-                </span>
-              )}
             </Link>
           )
         })}
