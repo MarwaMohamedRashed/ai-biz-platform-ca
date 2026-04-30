@@ -10,12 +10,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # Product routers — each product has its own route namespace
+from aeo.router import router as aeo_router 
 from reviews.router import router as reviews_router
 from bookings.router import router as bookings_router
 from startup.router import router as startup_router
 from insights.router import router as insights_router
 from settings.router import router as settings_router
 from google_auth.router import router as google_auth_router
+
 
 app = FastAPI(
     title="AI Business Platform API",
@@ -46,6 +48,7 @@ app.include_router(startup_router,  prefix="/api/v1/startup",  tags=["startup"])
 app.include_router(insights_router,  prefix="/api/v1/insights",  tags=["insights"])
 app.include_router(settings_router,  prefix="/api/v1/settings",  tags=["settings"])
 app.include_router(google_auth_router, prefix="/api/v1/google-auth", tags=["google-auth"])
+app.include_router(aeo_router, prefix="/api/v1/aeo", tags=["aeo"])
 
 
 # ─── Health check ─────────────────────────────────────────────────────────────
