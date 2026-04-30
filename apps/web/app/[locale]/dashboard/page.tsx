@@ -5,6 +5,7 @@ import UserMenu from '@/components/dashboard/UserMenu'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import Link from 'next/link'
 import { getLocale } from 'next-intl/server'
+import AeoAuditCard from '@/components/dashboard/AeoAuditCard'
 
 function getGreetingKey(): 'morning' | 'afternoon' | 'evening' {
   const hour = new Date().getHours()
@@ -24,7 +25,21 @@ export default async function DashboardPage() {
     .eq('id', user!.id)
     .single()
 
-  
+  const { data: business } = await supabase
+  .from('businesses')
+  .select('id')
+  .limit(1)
+  .single()
+
+  const { data: latestAudit } = business
+    ? await supabase
+        .from('aeo_audits')
+        .select('*')
+        .eq('business_id', business.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+    : { data: null }
   
   const fullName = profile?.full_name?.trim() || ''
   const firstName = fullName.split(' ')[0]
@@ -95,27 +110,11 @@ export default async function DashboardPage() {
               </div>
 
               {/* AEO coming-soon card */}
-              <div className="bg-white rounded-2xl border-l-[3px] border-l-[#4f46e5]
-                              shadow-sm border border-slate-100 p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <span className="text-[10px] font-bold text-[#4f46e5] uppercase tracking-wider">
-                    {t('aeoCard.label')}
-                  </span>
-                  <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                    {t('aeoCard.badge')}
-                  </span>
-                </div>
-                <p className="text-sm font-semibold text-[#1e293b] mb-1">
-                  {t('aeoCard.title')}
-                </p>
-                <p className="text-xs text-slate-500 mb-3">
-                  {t('aeoCard.description')}
-                </p>
-                <Link href={`/${locale}/dashboard/settings`}
-                  className="text-xs font-semibold bg-[#4f46e5] text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors">
-                  {t('aeoCard.cta')}
-                </Link>
-              </div>
+              <AeoAuditCard
+                businessId={business?.id ?? null}
+                initialAudit={latestAudit ?? null}
+                locale={locale}
+              />
 
             </div>
           </div>
@@ -144,23 +143,26 @@ export default async function DashboardPage() {
 
         <div className="px-5 py-4 border-b border-slate-100">
           <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">{t('aeoPanel.scoreLabel')}</p>
-          <p className="text-3xl font-bold text-slate-300">—</p>
-          <p className="text-[10px] text-slate-400 mt-0.5">{t('aeoPanel.noAudit')}</p>
-        </div>
-
-        <div className="px-5 py-4 border-b border-slate-100">
-          <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">ChatGPT</p>
-          <p className="text-sm font-semibold text-slate-300">{t('aeoPanel.notChecked')}</p>
+          <p className={`text-3xl font-bold ${latestAudit ? (latestAudit.score >= 70 ? 'text-green-600' : latestAudit.score >= 40 ? 'text-amber-500' : 'text-red-500') : 'text-slate-300'}`}>
+            {latestAudit ? latestAudit.score : '—'}
+          </p>
+          <p className="text-[10px] text-slate-400 mt-0.5">
+            {latestAudit ? `Last checked ${new Date(latestAudit.created_at).toLocaleDateString()}` : t('aeoPanel.noAudit')}
+          </p>
         </div>
 
         <div className="px-5 py-4 border-b border-slate-100">
           <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">Perplexity</p>
-          <p className="text-sm font-semibold text-slate-300">{t('aeoPanel.notChecked')}</p>
+          <p className={`text-sm font-semibold ${latestAudit ? (latestAudit.perplexity_mentioned ? 'text-green-600' : 'text-red-400') : 'text-slate-300'}`}>
+            {latestAudit ? (latestAudit.perplexity_mentioned ? '✓ Found' : '✗ Not found') : t('aeoPanel.notChecked')}
+          </p>
         </div>
 
         <div className="px-5 py-4 border-b border-slate-100">
           <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">Google AI</p>
-          <p className="text-sm font-semibold text-slate-300">{t('aeoPanel.notChecked')}</p>
+          <p className={`text-sm font-semibold ${latestAudit ? (latestAudit.google_ai_mentioned ? 'text-green-600' : 'text-red-400') : 'text-slate-300'}`}>
+            {latestAudit ? (latestAudit.google_ai_mentioned ? '✓ Found' : '✗ Not found') : t('aeoPanel.notChecked')}
+          </p>
         </div>
 
         <div className="px-5 py-4">
