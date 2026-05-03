@@ -29,6 +29,48 @@ export default function Sidebar({ user, locale, planTier }: Props) {
         </svg>
       ),
     },
+    {
+      key: 'content' as const,
+      href: `/${locale}/dashboard/content`,
+      exact: false,
+      icon: (active: boolean) => (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+            stroke={active ? '#4f46e5' : '#64748b'} strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round"
+            fill={active ? '#eef2ff' : 'none'}/>
+          <polyline points="14,2 14,8 20,8"
+            stroke={active ? '#4f46e5' : '#64748b'} strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round"/>
+          <line x1="16" y1="13" x2="8" y2="13"
+            stroke={active ? '#4f46e5' : '#64748b'} strokeWidth="2" strokeLinecap="round"/>
+          <line x1="16" y1="17" x2="8" y2="17"
+            stroke={active ? '#4f46e5' : '#64748b'} strokeWidth="2" strokeLinecap="round"/>
+          <polyline points="10,9 9,9 8,9"
+            stroke={active ? '#4f46e5' : '#64748b'} strokeWidth="2" strokeLinecap="round"/>
+        </svg>
+      ),
+    },
+    {
+      key: 'competitors' as const,
+      href: `/${locale}/dashboard/competitors`,
+      exact: false,
+      icon: (active: boolean) => (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M3 3v18h18" stroke={active ? '#4f46e5' : '#64748b'} strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round"/>
+          <rect x="7"  y="13" width="3" height="5" rx="0.5"
+            stroke={active ? '#4f46e5' : '#64748b'} strokeWidth="2"
+            fill={active ? '#eef2ff' : 'none'}/>
+          <rect x="12" y="9"  width="3" height="9" rx="0.5"
+            stroke={active ? '#4f46e5' : '#64748b'} strokeWidth="2"
+            fill={active ? '#eef2ff' : 'none'}/>
+          <rect x="17" y="6"  width="3" height="12" rx="0.5"
+            stroke={active ? '#4f46e5' : '#64748b'} strokeWidth="2"
+            fill={active ? '#eef2ff' : 'none'}/>
+        </svg>
+      ),
+    },
     // Phase 3 — restore when Google/Meta API approved (~July 2026)
     // { key: 'reviews', href: `/${locale}/dashboard/reviews`, exact: false, badge: pendingCount, icon: ... },
     // { key: 'bookings', href: `/${locale}/dashboard/bookings`, exact: false, icon: ... },
@@ -46,7 +88,21 @@ export default function Sidebar({ user, locale, planTier }: Props) {
           strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
       ),
-    }
+    },
+    {
+      key: 'plan' as const,
+      href: `/${locale}/dashboard/plan`,
+      exact: false,
+      icon: (active: boolean) => (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="1" y="4" width="22" height="16" rx="2" ry="2"
+            stroke={active ? '#4f46e5' : '#64748b'} strokeWidth="2"
+            fill={active ? '#eef2ff' : 'none'}/>
+          <line x1="1" y1="10" x2="23" y2="10"
+            stroke={active ? '#4f46e5' : '#64748b'} strokeWidth="2" strokeLinecap="round"/>
+        </svg>
+      ),
+    },
   ]
 
   const isActive = (href: string, exact: boolean) =>

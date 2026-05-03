@@ -176,20 +176,98 @@
       "save": "Save Settings",
       "saving": "Saving…",
       "saved": "Settings saved",
-      "errorSave": "Failed to save settings"
+      "errorSave": "Failed to save settings",
+      "businessProfile": {
+        "title": "Business Profile",
+        "subtitle": "Used for your AEO audit — update here whenever anything changes.",
+        "nameLabel": "Business Name",
+        "typeLabel": "Business Type",
+        "typeHint": "e.g. physiotherapy clinic, italian restaurant",
+        "cityLabel": "City",
+        "provinceLabel": "Province / State",
+        "provinceHint": "e.g. ON, QC, BC (leave blank if not applicable)",
+        "countryLabel": "Country",
+        "websiteLabel": "Website",
+        "websitePlaceholder": "https://yourbusiness.com",
+        "servicesLabel": "Services (optional)",
+        "servicesHint": "Comma-separated list of your main services — used in content generation.",
+        "save": "Save Business Profile",
+        "saving": "Saving…",
+        "saved": "Profile saved",
+        "errorSave": "Failed to save profile"
+      },
+      "reviewSettings": "Review Response Settings"
     },
     "nav": {
       "chat": "Chat",
       "reviews": "Reviews",
       "bookings": "Bookings",
       "guide": "Guide",
-      "settings": "Settings"
+      "settings": "Settings",
+      "content": "Content",
+      "competitors": "Competitors",
+      "plan": "Plan & Billing"
     },
     "planStatus": {
       "trialing": "Free Trial",
       "active": "Pro Plan"
     },
     "signOut": "Sign out",
+    "plan": {
+      "title": "Plan & Billing",
+      "subtitle": "Your current plan and available upgrades.",
+      "currentBadge": "Current plan",
+      "trialBadge": "Free trial active",
+      "upgradeBtn": "Upgrade",
+      "comingSoon": "Coming soon",
+      "contactBtn": "Contact us",
+      "billingNote": "All prices in CAD · Cancel anytime · Stripe billing coming soon",
+      "starter": {
+        "name": "Starter",
+        "price": "$19",
+        "period": "/ month",
+        "tagline": "Everything you need to dominate local AI search.",
+        "features": [
+          "Full AEO readiness audit",
+          "5-pillar scoring with per-signal breakdown",
+          "Top 3 competitor benchmarking",
+          "Competitor weak-point mining (AI-powered)",
+          "Monthly auto-audit",
+          "Score-change email alerts",
+          "AI content generator (GBP description, FAQ, schema)",
+          "Score history chart (6 months)",
+          "1 business location"
+        ]
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "$49",
+        "period": "/ month",
+        "tagline": "More data, more frequency, more action.",
+        "features": [
+          "Everything in Starter",
+          "Weekly audits",
+          "Action tracking (mark a recommendation done \u2192 re-checks that pillar)",
+          "Downloadable PDF audit report",
+          "Weekly email digest",
+          "12-month score history",
+          "Priority support"
+        ]
+      },
+      "business": {
+        "name": "Agency",
+        "price": "$149",
+        "period": "/ month",
+        "tagline": "Manage multiple clients under one roof.",
+        "features": [
+          "Everything in Pro",
+          "Up to 10 business locations",
+          "White-label PDF reports",
+          "Agency dashboard (all clients in one view)",
+          "Dedicated account manager"
+        ]
+      }
+    },
      "profile": {
         "menuLink": "Profile",
         "heading": "Your Profile",

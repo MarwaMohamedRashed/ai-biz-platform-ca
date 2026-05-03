@@ -6,6 +6,7 @@ import LanguageSwitcher from '@/components/LanguageSwitcher'
 import Link from 'next/link'
 import { getLocale } from 'next-intl/server'
 import AeoAuditCard from '@/components/dashboard/AeoAuditCard'
+import ScoreHistoryChart from '@/components/dashboard/ScoreHistoryChart'
 
 function getGreetingKey(): 'morning' | 'afternoon' | 'evening' {
   const hour = new Date().getHours()
@@ -27,19 +28,21 @@ export default async function DashboardPage() {
 
   const { data: business } = await supabase
   .from('businesses')
-  .select('id')
+  .select('id, name')
   .limit(1)
   .single()
 
-  const { data: latestAudit } = business
+  const { data: auditHistory } = business
     ? await supabase
         .from('aeo_audits')
-        .select('*')
+        .select('score, score_breakdown, raw_results, created_at')
         .eq('business_id', business.id)
         .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
+        .limit(6)
     : { data: null }
+
+  const latestAudit = auditHistory?.[0] ?? null
+  const historyAsc = auditHistory ? [...auditHistory].reverse() : []
   
   const fullName = profile?.full_name?.trim() || ''
   const firstName = fullName.split(' ')[0]
@@ -80,6 +83,9 @@ export default async function DashboardPage() {
               {new Date().toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' })}
             </p>
             <h1 className="text-base font-extrabold text-[#1e293b]">{t('pageTitle')}</h1>
+            {business?.name && (
+              <p className="text-xs text-slate-500 mt-0.5 font-medium">{business.name}</p>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
@@ -107,12 +113,17 @@ export default async function DashboardPage() {
                   <span className="font-semibold">{firstName}</span>!{' '}
                   {t('greeting.attention')}
                 </p>
+                {business?.name && (
+                  <p className="text-xs text-slate-400 mt-1">{business.name}</p>
+                )}
               </div>
 
-              {/* AEO coming-soon card */}
+              {/* AEO audit + recommendations */}
               <AeoAuditCard
                 businessId={business?.id ?? null}
                 initialAudit={latestAudit ?? null}
+                initialRecommendations={latestAudit?.raw_results?.recommendations ?? []}
+                prevBreakdown={auditHistory?.[1]?.score_breakdown ?? null}
                 locale={locale}
               />
 
@@ -151,19 +162,37 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        <div className="px-5 py-4 border-b border-slate-100">
-          <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">Perplexity</p>
-          <p className={`text-sm font-semibold ${latestAudit ? (latestAudit.perplexity_mentioned ? 'text-green-600' : 'text-red-400') : 'text-slate-300'}`}>
-            {latestAudit ? (latestAudit.perplexity_mentioned ? '✓ Found' : '✗ Not found') : t('aeoPanel.notChecked')}
-          </p>
-        </div>
+        <ScoreHistoryChart history={historyAsc} />
 
-        <div className="px-5 py-4 border-b border-slate-100">
-          <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">Google AI</p>
-          <p className={`text-sm font-semibold ${latestAudit ? (latestAudit.google_ai_mentioned ? 'text-green-600' : 'text-red-400') : 'text-slate-300'}`}>
-            {latestAudit ? (latestAudit.google_ai_mentioned ? '✓ Found' : '✗ Not found') : t('aeoPanel.notChecked')}
-          </p>
-        </div>
+        {latestAudit?.score_breakdown && (
+          <div className="px-5 py-4 border-b border-slate-100">
+            <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-2">Score breakdown</p>
+            <div className="flex flex-col gap-1.5">
+              {[
+                { key: 'gbp',          label: 'GBP',           max: 25 },
+                { key: 'reviews',      label: 'Reviews',       max: 22 },
+                { key: 'website',      label: 'Website',       max: 20 },
+                { key: 'local_search', label: 'Local search',  max: 15 },
+                { key: 'ai_citation',  label: 'AI citations',  max: 18 },
+              ].map(p => {
+                const pts = latestAudit.score_breakdown[p.key] ?? 0
+                const pct = (pts / p.max) * 100
+                const color = pct >= 75 ? 'bg-green-500' : pct >= 40 ? 'bg-amber-400' : 'bg-red-300'
+                return (
+                  <div key={p.key}>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-[10px] text-slate-600">{p.label}</span>
+                      <span className="text-[10px] text-slate-400">{pts}/{p.max}</span>
+                    </div>
+                    <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+                      <div className={`h-full ${color} rounded-full`} style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="px-5 py-4">
           <Link href={`/${locale}/dashboard/settings`}

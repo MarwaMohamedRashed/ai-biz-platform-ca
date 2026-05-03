@@ -176,20 +176,98 @@
       "save": "Enregistrer",
       "saving": "Enregistrement…",
       "saved": "Paramètres enregistrés",
-      "errorSave": "Échec de l'enregistrement"
+      "errorSave": "Échec de l'enregistrement",
+      "businessProfile": {
+        "title": "Profil d'entreprise",
+        "subtitle": "Utilisé pour votre audit AEO — mettez à jour ici dès que quelque chose change.",
+        "nameLabel": "Nom de l'entreprise",
+        "typeLabel": "Type d'entreprise",
+        "typeHint": "p. ex. clinique de physiothérapie, restaurant italien",
+        "cityLabel": "Ville",
+        "provinceLabel": "Province / État",
+        "provinceHint": "p. ex. ON, QC, BC (laisser vide si non applicable)",
+        "countryLabel": "Pays",
+        "websiteLabel": "Site web",
+        "websitePlaceholder": "https://votreentreprise.com",
+        "servicesLabel": "Services (facultatif)",
+        "servicesHint": "Liste de vos principaux services séparés par des virgules — utilisée pour la génération de contenu.",
+        "save": "Enregistrer le profil",
+        "saving": "Enregistrement…",
+        "saved": "Profil enregistré",
+        "errorSave": "Échec de l'enregistrement du profil"
+      },
+      "reviewSettings": "Paramètres de réponse aux avis"
     },
     "nav": {
       "chat": "Chat",
       "reviews": "Avis",
       "bookings": "Réservations",
       "guide": "Guide",
-      "settings": "Paramètres"
+      "settings": "Paramètres",
+      "content": "Contenu",
+      "competitors": "Concurrents",
+      "plan": "Forfait & facturation"
     },
     "planStatus": {
       "trialing": "Essai gratuit",
       "active": "Forfait Pro"
     },
     "signOut": "Se déconnecter",
+    "plan": {
+      "title": "Forfait & facturation",
+      "subtitle": "Votre forfait actuel et les mises à niveau disponibles.",
+      "currentBadge": "Forfait actuel",
+      "trialBadge": "Essai gratuit en cours",
+      "upgradeBtn": "Mettre à niveau",
+      "comingSoon": "Bientôt disponible",
+      "contactBtn": "Nous contacter",
+      "billingNote": "Tous les prix en CAD · Annulation à tout moment · Facturation Stripe bientôt disponible",
+      "starter": {
+        "name": "Démarrage",
+        "price": "19 $",
+        "period": "/ mois",
+        "tagline": "Tout ce qu'il faut pour dominer la recherche IA locale.",
+        "features": [
+          "Audit AEO complet",
+          "Score sur 5 piliers avec détail des signaux",
+          "Analyse des 3 principaux concurrents",
+          "Détection des points faibles des concurrents (IA)",
+          "Audit automatique mensuel",
+          "Alertes par courriel en cas de changement de score",
+          "Générateur de contenu IA (description GBP, FAQ, schéma)",
+          "Historique des scores (6 mois)",
+          "1 emplacement d'entreprise"
+        ]
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "49 $",
+        "period": "/ mois",
+        "tagline": "Plus de données, plus de fréquence, plus d'actions.",
+        "features": [
+          "Tout du forfait Démarrage",
+          "Audits hebdomadaires",
+          "Suivi des actions (marquer une recommandation faite → révérification du pilier)",
+          "Rapport d'audit PDF téléchargeable",
+          "Résumé hebdomadaire par courriel",
+          "Historique des scores (12 mois)",
+          "Assistance prioritaire"
+        ]
+      },
+      "business": {
+        "name": "Agence",
+        "price": "149 $",
+        "period": "/ mois",
+        "tagline": "Gérez plusieurs clients sous un même toit.",
+        "features": [
+          "Tout du forfait Pro",
+          "Jusqu'à 10 emplacements d'entreprise",
+          "Rapports PDF en marque blanche",
+          "Tableau de bord agence (tous les clients en un coup d'œil)",
+          "Gestionnaire de compte dédié"
+        ]
+      }
+    },
     
       "profile": {
         "menuLink": "Profil",

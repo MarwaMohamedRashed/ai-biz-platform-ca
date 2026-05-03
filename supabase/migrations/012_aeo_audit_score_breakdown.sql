@@ -1,0 +1,1 @@
+ALTER TABLE aeo_audits ADD COLUMN IF NOT EXISTS score_breakdown JSONB;
