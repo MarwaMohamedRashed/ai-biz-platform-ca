@@ -494,7 +494,7 @@ async def _google_one(
     local = check_local_pack(data, search_name)
     organic = check_organic(data, search_name, website)
     kg = check_knowledge_graph(data, search_name)
-    competitors = extract_competitors(data, search_name, user_city=city, user_region=province, user_country=country)
+    competitors = extract_competitors(data, search_name, user_city=city, user_region=province, user_country=country, max_count=5)
     logger.info(f"[AEO] Google '{query}' → ai={ai_mentioned} local={local['present']}(reviews={local.get('reviews')}) organic={organic['present']} kg={kg['found']}(reviews={kg.get('reviews_count')}) competitors={len(competitors)}")
 
     return {
@@ -591,15 +591,20 @@ async def run_google_multi(
     user_gl = country_to_gl(country)
     if user_gl:
         same_country: list[dict] = []
-        excluded_cross_border = 0
+        cross_border: list[dict] = []
         for c in deduped:
             cgl = address_country_gl(c.get("address"))
             if cgl is None or cgl == user_gl:
                 same_country.append(c)
             else:
-                excluded_cross_border += 1
-        competitors_data = same_country[:3]
-        logger.info(f"[AEO][COMP] {len(same_country)} same-country kept, {excluded_cross_border} cross-border excluded → showing {len(competitors_data)} (user_gl={user_gl})")
+                cross_border.append(c)
+        if len(same_country) >= 3:
+            competitors_data = same_country[:3]
+        else:
+            # Not enough same-country competitors — pad with cross-border rather
+            # than showing a shorter list. Cross-border is still better than nothing.
+            competitors_data = (same_country + cross_border)[:3]
+        logger.info(f"[AEO][COMP] {len(same_country)} same-country, {len(cross_border)} cross-border → showing {len(competitors_data)} (user_gl={user_gl})")
     else:
         competitors_data = deduped[:3]
 
@@ -1277,10 +1282,17 @@ Return at most 5 themes. Only include genuine complaints with 2+ mentions. If th
         return {}
 
 
-async def _fetch_own_reviews(place_id: str, country: str | None = None) -> list[dict]:
-    """Fetch the own business's latest Google Maps reviews via SerpApi google_maps_reviews.
+async def _fetch_own_reviews(
+    place_id: str,
+    country: str | None = None,
+    max_days: int = 90,
+    max_pages: int = 3,
+) -> list[dict]:
+    """Fetch the own business's Google Maps reviews from the last `max_days` days via SerpApi.
+    Reviews are sorted newest-first. Paginates through up to `max_pages` pages (~10 reviews
+    each) and stops early once a review falls outside the date window.
     Re-uses the same engine as competitor review fetching — no Phase 2 reviews table involved."""
-    params: dict[str, str] = {
+    base_params: dict[str, str] = {
         "api_key": SERPAPI_KEY,
         "engine": "google_maps_reviews",
         "place_id": place_id,
@@ -1289,33 +1301,64 @@ async def _fetch_own_reviews(place_id: str, country: str | None = None) -> list[
     }
     gl = country_to_gl(country)
     if gl:
-        params["gl"] = gl
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                "https://serpapi.com/search",
-                params=params,
-                timeout=30.0,
-            )
-            response.raise_for_status()
-            data = response.json()
+        base_params["gl"] = gl
+
+    collected: list[dict] = []
+    next_page_token: str | None = None
+
+    for page in range(max_pages):
+        params = {**base_params}
+        if next_page_token:
+            params["next_page_token"] = next_page_token
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    "https://serpapi.com/search",
+                    params=params,
+                    timeout=30.0,
+                )
+                response.raise_for_status()
+                data = response.json()
+        except Exception as e:
+            logger.warning(f"[AEO][OWN] Failed to fetch reviews page {page+1} for place_id={place_id}: {e}")
+            break
+
         reviews = data.get("reviews", [])
-        return [
-            {"rating": r.get("rating"), "snippet": r.get("snippet", "")}
-            for r in reviews
-            if r.get("snippet")
-        ]
-    except Exception as e:
-        logger.warning(f"[AEO][OWN] Failed to fetch own reviews for place_id={place_id}: {e}")
-        return []
+        if not reviews:
+            break
+
+        hit_cutoff = False
+        for r in reviews:
+            days = _parse_relative_date(r.get("date"))
+            # If we can parse the date and it's beyond the window, stop pagination entirely
+            if days is not None and days > max_days:
+                hit_cutoff = True
+                break
+            if r.get("snippet"):
+                collected.append({"rating": r.get("rating"), "snippet": r.get("snippet", "")})
+
+        logger.debug(f"[AEO][OWN] Page {page+1}: {len(reviews)} reviews fetched, {len(collected)} within {max_days}d window")
+
+        if hit_cutoff:
+            break
+
+        # Advance to the next page if available
+        serpapi_pagination = data.get("serpapi_pagination") or {}
+        next_page_token = serpapi_pagination.get("next_page_token")
+        if not next_page_token:
+            break
+
+    logger.info(f"[AEO][OWN] Collected {len(collected)} reviews within last {max_days} days across up to {max_pages} pages")
+    return collected
 
 
 async def _analyze_own_reputation(reviews: list[dict], business_name: str) -> dict:
     """AI analysis of own business reviews — extracts strengths and weaknesses as short phrases."""
     review_text = "\n".join(
-        f"- ({r['rating']}★) {r['snippet']}" for r in reviews[:40] if r.get("snippet")
+        f"- ({r['rating']}★) {r['snippet']}" for r in reviews[:60] if r.get("snippet")
     )
-    prompt = f"""You are analyzing customer reviews of {business_name}.
+    prompt = f"""You are analyzing customer reviews from the last 3 months for {business_name}.
 Identify the main strengths (things customers consistently praise) and weaknesses (recurring complaints).
 
 Reviews:

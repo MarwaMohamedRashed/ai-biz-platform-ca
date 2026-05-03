@@ -65,7 +65,7 @@ export default function OwnReputationCard() {
         </div>
         <div className="text-right">
           <p className="text-[10px] text-slate-400">
-            {data.review_count} Google review{data.review_count !== 1 ? 's' : ''}
+              {data.review_count} Google review{data.review_count !== 1 ? 's' : ''} · last 3 months
             {data.avg_rating != null && (
               <span className="ml-1 font-semibold text-amber-500">{data.avg_rating}★</span>
             )}
