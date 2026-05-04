@@ -84,6 +84,19 @@
 
 ---
 
+## Post-launch / V2 — Marketing site polish
+
+Items that aren't blocking the June 1 launch but should land soon after, while early-bird beta users are onboarded.
+
+| # | Task | Area | Priority | Done |
+|---|---|---|---|---|
+| 1 | French landing page (`apps/landing/fr/index.html`) — full translation of the marketing site, not just app strings | i18n / Marketing | Medium | ☐ |
+| 2 | Designed 1200×630 Open Graph banner image to replace `leapone-icon.png` fallback (current OG card shows the small square icon instead of a proper landscape preview) | Marketing | Medium | ☐ |
+| 3 | Rewrite landing page with screenshots of the live audit, recommendations, and competitor analysis (current copy is pre-product, will be replaced post-launch) | Marketing | High | ☐ |
+| 4 | Pricing page with finalized $19 Starter / $49 Pro tiers (currently placeholder) | Marketing | High | ☐ |
+
+---
+
 ## Phase 2 — AI Sales Agent
 Starts after AEO Phase 1 launches and stabilizes. Roadmap details in `project_sprint_roadmap.md`.
 
