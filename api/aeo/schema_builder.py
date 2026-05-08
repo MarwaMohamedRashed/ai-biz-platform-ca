@@ -181,17 +181,34 @@ def find_missing_required_fields(business: dict) -> list[str]:
 
 
 # ─── Builder ──────────────────────────────────────────────────────────────
-def build_schema(business: dict, description: str | None = None) -> dict:
+def build_schema(
+    business: dict,
+    description: str | None = None,
+    content_language: str | None = None,
+) -> dict:
     """
     Build a Schema.org JSON-LD object from a business profile dict.
     Pure / deterministic -- no LLM, no network calls, no hallucination.
     Fields with no data are omitted (not emitted as null).
+
+    `content_language` is the language the description+FAQ were generated in
+    (`'en'` or `'fr'`) — used to gate the Quebec bilingual `inLanguage`
+    declaration. If the business is in QC AND content has been generated in
+    French, we declare the entity as bilingual to Google Knowledge Graph.
+    Without this gate we'd be claiming bilingual on English-only content,
+    which Google can penalise.
     """
     obj: dict = {
         "@context": "https://schema.org",
         "@type":    resolve_schema_type(business.get("type")),
         "name":     business.get("name"),
     }
+
+    # Quebec bilingual signal — only when business is in QC AND we know
+    # French content exists (or the user explicitly opted in).
+    province = (business.get("province") or "").strip().upper()
+    if province == "QC" and (content_language == "fr" or business.get("bilingual_opt_in")):
+        obj["inLanguage"] = ["fr-CA", "en-CA"]
 
     if business.get("image_url"):
         obj["image"] = business["image_url"]

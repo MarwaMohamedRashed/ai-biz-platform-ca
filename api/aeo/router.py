@@ -224,8 +224,40 @@ async def normalize_business_type(raw_type: str, business_name: str) -> str:
     return result.strip()
 
 
-def build_queries(business_type_en: str, city: str, province: str) -> list[str]:
-    return [t.format(type=business_type_en, city=city, province=province) for t in QUERY_TEMPLATES]
+def build_queries(
+    business_type_en: str,
+    city: str,
+    province: str,
+    postal_code: str | None = None,
+    is_trades: bool = False,
+    is_healthcare: bool = False,
+) -> list[str]:
+    """
+    Returns the list of search-query strings to run against each AI engine.
+
+    Base set: 3 templates (Best/near/Top) — runs for every audit.
+
+    Conditional additions (only added when the gating condition is true,
+    keeping cost predictable):
+      * FSA-prefix query when postal_code is set — uniquely Canadian
+        search pattern, ~20% of locals search by FSA prefix
+      * Emergency / 24-7 query for trades + healthcare — high-intent
+        urgency searches
+      * Weekend-availability query for trades + healthcare — common
+        intent for after-hours services
+    """
+    queries = [t.format(type=business_type_en, city=city, province=province)
+               for t in QUERY_TEMPLATES]
+
+    if postal_code and len(postal_code.strip()) >= 3:
+        fsa = postal_code.strip()[:3].upper()
+        queries.append(f"{business_type_en} near {fsa}")
+
+    if is_trades or is_healthcare:
+        queries.append(f"Emergency {business_type_en} {city} 24/7")
+        queries.append(f"{business_type_en} open weekends {city}")
+
+    return queries
 
 
 async def _perplexity_one(business_name: str, query: str, city: str) -> dict:
@@ -252,9 +284,17 @@ async def _perplexity_one(business_name: str, query: str, city: str) -> dict:
     return {"mentioned": mentioned, "snippet": snippet, "answer": answer[:2000], "query": query}
 
 
-async def run_perplexity_multi(business_name: str, business_type_en: str, city: str, province: str) -> dict:
+async def run_perplexity_multi(
+    business_name: str,
+    business_type_en: str,
+    city: str,
+    province: str,
+    postal_code: str | None = None,
+    is_trades: bool = False,
+    is_healthcare: bool = False,
+) -> dict:
     results = []
-    for query in build_queries(business_type_en, city, province):
+    for query in build_queries(business_type_en, city, province, postal_code, is_trades, is_healthcare):
         try:
             results.append(await _perplexity_one(business_name, query, city))
         except Exception as e:
@@ -294,9 +334,17 @@ async def _chatgpt_one(business_name: str, query: str, city: str) -> dict:
     return {"mentioned": mentioned, "snippet": snippet, "answer": answer[:2000], "query": query}
 
 
-async def run_chatgpt_multi(business_name: str, business_type_en: str, city: str, province: str) -> dict:
+async def run_chatgpt_multi(
+    business_name: str,
+    business_type_en: str,
+    city: str,
+    province: str,
+    postal_code: str | None = None,
+    is_trades: bool = False,
+    is_healthcare: bool = False,
+) -> dict:
     results = []
-    for query in build_queries(business_type_en, city, province):
+    for query in build_queries(business_type_en, city, province, postal_code, is_trades, is_healthcare):
         try:
             results.append(await _chatgpt_one(business_name, query, city))
         except Exception as e:
@@ -598,9 +646,12 @@ async def run_google_multi(
     province: str,
     website: str | None,
     country: str | None = None,
+    postal_code: str | None = None,
+    is_trades: bool = False,
+    is_healthcare: bool = False,
 ) -> dict:
     results = []
-    for query in build_queries(business_type_en, city, province):
+    for query in build_queries(business_type_en, city, province, postal_code, is_trades, is_healthcare):
         try:
             results.append(await _google_one(business_name, query, city, website, province, country))
         except Exception as e:
@@ -1130,16 +1181,27 @@ def generate_recommendations(
             "impact": 6,
         })
 
-    # ─── Canadian trades directory recommendations ────────────────
-    # HomeStars and TrustedPros are the two most-cited Canadian trades
-    # directories. AI engines (especially Perplexity and Google AI Overview)
-    # treat listings on these as strong trust signals for plumbers,
-    # electricians, HVAC, roofers, and general contractors.
-    if _is_trades_business(business.get("type")):
+    # ─── Canadian vertical-specific directory recommendations ─────
+    # Each block is gated by a vertical detector AND by whether the user
+    # is already detected on that directory in their organic results.
+    # Compute user_dirs once, lazily — only when at least one vertical fires.
+    btype = business.get("type")
+    needs_vertical_check = (
+        _is_trades_business(btype)
+        or _is_healthcare_business(btype)
+        or _is_food_business(btype)
+        or _is_legal_business(btype)
+        or _is_realtor_business(btype)
+    )
+    user_dirs: set[str] = set()
+    if needs_vertical_check:
         user_dirs = _user_directories_only(
             google.get("per_query", []),
             business.get("name", ""),
         )
+
+    # Trades — HomeStars + TrustedPros
+    if _is_trades_business(btype):
         if "HomeStars" not in user_dirs:
             recs.append({
                 "pillar": "ai_citation",
@@ -1161,6 +1223,103 @@ def generate_recommendations(
                 "url": "https://www.trustedpros.ca/contractor",
             })
 
+    # Healthcare — RateMDs (any healthcare) + Opencare (dentists specifically)
+    if _is_healthcare_business(btype):
+        if "RateMDs" not in user_dirs:
+            recs.append({
+                "pillar": "ai_citation",
+                "title": "Claim your RateMDs profile",
+                "description": "RateMDs is Canada's largest healthcare-provider rating site. AI engines cite it heavily when patients search 'best dentist/doctor/physiotherapist near me'. Healthcare businesses without a RateMDs profile are routinely missed in AI answers about local care.",
+                "action": "Find your existing RateMDs listing (created automatically from public records) at ratemds.com and claim it, or create a new profile. Verify your credentials, hours, and services.",
+                "difficulty": "easy",
+                "impact": 4,
+                "url": "https://www.ratemds.com",
+            })
+        if _is_dentist_business(btype) and "Opencare" not in user_dirs:
+            recs.append({
+                "pillar": "ai_citation",
+                "title": "Claim your Opencare profile",
+                "description": "Opencare is the dominant Canadian directory for dental practices and is regularly cited by ChatGPT and Perplexity for 'best dentist in <city>' queries. Dentists not on Opencare miss a category-specific citation source.",
+                "action": "Sign up as a dental practice at opencare.com/dentists/join. Complete your services, accepted insurance, and office hours.",
+                "difficulty": "easy",
+                "impact": 3,
+                "url": "https://www.opencare.com/dentists/join/",
+            })
+
+    # Food — OpenTable + TripAdvisor
+    if _is_food_business(btype):
+        if "OpenTable" not in user_dirs:
+            recs.append({
+                "pillar": "ai_citation",
+                "title": "Claim your OpenTable listing",
+                "description": "OpenTable is the most-cited restaurant-discovery source for AI engines in Canada. Even if you don't take reservations through them, the directory presence alone boosts visibility in AI search answers about local dining.",
+                "action": "Sign up at restaurant.opentable.com. You can list your restaurant for discovery without enabling reservations.",
+                "difficulty": "easy",
+                "impact": 4,
+                "url": "https://restaurant.opentable.com",
+            })
+        if "TripAdvisor" not in user_dirs:
+            recs.append({
+                "pillar": "ai_citation",
+                "title": "Claim your TripAdvisor business listing",
+                "description": "TripAdvisor is widely cited by Perplexity and Google AI Overview for restaurant queries — especially when the searcher includes 'best' or 'top'. A complete TripAdvisor profile is one of the highest-ROI citations for restaurants in Canada.",
+                "action": "Claim your business at tripadvisor.com/Owners. Add photos, menu, and respond to recent reviews.",
+                "difficulty": "easy",
+                "impact": 3,
+                "url": "https://www.tripadvisor.com/Owners",
+            })
+
+    # Legal — LawyerLocate
+    if _is_legal_business(btype) and "LawyerLocate" not in user_dirs:
+        recs.append({
+            "pillar": "ai_citation",
+            "title": "Claim your LawyerLocate profile",
+            "description": "LawyerLocate is a Canadian-specific lawyer directory that ranks well in AI engine answers about legal services. Combined with a LinkedIn presence, it materially boosts AI citation rates for solo practitioners and small firms.",
+            "action": "Register at lawyerlocate.ca/lawyers/register. List your practice areas, jurisdictions, and contact details.",
+            "difficulty": "easy",
+            "impact": 3,
+            "url": "https://www.lawyerlocate.ca/lawyers/register",
+        })
+
+    # Realtor — Realtor.ca (CREA-national)
+    if _is_realtor_business(btype) and "Realtor.ca" not in user_dirs:
+        recs.append({
+            "pillar": "ai_citation",
+            "title": "Ensure you appear on Realtor.ca",
+            "description": "Realtor.ca is the national directory operated by the Canadian Real Estate Association (CREA). It is the single most-cited source by AI engines for Canadian real estate queries. Active CREA membership puts you on Realtor.ca automatically — verify your listing is complete and current.",
+            "action": "Confirm your CREA membership is active via your provincial real estate board, then verify your Realtor.ca profile shows current listings, photo, contact details, and specializations.",
+            "difficulty": "easy",
+            "impact": 4,
+            "url": "https://www.crea.ca/membership/",
+        })
+
+    # ─── Universal AI-engine listings (any vertical) ──────────────
+    # Apple Business Connect feeds Apple Maps + Apple Intelligence.
+    # Bing Places feeds Microsoft Copilot. Both are growing AI citation
+    # sources; both are free and under-claimed by Canadian SMBs.
+    # We can't easily detect presence from SerpApi (Apple Maps + Bing Places
+    # don't surface in Google's index) so we fire for all businesses at
+    # low impact — the cost of ignoring is much higher than the noise of
+    # showing one extra rec.
+    recs.append({
+        "pillar": "ai_citation",
+        "title": "Claim your Apple Business Connect listing",
+        "description": "Apple Business Connect (free) controls how your business shows up in Apple Maps and is increasingly cited by Apple Intelligence on iPhone/iPad. Most Canadian SMBs have not claimed their listing — this is one of the lowest-effort, highest-incremental-reach citations available right now.",
+        "action": "Visit businessconnect.apple.com, sign in with your Apple ID, find your business, and verify ownership. Takes 5–10 minutes.",
+        "difficulty": "easy",
+        "impact": 2,
+        "url": "https://businessconnect.apple.com",
+    })
+    recs.append({
+        "pillar": "ai_citation",
+        "title": "Claim your Bing Places listing",
+        "description": "Bing Places feeds Microsoft Copilot's local search answers. With Copilot integrated into Windows 11 and Microsoft 365, Bing Places presence is a growing AI citation factor. Bing Places will auto-import your Google Business Profile data — you just need to verify ownership.",
+        "action": "Visit bingplaces.com, import from Google, verify ownership, and confirm your details. Takes 5 minutes.",
+        "difficulty": "easy",
+        "impact": 2,
+        "url": "https://www.bingplaces.com",
+    })
+
     # Sort by impact (highest first)
     recs.sort(key=lambda r: r["impact"], reverse=True)
     return recs
@@ -1173,13 +1332,24 @@ async def _run_audit_core(business: dict) -> dict:
     province = business["province"]
     country = business.get("country") or "Canada"  # legacy default for pre-migration rows
     website = business.get("website")
+    postal_code = business.get("postal_code")
     business_type_en = await normalize_business_type(business["type"], business_name)
-    print(f"[AEO] Audit start — name='{business_name}' type='{business_type_en}' city='{city}, {province}, {country}' (gl={country_to_gl(country)})")
+
+    # Vertical flags drive the conditional query templates (FSA / emergency / weekend).
+    # Use the original business type (the user's free-form entry) for vertical detection
+    # since that's what the regex patterns are tuned against.
+    is_trades_v     = _is_trades_business(business.get("type"))
+    is_healthcare_v = _is_healthcare_business(business.get("type"))
+
+    print(f"[AEO] Audit start — name='{business_name}' type='{business_type_en}' city='{city}, {province}, {country}' (gl={country_to_gl(country)}, trades={is_trades_v}, healthcare={is_healthcare_v}, fsa={postal_code[:3].upper() if postal_code and len(postal_code) >= 3 else 'n/a'})")
 
     perplexity_result, google_result, chatgpt_result = await asyncio.gather(
-        run_perplexity_multi(business_name, business_type_en, city, province),
-        run_google_multi(business_name, business_type_en, city, province, website, country),
-        run_chatgpt_multi(business_name, business_type_en, city, province),
+        run_perplexity_multi(business_name, business_type_en, city, province,
+                             postal_code=postal_code, is_trades=is_trades_v, is_healthcare=is_healthcare_v),
+        run_google_multi(business_name, business_type_en, city, province, website, country,
+                         postal_code=postal_code, is_trades=is_trades_v, is_healthcare=is_healthcare_v),
+        run_chatgpt_multi(business_name, business_type_en, city, province,
+                          postal_code=postal_code, is_trades=is_trades_v, is_healthcare=is_healthcare_v),
     )
     website_check = await check_website(website)
 
@@ -1592,6 +1762,14 @@ DIRECTORY_DOMAINS: dict[str, str] = {
     "trustedpros.ca":       "TrustedPros",
     "angi.com":             "Angi",
     "thumbtack.com":        "Thumbtack",
+    # Canadian general directories (added 2026-05-08)
+    "n49.com":              "n49",
+    "cylex-canada.ca":      "Cylex Canada",
+    # Canadian vertical-specific directories
+    "realtor.ca":           "Realtor.ca",
+    "lawyerlocate.ca":      "LawyerLocate",
+    "opentable.com":        "OpenTable",
+    "opentable.ca":         "OpenTable",
 }
 
 # Canadian trades-business detector — used by recommendations engine
@@ -1611,6 +1789,59 @@ def _is_trades_business(business_type: str | None) -> bool:
     if not business_type:
         return False
     return bool(_TRADES_PATTERN.search(business_type))
+
+
+# Vertical detectors used to gate Canadian-specific recommendations.
+# Each pattern is intentionally narrow — false positives mean the wrong rec
+# fires for the wrong business, which is more damaging than a missed rec.
+
+_HEALTHCARE_PATTERN = re.compile(
+    r"\bdentist|\bdental\b|\bdoctor\b|\bphysician\b|\bphysiotherap\w*|"
+    r"\bphysical\s+therap\w*|\bchiropract\w+|\boptometr\w+|\beye\s+care|"
+    r"\bvet(erinary)?\b|\banimal\s+hospital|\bpharm\w+|\bmedical\s+clinic|"
+    r"\bclinic\b|\bnaturopath\w*|\bmassage\s+therap\w*|\baudiologist|"
+    r"\bpsychologist|\bcounsell?ing|\btherapist",
+    re.IGNORECASE,
+)
+
+_DENTIST_PATTERN = re.compile(r"\bdentist|\bdental\b|\borthodont\w+", re.IGNORECASE)
+
+_FOOD_PATTERN = re.compile(
+    r"\brestaurant|\bdiner\b|\bsteakhouse|\bsushi|\bpizza|\bcaf[eé]\b|"
+    r"\bcoffee\s+shop|\bbakery|\bbar\b|\bpub\b|\bbrewery|\bbistro|\beatery",
+    re.IGNORECASE,
+)
+
+_LEGAL_PATTERN = re.compile(
+    r"\blawyer|\battorney|\blegal\s+service|\blaw\s+(firm|office)|"
+    r"\bparalegal|\bnotary\s+public",
+    re.IGNORECASE,
+)
+
+_REALTOR_PATTERN = re.compile(
+    r"\breal\s+estate|\brealtor\b|\brealty\b",
+    re.IGNORECASE,
+)
+
+
+def _is_healthcare_business(business_type: str | None) -> bool:
+    return bool(business_type and _HEALTHCARE_PATTERN.search(business_type))
+
+
+def _is_dentist_business(business_type: str | None) -> bool:
+    return bool(business_type and _DENTIST_PATTERN.search(business_type))
+
+
+def _is_food_business(business_type: str | None) -> bool:
+    return bool(business_type and _FOOD_PATTERN.search(business_type))
+
+
+def _is_legal_business(business_type: str | None) -> bool:
+    return bool(business_type and _LEGAL_PATTERN.search(business_type))
+
+
+def _is_realtor_business(business_type: str | None) -> bool:
+    return bool(business_type and _REALTOR_PATTERN.search(business_type))
 
 
 def _user_directories_only(per_query_results: list[dict], business_name: str) -> set[str]:
@@ -2297,7 +2528,7 @@ async def generate_content(
     validation_warnings = _validate_content(descriptions, faq, social_bio)
 
     # Deterministic schema -- never LLM-generated
-    schema_obj = build_schema(business, description=descriptions["website"])
+    schema_obj = build_schema(business, description=descriptions["website"], content_language=language)
     schema_raw = json.dumps(schema_obj, indent=2, ensure_ascii=False)
     schema_missing = find_missing_required_fields(business)
 

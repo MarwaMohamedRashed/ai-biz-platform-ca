@@ -90,6 +90,13 @@ const DIRECTORY_CLAIM_URLS: Record<string, string> = {
   'TrustedPros':  'https://www.trustedpros.ca/contractor',
   'Angi':         'https://pro.angi.com/',
   'Thumbtack':    'https://www.thumbtack.com/pro/',
+  // Canadian general directories
+  'n49':          'https://www.n49.com/biz/claim',
+  'Cylex Canada': 'https://www.cylex-canada.ca/add-business.html',
+  // Canadian vertical-specific
+  'Realtor.ca':   'https://www.crea.ca/membership/',
+  'LawyerLocate': 'https://www.lawyerlocate.ca/lawyers/register',
+  'OpenTable':   'https://restaurant.opentable.com',
 }
 
 interface Props {

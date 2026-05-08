@@ -164,6 +164,18 @@ class TestDirectoryDomainsConst:
         assert DIRECTORY_DOMAINS["homestars.com"]  == "HomeStars"
         assert DIRECTORY_DOMAINS["trustedpros.ca"] == "TrustedPros"
 
+    def test_has_canadian_general_directories(self):
+        # n49 + Cylex Canada — added 2026-05-08
+        assert DIRECTORY_DOMAINS["n49.com"]         == "n49"
+        assert DIRECTORY_DOMAINS["cylex-canada.ca"] == "Cylex Canada"
+
+    def test_has_canadian_vertical_directories(self):
+        # Vertical-specific Canadian directories
+        assert DIRECTORY_DOMAINS["realtor.ca"]      == "Realtor.ca"
+        assert DIRECTORY_DOMAINS["lawyerlocate.ca"] == "LawyerLocate"
+        assert DIRECTORY_DOMAINS["opentable.com"]   == "OpenTable"
+        assert DIRECTORY_DOMAINS["opentable.ca"]    == "OpenTable"
+
     def test_has_global_majors(self):
         for d in ["yelp.com", "tripadvisor.com", "bbb.org", "facebook.com",
                   "linkedin.com", "instagram.com", "foursquare.com"]:
