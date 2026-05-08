@@ -14,7 +14,7 @@ const PILLARS = [
     max: 25,
     color: 'bg-indigo-500',
     description:
-      'Your GBP listing is the single most important signal for local AI search. We check whether Google's Knowledge Graph recognises your business by name, whether your category and contact details are present, and whether your rating appears.',
+      'Your GBP listing is the single most important signal for local AI search. We check whether Google\'s Knowledge Graph recognises your business by name, whether your category and contact details are present, and whether your rating appears.',
     signals: [
       { label: 'Business found in Google Knowledge Graph',           pts: 10 },
       { label: 'Star rating present',                                pts: 5  },

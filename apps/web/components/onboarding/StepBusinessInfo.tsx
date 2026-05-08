@@ -30,6 +30,12 @@ export default function StepBusinessInfo({ userId, onComplete }: Props) {
   const [customType, setCustomType] = useState('')
   const [services, setServices] = useState('')
   const [website, setWebsite] = useState('')
+  // Schema-generator fields (migration 015)
+  const [streetAddress, setStreetAddress] = useState('')
+  const [postalCode, setPostalCode] = useState('')
+  const [phone, setPhone] = useState('')
+  const [imageUrl, setImageUrl] = useState('')
+  const [priceRange, setPriceRange] = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -46,7 +52,12 @@ export default function StepBusinessInfo({ userId, onComplete }: Props) {
     city,
     province: province || null,
     services: services || null,
-    website: website || null
+    website: website || null,
+    street_address: streetAddress || null,
+    postal_code: postalCode ? postalCode.toUpperCase() : null,
+    phone: phone || null,
+    image_url: imageUrl || null,
+    price_range: priceRange || null,
   })
 
   setLoading(false)
@@ -177,6 +188,71 @@ export default function StepBusinessInfo({ userId, onComplete }: Props) {
                     outline-none focus:border-[#4f46e5] transition-colors resize-none" />
         <p className="text-xs text-slate-400">{t('servicesHint')}</p>
       </div>
+
+      {/* ── Schema-generator optional fields ─────────────────────────── */}
+      <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium text-[#1e293b]">{t('streetAddressLabel')}</label>
+        <input
+          type="text"
+          value={streetAddress}
+          onChange={e => setStreetAddress(e.target.value)}
+          placeholder={t('streetAddressPlaceholder')}
+          className="border border-slate-200 rounded-xl px-4 py-3 text-sm text-[#1e293b]
+                    outline-none focus:border-[#4f46e5] transition-colors" />
+        <p className="text-xs text-slate-400">{t('streetAddressHint')}</p>
+      </div>
+
+      <div className="flex gap-3">
+        <div className="flex flex-col gap-1.5 flex-1">
+          <label className="text-sm font-medium text-[#1e293b]">{t('postalCodeLabel')}</label>
+          <input
+            type="text"
+            value={postalCode}
+            onChange={e => setPostalCode(e.target.value)}
+            placeholder={t('postalCodePlaceholder')}
+            className="border border-slate-200 rounded-xl px-4 py-3 text-sm text-[#1e293b]
+                      outline-none focus:border-[#4f46e5] transition-colors" />
+        </div>
+        <div className="flex flex-col gap-1.5 flex-1">
+          <label className="text-sm font-medium text-[#1e293b]">{t('phoneLabel')}</label>
+          <input
+            type="tel"
+            value={phone}
+            onChange={e => setPhone(e.target.value)}
+            placeholder={t('phonePlaceholder')}
+            className="border border-slate-200 rounded-xl px-4 py-3 text-sm text-[#1e293b]
+                      outline-none focus:border-[#4f46e5] transition-colors" />
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium text-[#1e293b]">{t('imageUrlLabel')}</label>
+        <input
+          type="url"
+          value={imageUrl}
+          onChange={e => setImageUrl(e.target.value)}
+          placeholder={t('imageUrlPlaceholder')}
+          className="border border-slate-200 rounded-xl px-4 py-3 text-sm text-[#1e293b]
+                    outline-none focus:border-[#4f46e5] transition-colors" />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium text-[#1e293b]">{t('priceRangeLabel')}</label>
+        <select
+          value={priceRange}
+          onChange={e => setPriceRange(e.target.value)}
+          className="border border-slate-200 rounded-xl px-4 py-3 text-sm text-[#1e293b]
+                    outline-none focus:border-[#4f46e5] transition-colors bg-white">
+          <option value="">—</option>
+          <option value="$">$</option>
+          <option value="$$">$$</option>
+          <option value="$$$">$$$</option>
+          <option value="$$$$">$$$$</option>
+        </select>
+        <p className="text-xs text-slate-400">{t('priceRangeHint')}</p>
+      </div>
+
+      <p className="text-xs text-slate-400 -mt-2">{t('schemaTip')}</p>
 
       <button
         type="submit"

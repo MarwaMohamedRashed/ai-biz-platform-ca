@@ -94,6 +94,7 @@ Items that aren't blocking the June 1 launch but should land soon after, while e
 | 2 | Designed 1200×630 Open Graph banner image to replace `leapone-icon.png` fallback (current OG card shows the small square icon instead of a proper landscape preview) | Marketing | Medium | ☐ |
 | 3 | Rewrite landing page with screenshots of the live audit, recommendations, and competitor analysis (current copy is pre-product, will be replaced post-launch) | Marketing | High | ☐ |
 | 4 | Pricing page with finalized $19 Starter / $49 Pro tiers (currently placeholder) | Marketing | High | ☐ |
+| 5 | Add a business phone (Google Voice / Twilio / GoSolo) and wire `telephone` field into LocalBusiness JSON-LD on landing page. Removes the "missing telephone" warning in Google's Rich Results Test and gives customers a contact channel. | Marketing / Trust | Low | ☐ |
 
 ---
 

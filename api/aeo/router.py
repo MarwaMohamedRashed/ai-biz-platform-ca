@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header
 from pydantic import BaseModel
 from core.ai_engine import ai_engine
 from core.auth import get_current_user
-from core.database import supabase_admin, get_business_by_user
+from core.database import supabase_admin, get_business_by_user, get_active_subscription
 from core.notifications import send_email
 import asyncio
 import httpx
@@ -10,13 +10,18 @@ import json
 import os
 import logging
 import re
+from openai import AsyncOpenAI
+from .schema_builder import build_schema, build_faq_schema, find_missing_required_fields
+_audit_openai = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 SERPAPI_KEY = os.getenv("SERPAPI_KEY")
 CRON_SECRET = os.getenv("CRON_SECRET")
+BILLING_ENABLED = os.getenv("BILLING_ENABLED", "false").lower() == "true"
 KNOWN_TYPES = {"restaurant", "salon", "retail", "plumber", "cafe"}
 
 # Map full country names (as stored on businesses.country, set in onboarding) to
@@ -265,6 +270,47 @@ async def run_perplexity_multi(business_name: str, business_type_en: str, city: 
         "per_query": results,
     }
 
+async def _chatgpt_one(business_name: str, query: str, city: str) -> dict:
+    response = await _audit_openai.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are a local business search assistant. "
+                    "A user is asking you to recommend businesses in their area. "
+                    "Answer based on your training knowledge, listing specific business names where you know them."
+                ),
+            },
+            {"role": "user", "content": query},
+        ],
+        max_tokens=500,
+        temperature=0.0,
+    )
+    answer = response.choices[0].message.content.strip()
+    mentioned = extract_search_name(business_name, city).lower() in answer.lower()
+    snippet = answer[:500] if mentioned else None
+    print(f"[AEO] ChatGPT '{query}' → mentioned={mentioned}")
+    return {"mentioned": mentioned, "snippet": snippet, "answer": answer[:2000], "query": query}
+
+
+async def run_chatgpt_multi(business_name: str, business_type_en: str, city: str, province: str) -> dict:
+    results = []
+    for query in build_queries(business_type_en, city, province):
+        try:
+            results.append(await _chatgpt_one(business_name, query, city))
+        except Exception as e:
+            print(f"[AEO] ChatGPT failed for '{query}': {e}")
+            results.append({"mentioned": False, "snippet": None, "answer": "", "query": query})
+
+    mentioned = any(r["mentioned"] for r in results)
+    snippet = next((r["snippet"] for r in results if r["mentioned"]), None)
+    return {
+        "mentioned": mentioned,
+        "snippet": snippet,
+        "queries": [r["query"] for r in results],
+        "per_query": results,
+    }
 
 def check_organic(data: dict, search_name: str, website: str | None) -> dict:
     results = data.get("organic_results", [])
@@ -505,6 +551,13 @@ async def _google_one(
         },
         "local_pack": local,
         "organic": organic,
+        # Trimmed raw organic results for citation-gap analysis (W3).
+        # Top 10 per query is enough to detect directory listings without
+        # bloating raw_results JSONB.
+        "organic_results_raw": [
+            {"link": r.get("link"), "title": r.get("title"), "snippet": r.get("snippet")}
+            for r in (data.get("organic_results", []) or [])[:10]
+        ],
         "knowledge_graph": kg,
         "competitors": competitors,
         "query": query,
@@ -531,6 +584,7 @@ async def _google_name_lookup(
             "ai_overview": {"mentioned": False, "snippet": None, "text": ""},
             "local_pack": {"present": False, "position": None, "rating": None, "reviews": None},
             "organic": {"present": False, "position": None},
+            "organic_results_raw": [],
             "knowledge_graph": {"found": False, "title": None, "rating": None, "reviews_count": None, "type": None, "website": None, "phone": None},
             "competitors": [],
             "query": query,
@@ -706,16 +760,20 @@ def match_competitor_ai_citations(
     competitors: list[dict],
     perplexity_result: dict,
     google_result: dict,
+    chatgpt_result: dict,
 ) -> dict[str, dict]:
     """For each competitor, check whether their name appears in any of the per-query
-    Perplexity answers or Google AI Overview text snippets we already fetched.
+    Perplexity, Google AI Overview, or ChatGPT answers we already fetched.
     Cost: $0 — pure text scanning over data we paid for during the user's audit.
-    Returns a dict keyed by _competitor_key() → {perplexity_mentioned, google_ai_mentioned}."""
+    Returns a dict keyed by _competitor_key() → {perplexity_mentioned, google_ai_mentioned, chatgpt_mentioned}."""
     perplexity_texts = [
         r.get("answer", "") for r in perplexity_result.get("per_query", [])
     ]
     google_ai_texts = [
         (r.get("ai_overview") or {}).get("text", "") for r in google_result.get("per_query", [])
+    ]
+    chatgpt_texts = [
+        r.get("answer", "") for r in chatgpt_result.get("per_query", [])
     ]
 
     output: dict[str, dict] = {}
@@ -725,19 +783,23 @@ def match_competitor_ai_citations(
         if not key or not name:
             continue
         perplexity_hit = any(text and _name_matches(text, name) for text in perplexity_texts)
-        google_ai_hit = any(text and _name_matches(text, name) for text in google_ai_texts)
+        google_ai_hit  = any(text and _name_matches(text, name) for text in google_ai_texts)
+        chatgpt_hit    = any(text and _name_matches(text, name) for text in chatgpt_texts)
         output[key] = {
             "perplexity_mentioned": perplexity_hit,
             "google_ai_mentioned":  google_ai_hit,
+            "chatgpt_mentioned":    chatgpt_hit,
         }
     hits_per = sum(1 for v in output.values() if v["perplexity_mentioned"])
-    hits_g = sum(1 for v in output.values() if v["google_ai_mentioned"])
-    logger.info(f"[AEO][COMP] AI citations: {hits_per}/{len(output)} Perplexity, {hits_g}/{len(output)} Google AI")
+    hits_g   = sum(1 for v in output.values() if v["google_ai_mentioned"])
+    hits_gpt = sum(1 for v in output.values() if v["chatgpt_mentioned"])
+    logger.info(f"[AEO][COMP] AI citations: {hits_per}/{len(output)} Perplexity, {hits_g}/{len(output)} Google AI, {hits_gpt}/{len(output)} ChatGPT")
     return output
 
 
-def calculate_score(business: dict, perplexity: dict, google: dict, website_check: dict) -> dict:
+def calculate_score(business: dict, perplexity: dict, google: dict, website_check: dict, chatgpt: dict) -> dict:
     # If the formula here changes, update score_competitor() to match.
+    # ai_citation max = 18: ChatGPT 6 + Perplexity 6 + Google AI 6
     kg = google["knowledge_graph"]
     lp = google["local_pack"]
 
@@ -748,7 +810,7 @@ def calculate_score(business: dict, perplexity: dict, google: dict, website_chec
     gbp = 0
     if has_gbp: gbp += 10
     if effective_rating: gbp += 5
-    if kg.get("type"): gbp += 5                          # only if KG has a category set
+    if kg.get("type"): gbp += 5
     if kg.get("website") or kg.get("phone") or business.get("website"): gbp += 5
 
     reviews = 0
@@ -767,8 +829,9 @@ def calculate_score(business: dict, perplexity: dict, google: dict, website_chec
     if google["organic"]["present"]: local += 5
 
     ai = 0
-    if perplexity["mentioned"]: ai += 10
-    if google["ai_overview"]["mentioned"]: ai += 8
+    if chatgpt["mentioned"]:               ai += 6
+    if perplexity["mentioned"]:            ai += 6
+    if google["ai_overview"]["mentioned"]: ai += 6
 
     total = gbp + reviews + web + local + ai
     return {
@@ -788,6 +851,7 @@ def score_competitor(
     website_check: dict | None = None,
     perplexity_mentioned: bool | None = None,
     google_ai_mentioned: bool | None = None,
+    chatgpt_mentioned: bool | None = None,
 ) -> dict:
     """Score a competitor using the same 5-pillar formula as calculate_score().
     If the formula in calculate_score() changes, update this function to match.
@@ -820,17 +884,21 @@ def score_competitor(
         if website_check.get("has_faq_schema"):             web += 6
 
     # ─── Local Search pillar (max 15) ────────────────────────────
-    # In local pack by definition. Organic check is not run for competitors (would cost
-    # extra SerpApi calls per competitor and the local pack signal is the dominant one).
     local = 10
 
-    # ─── AI Citation pillar (max 18) ─────────────────────────────
+    # ─── AI Citation pillar (max 18): ChatGPT 6 + Perplexity 6 + Google AI 6 ──
     ai = 0
-    if perplexity_mentioned is True: ai += 10
-    if google_ai_mentioned is True:  ai += 8
+    if chatgpt_mentioned is True:    ai += 6
+    if perplexity_mentioned is True: ai += 6
+    if google_ai_mentioned is True:  ai += 6
 
     total = gbp + rev + web + local + ai
-    has_full_data = website_check is not None and perplexity_mentioned is not None and google_ai_mentioned is not None
+    has_full_data = (
+        website_check is not None
+        and perplexity_mentioned is not None
+        and google_ai_mentioned is not None
+        and chatgpt_mentioned is not None
+    )
 
     return {
         "total": total,
@@ -852,6 +920,7 @@ def generate_recommendations(
     website_check: dict,
     breakdown: dict,
     recency: dict,
+    chatgpt: dict | None = None,
 ) -> list[dict]:
     """
     Maps each pillar gap to a specific, actionable recommendation.
@@ -1023,24 +1092,74 @@ def generate_recommendations(
         })
 
     # ─── AI Citation pillar ──────────────────────────────────
+    if chatgpt and not chatgpt["mentioned"]:
+        recs.append({
+            "pillar": "ai_citation",
+            "title": "Build your presence in ChatGPT's training data",
+            "description": (
+                "ChatGPT answers from its training knowledge, not live search. "
+                "Your business isn't prominent enough yet to appear in its responses. "
+                "These actions build the web footprint that gets picked up in future AI model updates (typically 6–12 months)."
+            ),
+            "action": (
+                "1. Claim and fully complete your Yelp, TripAdvisor, and Yellow Pages profiles — "
+                "these platforms are heavily indexed in AI training data. "
+                "2. Get listed in your local Chamber of Commerce and BBB. "
+                "3. Seek a mention in a local news article or industry publication. "
+                "4. Add a detailed FAQ page to your website — Q&A content is exactly what LLMs train on."
+            ),
+            "difficulty": "hard",
+            "impact": 6,
+        })
     if not perplexity["mentioned"]:
         recs.append({
             "pillar": "ai_citation",
             "title": "Get cited by Perplexity",
-            "description": "Perplexity favors authoritative sources like Wikipedia, Reddit, news sites, and well-structured business listings.",
+            "description": "Perplexity searches the web in real time. It favors authoritative sources like Yelp, Reddit, news sites, and well-structured business listings.",
             "action": "Create or update your business listing on directories Perplexity crawls: Yelp, BBB, Yellow Pages, Foursquare. Ensure your website has clear, factual content about your services.",
             "difficulty": "hard",
-            "impact": 10,
+            "impact": 6,
         })
     if not google["ai_overview"]["mentioned"]:
         recs.append({
             "pillar": "ai_citation",
             "title": "Optimize for Google AI Overview",
-            "description": "Google AI Overview cites businesses with strong content + GBP + schema together. It's harder to influence than Perplexity but possible.",
+            "description": "Google AI Overview cites businesses with strong GBP + content + schema together. It's the hardest AI engine to influence but rewards a complete profile.",
             "action": "Add a 150-200 word business description on your homepage that directly answers 'what do you do, where, and for whom'. Use the description we generated for you in the Content tab.",
             "difficulty": "hard",
-            "impact": 8,
+            "impact": 6,
         })
+
+    # ─── Canadian trades directory recommendations ────────────────
+    # HomeStars and TrustedPros are the two most-cited Canadian trades
+    # directories. AI engines (especially Perplexity and Google AI Overview)
+    # treat listings on these as strong trust signals for plumbers,
+    # electricians, HVAC, roofers, and general contractors.
+    if _is_trades_business(business.get("type")):
+        user_dirs = _user_directories_only(
+            google.get("per_query", []),
+            business.get("name", ""),
+        )
+        if "HomeStars" not in user_dirs:
+            recs.append({
+                "pillar": "ai_citation",
+                "title": "Claim your HomeStars profile",
+                "description": "HomeStars is Canada's largest trades directory and one of the most-cited sources by AI engines (ChatGPT, Perplexity, Google AI Overview) when answering 'best contractor in <city>' questions. Trades businesses without a HomeStars profile are dramatically less likely to be cited.",
+                "action": "Create a free contractor profile at homestars.com/create-account. Complete your services, service area, and request reviews from your last 5 satisfied customers.",
+                "difficulty": "easy",
+                "impact": 4,
+                "url": "https://homestars.com/create-account",
+            })
+        if "TrustedPros" not in user_dirs:
+            recs.append({
+                "pillar": "ai_citation",
+                "title": "Claim your TrustedPros profile",
+                "description": "TrustedPros is the second-largest Canadian trades directory and a trusted citation source for AI engines. Combined with a HomeStars listing, it materially boosts your chance of being cited in AI answers about local trades.",
+                "action": "Sign up as a contractor at trustedpros.ca. Verify your business details and request a few customer reviews to bootstrap your rating.",
+                "difficulty": "easy",
+                "impact": 3,
+                "url": "https://www.trustedpros.ca/contractor",
+            })
 
     # Sort by impact (highest first)
     recs.sort(key=lambda r: r["impact"], reverse=True)
@@ -1057,18 +1176,21 @@ async def _run_audit_core(business: dict) -> dict:
     business_type_en = await normalize_business_type(business["type"], business_name)
     print(f"[AEO] Audit start — name='{business_name}' type='{business_type_en}' city='{city}, {province}, {country}' (gl={country_to_gl(country)})")
 
-    perplexity_result = await run_perplexity_multi(business_name, business_type_en, city, province)
-    google_result = await run_google_multi(business_name, business_type_en, city, province, website, country)
+    perplexity_result, google_result, chatgpt_result = await asyncio.gather(
+        run_perplexity_multi(business_name, business_type_en, city, province),
+        run_google_multi(business_name, business_type_en, city, province, website, country),
+        run_chatgpt_multi(business_name, business_type_en, city, province),
+    )
     website_check = await check_website(website)
 
     # Recency check — only if the KG gave us a place_id (i.e. business is indexed by Google)
     place_id = google_result["knowledge_graph"].get("place_id")
     recency = await _check_review_recency(place_id, country) if place_id else {"checked": False, "recent": None, "days_since_last": None, "last_review_date": None}
 
-    scoring = calculate_score(business, perplexity_result, google_result, website_check)
+    scoring = calculate_score(business, perplexity_result, google_result, website_check, chatgpt_result)
     score = scoring["total"]
     breakdown = scoring["breakdown"]
-    recommendations = generate_recommendations(business, perplexity_result, google_result, website_check, breakdown, recency)
+    recommendations = generate_recommendations(business, perplexity_result, google_result, website_check, breakdown, recency, chatgpt_result)
     print(f"[AEO] Score: {score}/100  breakdown={breakdown}  recs={len(recommendations)}")
 
     # ─── Competitor scoring ────────────────────────────────────────────────
@@ -1080,7 +1202,7 @@ async def _run_audit_core(business: dict) -> dict:
     if competitors_raw:
         comp_websites, comp_ai = await asyncio.gather(
             check_competitor_websites(competitors_raw),
-            asyncio.to_thread(match_competitor_ai_citations, competitors_raw, perplexity_result, google_result),
+            asyncio.to_thread(match_competitor_ai_citations, competitors_raw, perplexity_result, google_result, chatgpt_result),
         )
         for c in competitors_raw:
             key = _competitor_key(c)
@@ -1091,6 +1213,7 @@ async def _run_audit_core(business: dict) -> dict:
                 website_check=website_data,
                 perplexity_mentioned=ai_data.get("perplexity_mentioned"),
                 google_ai_mentioned=ai_data.get("google_ai_mentioned"),
+                chatgpt_mentioned=ai_data.get("chatgpt_mentioned"),
             )
             scored_competitors.append({
                 **c,
@@ -1108,15 +1231,28 @@ async def _run_audit_core(business: dict) -> dict:
     # This runs in parallel across competitors and is gated on place_id availability.
     competitor_insights = await _analyze_competitor_weaknesses(scored_competitors, country)
 
+    # ─── Citation gap analysis (W3) ───────────────────────────────────────
+    # Walk organic_results across the 3 google queries, detect directory listings
+    # (Yelp, BBB, Yellow Pages, etc.), and compute which directories competitors
+    # appear on that the user does not. $0 cost — pure text scan over data we
+    # already paid SerpApi for.
+    citation_gaps = _detect_directory_presence(
+        google_result.get("per_query", []),
+        business_name,
+        [c.get("name") for c in scored_competitors if c.get("name")],
+    )
+
     return {
         "score":                score,
         "breakdown":            breakdown,
         "recommendations":      recommendations,
         "perplexity":           perplexity_result,
         "google":               google_result,
+        "chatgpt":              chatgpt_result,
         "website":              website_check,
         "competitors":          scored_competitors,
         "competitor_insights":  competitor_insights,
+        "citation_gaps":        citation_gaps,
     }
 
 
@@ -1421,6 +1557,225 @@ class AuditRequest(BaseModel):
     business_id: str
 
 
+class GenerateContentRequest(BaseModel):
+    business_id: str
+    language: str = "en"  # 'en' | 'fr'
+
+
+# ─── Directory presence (citation gap analysis) ───────────────────────────
+# Known directory/citation domains that we recognise in organic results.
+# Mix of US + Canadian + international + niche health/professional sites.
+DIRECTORY_DOMAINS: dict[str, str] = {
+    "yelp.com":             "Yelp",
+    "yelp.ca":              "Yelp",
+    "yellowpages.com":      "Yellow Pages",
+    "yellowpages.ca":       "Yellow Pages",
+    "ypg.com":              "Yellow Pages",
+    "bbb.org":              "BBB",
+    "tripadvisor.com":      "TripAdvisor",
+    "tripadvisor.ca":       "TripAdvisor",
+    "facebook.com":         "Facebook",
+    "instagram.com":        "Instagram",
+    "linkedin.com":         "LinkedIn",
+    "foursquare.com":       "Foursquare",
+    "nextdoor.com":         "Nextdoor",
+    "ratemds.com":          "RateMDs",
+    "healthgrades.com":     "Healthgrades",
+    "411.ca":               "411.ca",
+    "canada411.ca":         "Canada411",
+    "mapquest.com":         "MapQuest",
+    "opencare.com":         "Opencare",
+    "zocdoc.com":           "Zocdoc",
+    "wellness.com":         "Wellness.com",
+    "houzz.com":            "Houzz",
+    "homestars.com":        "HomeStars",
+    "trustedpros.ca":       "TrustedPros",
+    "angi.com":             "Angi",
+    "thumbtack.com":        "Thumbtack",
+}
+
+# Canadian trades-business detector — used by recommendations engine
+# to suggest HomeStars/TrustedPros listings for plumbers, electricians, etc.
+_TRADES_PATTERN = re.compile(
+    r"\bplumb\w+|\belectric(ian|al)\b|\bhvac\b|\bheating\b|\bcooling\b|"
+    r"\bair\s+conditioning|\broof\w+|\bcontractor\b|\bgeneral\s+contractor|"
+    r"\bconstruction|\bhouse\s*painter|\bpainting\s+contractor|\blocksmith|"
+    r"\bhandyman|\blandscap\w+|\bcarpent\w+|\bflooring\b|\brenovat\w+",
+    re.IGNORECASE,
+)
+
+
+def _is_trades_business(business_type: str | None) -> bool:
+    """True if the business looks like a Canadian trades business — used to
+    gate HomeStars/TrustedPros recommendations."""
+    if not business_type:
+        return False
+    return bool(_TRADES_PATTERN.search(business_type))
+
+
+def _user_directories_only(per_query_results: list[dict], business_name: str) -> set[str]:
+    """Lightweight helper: which directories does the user appear on?
+    Used by generate_recommendations() — same matching logic as
+    _detect_directory_presence() but skips the competitor side."""
+    user_dirs: set[str] = set()
+    user_short = _name_short(business_name)
+    if not user_short:
+        return user_dirs
+
+    for q in per_query_results or []:
+        for r in q.get("organic_results_raw", []) or []:
+            link = r.get("link") or ""
+            domain = _domain_from_url(link)
+            label = None
+            for d_domain, d_label in DIRECTORY_DOMAINS.items():
+                if domain == d_domain or domain.endswith("." + d_domain):
+                    label = d_label
+                    break
+            if not label:
+                continue
+            haystack = ((r.get("title") or "") + " " + (r.get("snippet") or "")).lower()
+            if user_short in haystack:
+                user_dirs.add(label)
+    return user_dirs
+
+
+def _domain_from_url(url: str) -> str:
+    """Strip scheme/path/www; return bare domain in lowercase."""
+    if not url:
+        return ""
+    u = url.lower()
+    u = re.sub(r"^https?://", "", u)
+    u = u.split("/", 1)[0]
+    u = re.sub(r"^www\.", "", u)
+    return u
+
+
+def _name_short(name: str | None) -> str:
+    """First 3 words of a business name, lowercased — used as a lenient
+    substring match against organic-result snippets."""
+    if not name:
+        return ""
+    return " ".join(name.lower().strip().split()[:3])
+
+
+def _detect_directory_presence(
+    per_query_results: list[dict],
+    business_name: str,
+    competitor_names: list[str],
+) -> dict:
+    """
+    Walk organic_results across all queries and determine which directories
+    the user and each competitor appear on.
+    Heuristic: a business is "on" a directory if its first three name words
+    appear in the title or snippet of an organic result whose URL is on that
+    directory's domain. Approximate but practical given SerpApi data.
+
+    Returns:
+      {
+        "user":        ["Yelp", "BBB"],
+        "competitors": {<comp_name>: ["Yelp", ...]},
+        "gaps":        ["TripAdvisor", "Yellow Pages"]
+      }
+    """
+    user_dirs: set[str] = set()
+    competitor_dirs: dict[str, set[str]] = {n: set() for n in competitor_names if n}
+
+    user_short = _name_short(business_name)
+    competitor_shorts = {n: _name_short(n) for n in competitor_dirs}
+
+    for q in per_query_results or []:
+        for r in q.get("organic_results_raw", []) or []:
+            link = r.get("link") or ""
+            domain = _domain_from_url(link)
+            label = None
+            for d_domain, d_label in DIRECTORY_DOMAINS.items():
+                if domain == d_domain or domain.endswith("." + d_domain):
+                    label = d_label
+                    break
+            if not label:
+                continue
+            haystack = ((r.get("title") or "") + " " + (r.get("snippet") or "")).lower()
+
+            if user_short and user_short in haystack:
+                user_dirs.add(label)
+            for name, n_short in competitor_shorts.items():
+                if n_short and n_short in haystack:
+                    competitor_dirs[name].add(label)
+
+    all_competitor_dirs: set[str] = set()
+    for s in competitor_dirs.values():
+        all_competitor_dirs |= s
+
+    gaps = sorted(all_competitor_dirs - user_dirs)
+
+    return {
+        "user":        sorted(user_dirs),
+        "competitors": {n: sorted(s) for n, s in competitor_dirs.items()},
+        "gaps":        gaps,
+    }
+
+
+# ─── Profile-field validators (used by PUT /business) ──────────────────────
+_CANADIAN_POSTAL = re.compile(
+    r"^[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z][ -]?\d[ABCEGHJ-NPRSTV-Z]\d$",
+    re.IGNORECASE,
+)
+_HOURS_RANGE = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)-([01]\d|2[0-3]):([0-5]\d)$")
+_ALLOWED_PRICE_RANGES = {"$", "$$", "$$$", "$$$$"}
+_WEEKDAYS = {"monday", "tuesday", "wednesday", "thursday",
+             "friday", "saturday", "sunday"}
+
+def _clean_postal(postal: str | None, country: str | None) -> str | None:
+    if not postal or not postal.strip():
+        return None
+    p = postal.strip().upper()
+    if (country or "Canada") == "Canada" and not _CANADIAN_POSTAL.match(p):
+        raise HTTPException(status_code=422,
+            detail="postal_code: invalid Canadian postal code (e.g. K1P 5N7)")
+    return p
+
+def _clean_image_url(url: str | None) -> str | None:
+    if not url or not url.strip():
+        return None
+    u = url.strip()
+    if not (u.startswith("http://") or u.startswith("https://")):
+        raise HTTPException(status_code=422,
+            detail="image_url must start with http:// or https://")
+    return u
+
+def _clean_price_range(pr: str | None) -> str | None:
+    if not pr or not pr.strip():
+        return None
+    p = pr.strip()
+    if p not in _ALLOWED_PRICE_RANGES:
+        raise HTTPException(status_code=422,
+            detail="price_range must be one of '$', '$$', '$$$', '$$$$'")
+    return p
+
+def _clean_hours(hours: dict | None) -> dict | None:
+    if hours is None:
+        return None
+    if not isinstance(hours, dict):
+        raise HTTPException(status_code=422, detail="hours must be an object")
+    out: dict[str, str] = {}
+    for day, val in hours.items():
+        d = str(day).lower().strip()
+        if d not in _WEEKDAYS:
+            raise HTTPException(status_code=422,
+                detail=f"hours: invalid day '{day}'")
+        if val is None or str(val).strip() == "":
+            continue
+        v = str(val).strip().lower()
+        if v == "closed":
+            out[d] = "closed"
+        elif _HOURS_RANGE.match(v):
+            out[d] = v
+        else:
+            raise HTTPException(status_code=422,
+                detail=f"hours[{d}]: must be 'closed' or 'HH:MM-HH:MM'")
+    return out or None
+
+
 class BusinessProfileRequest(BaseModel):
     name: str
     type: str
@@ -1429,6 +1784,12 @@ class BusinessProfileRequest(BaseModel):
     country: str | None = "Canada"
     website: str | None = None
     services: str | None = None
+    street_address: str | None = None
+    postal_code: str | None = None
+    phone: str | None = None
+    image_url: str | None = None
+    price_range: str | None = None
+    hours: dict | None = None  # {"monday": "09:00-17:00", "tuesday": "closed", ...}
 
 
 @router.get("/business")
@@ -1446,6 +1807,12 @@ async def get_business_profile(current_user: dict = Depends(get_current_user)):
         "country":  business.get("country"),
         "website":  business.get("website"),
         "services": business.get("services"),
+        "street_address": business.get("street_address"),
+        "postal_code": business.get("postal_code"),
+        "phone": business.get("phone"),
+        "image_url": business.get("image_url"),
+        "price_range": business.get("price_range"),
+        "hours": business.get("hours"),
     }
 
 
@@ -1464,14 +1831,22 @@ async def update_business_profile(
     if not name or not city:
         raise HTTPException(status_code=422, detail="Business name and city are required")
 
+    country = request.country or "Canada"
+
     supabase_admin.table("businesses").update({
-        "name":     name,
-        "type":     request.type.strip() if request.type else business.get("type"),
-        "city":     city,
-        "province": request.province.strip() if request.province else None,
-        "country":  request.country or "Canada",
-        "website":  request.website.strip() if request.website else None,
-        "services": request.services.strip() if request.services else None,
+        "name":           name,
+        "type":           request.type.strip() if request.type else business.get("type"),
+        "city":           city,
+        "province":       request.province.strip() if request.province else None,
+        "country":        country,
+        "website":        request.website.strip() if request.website else None,
+        "services":       request.services.strip() if request.services else None,
+        "street_address": request.street_address.strip() if request.street_address else None,
+        "postal_code":    _clean_postal(request.postal_code, country),
+        "phone":          request.phone.strip() if request.phone else None,
+        "image_url":      _clean_image_url(request.image_url),
+        "price_range":    _clean_price_range(request.price_range),
+        "hours":          _clean_hours(request.hours),
     }).eq("id", business["id"]).execute()
 
     return {"message": "Business profile updated"}
@@ -1487,6 +1862,11 @@ async def run_audit(
         raise HTTPException(status_code=404, detail="Business profile not found")
     if str(business["id"]) != request.business_id:
         raise HTTPException(status_code=403, detail="Access denied")
+
+    if BILLING_ENABLED:
+        subscription = await get_active_subscription(str(business["id"]))
+        if not subscription:
+            raise HTTPException(status_code=402, detail="Active subscription required")
 
     prev_audits = supabase_admin.table("aeo_audits") \
         .select("score") \
@@ -1506,13 +1886,17 @@ async def run_audit(
         "perplexity_snippet":   result["perplexity"]["snippet"],
         "google_ai_mentioned":  result["google"]["ai_overview"]["mentioned"],
         "google_ai_snippet":    result["google"]["ai_overview"]["snippet"],
+        "chatgpt_mentioned":    result["chatgpt"]["mentioned"],
+        "chatgpt_snippet":      result["chatgpt"]["snippet"],
         "raw_results": {
             "perplexity":           result["perplexity"],
             "google":               result["google"],
+            "chatgpt":              result["chatgpt"],
             "website":              result["website"],
             "recommendations":      result["recommendations"],
             "competitors":          result.get("competitors", []),
             "competitor_insights":  result.get("competitor_insights", {}),
+            "citation_gaps":        result.get("citation_gaps", {}),
         },
     }).execute()
 
@@ -1525,10 +1909,12 @@ async def run_audit(
     result["raw_results"] = {
         "perplexity":          result["perplexity"],
         "google":              result["google"],
+        "chatgpt":             result["chatgpt"],
         "website":             result["website"],
         "recommendations":     result["recommendations"],
         "competitors":         result.get("competitors", []),
         "competitor_insights": result.get("competitor_insights", {}),
+        "citation_gaps":       result.get("citation_gaps", {}),
     }
     return result
 
@@ -1662,12 +2048,17 @@ async def cron_monthly_audit(authorization: str | None = Header(default=None)):
                 "perplexity_snippet":   result["perplexity"]["snippet"],
                 "google_ai_mentioned":  result["google"]["ai_overview"]["mentioned"],
                 "google_ai_snippet":    result["google"]["ai_overview"]["snippet"],
+                "chatgpt_mentioned":    result["chatgpt"]["mentioned"],
+                "chatgpt_snippet":      result["chatgpt"]["snippet"],
                 "raw_results": {
-                    "perplexity":      result["perplexity"],
-                    "google":          result["google"],
-                    "website":         result["website"],
-                    "recommendations": result["recommendations"],
-                    "competitors":     result.get("competitors", []),
+                    "perplexity":          result["perplexity"],
+                    "google":              result["google"],
+                    "chatgpt":             result["chatgpt"],
+                    "website":             result["website"],
+                    "recommendations":     result["recommendations"],
+                    "competitors":         result.get("competitors", []),
+                    "competitor_insights": result.get("competitor_insights", {}),
+                    "citation_gaps":       result.get("citation_gaps", {}),
                 },
             }).execute()
 
@@ -1686,93 +2077,255 @@ async def cron_monthly_audit(authorization: str | None = Header(default=None)):
     return {"audited": len(summary), "results": summary}
 
 
+# ─── Content-generation helpers ───────────────────────────────────────────
+async def _fetch_people_also_ask(business_type: str, city: str,
+                                  country: str, language: str = "en") -> list[str]:
+    """Pull `related_questions` from SerpApi for a generic Google search.
+    Best-effort: returns [] on any failure (no error to caller)."""
+    if not SERPAPI_KEY or not business_type or not city:
+        return []
+    try:
+        gl = COUNTRY_TO_GL.get(country, "ca")
+        hl = "fr" if language == "fr" else "en"
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                "https://serpapi.com/search",
+                params={
+                    "q":       f"{business_type} in {city}",
+                    "engine":  "google",
+                    "gl":      gl,
+                    "hl":      hl,
+                    "api_key": SERPAPI_KEY,
+                },
+            )
+            data = resp.json()
+            related = data.get("related_questions", []) or []
+            return [r.get("question") for r in related if r.get("question")][:8]
+    except Exception as e:
+        logger.warning(f"[PAA] fetch failed: {e}")
+        return []
+
+
+def _build_content_prompts(language: str, base_context: str, services: str,
+                           paa_questions: list[str]) -> dict[str, str]:
+    """Localized prompt templates for the four LLM calls."""
+    services_line_en = f"\nServices to highlight: {services}" if services else ""
+    services_line_fr = f"\nServices à mettre en avant : {services}" if services else ""
+    paa_block_en = ""
+    paa_block_fr = ""
+    if paa_questions:
+        joined = "\n- ".join(paa_questions[:8])
+        paa_block_en = (
+            "\nUse these real customer questions as inspiration (rewrite to fit "
+            "this business; if one doesn't apply, write a relevant variant):\n- "
+            + joined
+        )
+        paa_block_fr = (
+            "\nUtilise ces vraies questions de clients comme inspiration (réécris pour "
+            "cadrer avec l'entreprise; si une ne s'applique pas, écris une variante pertinente):\n- "
+            + joined
+        )
+
+    if language == "fr":
+        return {
+            "website_desc": (
+                f"{base_context}\nÉcris une description d'entreprise de 300-400 mots optimisée pour les "
+                "moteurs de recherche IA (ChatGPT, Perplexity, Google AI Overview). Sois précis, mentionne "
+                "la ville et les principaux services. Ton professionnel à la troisième personne."
+                + services_line_fr
+            ),
+            "gbp_desc": (
+                f"{base_context}\nÉcris une description Google Business Profile, MAXIMUM 700 caractères. "
+                "Va droit au but, mentionne la ville et les services, orientée bénéfices client."
+                + services_line_fr
+            ),
+            "yelp_desc": (
+                f"{base_context}\nÉcris une description style Yelp de 200-250 mots, ton concis, "
+                "troisième personne, mentionne les services."
+                + services_line_fr
+            ),
+            "social_bio": (
+                f"{base_context}\nÉcris une biographie de 150 caractères MAXIMUM pour Instagram/Facebook. "
+                "Style punchy, mentionne la ville et le service principal."
+            ),
+            "faq": (
+                f"{base_context}\nGénère 10 questions et réponses FAQ qu'un client poserait sur cette entreprise.\n"
+                "Chaque réponse doit faire 40-80 mots, être factuelle et utile pour citation par les IA.\n"
+                "Format: tableau JSON [{\"question\": \"...\", \"answer\": \"...\"}]. "
+                "Retourne uniquement du JSON valide."
+                + paa_block_fr
+            ),
+        }
+
+    return {
+        "website_desc": (
+            f"{base_context}\nWrite a 300-400 word business description optimized to appear in AI search "
+            "engine answers (ChatGPT, Perplexity, Google AI Overview). Be specific, mention the city and "
+            "key services. Write in third person, professional tone."
+            + services_line_en
+        ),
+        "gbp_desc": (
+            f"{base_context}\nWrite a Google Business Profile description, MAX 700 characters. "
+            "Direct, benefit-focused, mention the city and main services."
+            + services_line_en
+        ),
+        "yelp_desc": (
+            f"{base_context}\nWrite a Yelp-style description, 200-250 words, concise tone, third person, "
+            "mention services."
+            + services_line_en
+        ),
+        "social_bio": (
+            f"{base_context}\nWrite a 150-character MAX social bio for Instagram/Facebook. Punchy, "
+            "include city and main service."
+        ),
+        "faq": (
+            f"{base_context}\nGenerate 10 FAQ questions and answers a customer would ask about this business.\n"
+            "Each answer should be 40-80 words, factual, and useful for AI to cite verbatim.\n"
+            "Format as JSON array: [{\"question\": \"...\", \"answer\": \"...\"}]. "
+            "Return only valid JSON."
+            + paa_block_en
+        ),
+    }
+
+
+def _truncate_at_word(text: str, limit: int) -> str:
+    """Hard-cap a string at `limit` chars without splitting a word."""
+    text = (text or "").strip()
+    if len(text) <= limit:
+        return text
+    return text[:limit - 1].rsplit(' ', 1)[0] + "…"
+
+
+def _validate_content(descriptions: dict, faq: list, social_bio: str) -> list[str]:
+    """Return a list of validation warnings (empty list = clean)."""
+    warnings: list[str] = []
+    if not descriptions.get("website") or len(descriptions["website"].split()) < 100:
+        warnings.append("website_description_too_short")
+    if not descriptions.get("gbp"):
+        warnings.append("gbp_description_missing")
+    elif len(descriptions["gbp"]) > 750:
+        warnings.append("gbp_description_too_long")
+    if not faq or len(faq) < 8:
+        warnings.append("faq_too_few_items")
+    if not social_bio or len(social_bio) > 150:
+        warnings.append("social_bio_invalid_length")
+    return warnings
+
+
 @router.post("/generate-content")
 async def generate_content(
-    request: AuditRequest,
+    request: GenerateContentRequest,
     current_user: dict = Depends(get_current_user),
 ):
     business = await get_business_by_user(current_user["id"])
     if not business:
         raise HTTPException(status_code=404, detail="Business profile not found")
-
     if str(business["id"]) != request.business_id:
         raise HTTPException(status_code=403, detail="Access denied")
 
-    latest_audit = supabase_admin.table("aeo_audits") \
-        .select("*") \
-        .eq("business_id", business["id"]) \
-        .order("created_at", desc=True) \
-        .limit(1) \
-        .execute()
+    if BILLING_ENABLED:
+        subscription = await get_active_subscription(str(business["id"]))
+        if not subscription:
+            raise HTTPException(status_code=402, detail="Active subscription required")
 
+    language = "fr" if request.language == "fr" else "en"
+
+    latest_audit = supabase_admin.table("aeo_audits") \
+        .select("*").eq("business_id", business["id"]) \
+        .order("created_at", desc=True).limit(1).execute()
     audit = latest_audit.data[0] if latest_audit.data else None
 
     name     = business["name"]
     btype    = business["type"]
     city     = business["city"]
+    province = business.get("province") or ""
     services = business.get("services") or ""
     website  = business.get("website") or ""
+    country  = business.get("country") or "Canada"
 
     audit_context = ""
     if audit:
         gaps = []
-        if not audit["perplexity_mentioned"]: gaps.append("Perplexity")
-        if not audit["google_ai_mentioned"]:  gaps.append("Google AI Overview")
+        if not audit.get("perplexity_mentioned"): gaps.append("Perplexity")
+        if not audit.get("google_ai_mentioned"):  gaps.append("Google AI Overview")
+        if not audit.get("chatgpt_mentioned"):    gaps.append("ChatGPT")
         if gaps:
-            audit_context = f"The business is NOT currently appearing in: {', '.join(gaps)}. "
+            audit_context = f"The business is NOT currently cited by: {', '.join(gaps)}. "
 
-    base_context = f"""
-Business name: {name}
-Business type: {btype}
-City: {city}
-Services: {services}
-Website: {website}
-{audit_context}
-"""
-
-    description = await ai_engine.generate(
-        prompt=f"{base_context}\nWrite a 150-200 word business description optimized to appear in AI search engine answers (ChatGPT, Perplexity, Google AI Overview). Be specific, mention the city and key services. Write in third person.",
-        max_tokens=400,
-        temperature=0.7,
+    base_context = (
+        f"Business name: {name}\n"
+        f"Business type: {btype}\n"
+        f"City: {city}{', ' + province if province else ''}\n"
+        f"Services: {services}\n"
+        f"Website: {website}\n"
+        f"{audit_context}"
     )
 
-    faq_raw = await ai_engine.generate(
-        prompt=f"{base_context}\nGenerate 5 FAQ questions and answers that potential customers would ask about this business. Format as JSON array: [{{\"question\": \"...\", \"answer\": \"...\"}}]. Return only valid JSON.",
-        system_prompt="Return only valid JSON, no markdown.",
-        max_tokens=800,
-        temperature=0.5,
+    # People-Also-Ask seeds for FAQ grounding (best-effort)
+    paa_questions = await _fetch_people_also_ask(btype, city, country, language)
+
+    prompts = _build_content_prompts(language, base_context, services, paa_questions)
+
+    # Run all 5 LLM calls in parallel
+    website_desc, gbp_desc, yelp_desc, social_bio_raw, faq_raw = await asyncio.gather(
+        ai_engine.generate(prompt=prompts["website_desc"], max_tokens=700, temperature=0.7),
+        ai_engine.generate(prompt=prompts["gbp_desc"],     max_tokens=350, temperature=0.7),
+        ai_engine.generate(prompt=prompts["yelp_desc"],    max_tokens=500, temperature=0.7),
+        ai_engine.generate(prompt=prompts["social_bio"],   max_tokens=120, temperature=0.8),
+        ai_engine.generate(prompt=prompts["faq"],          max_tokens=2500, temperature=0.5,
+                           system_prompt="Return only valid JSON, no markdown."),
     )
 
-    schema_raw = await ai_engine.generate(
-        prompt=f"{base_context}\nGenerate a JSON-LD schema markup (LocalBusiness type) for this business. Include name, type, address (city), and description. Return only the JSON-LD script tag content.",
-        system_prompt="Return only valid JSON-LD, no explanation.",
-        max_tokens=600,
-        temperature=0.2,
-    )
-
-    social_bio = await ai_engine.generate(
-        prompt=f"{base_context}\nWrite a 150-character social media bio for Instagram/Facebook for this business. Be punchy and include the city and main service.",
-        max_tokens=100,
-        temperature=0.8,
-    )
-
-    import json
+    # Parse FAQ JSON, tolerant of fenced code blocks the LLM sometimes emits
     try:
-        faq = json.loads(re.sub(r'^```(?:json)?\s*|\s*```$', '', faq_raw.strip(), flags=re.MULTILINE))
+        faq = json.loads(re.sub(r'^```(?:json)?\s*|\s*```$', '', faq_raw.strip(),
+                                flags=re.MULTILINE))
+        if not isinstance(faq, list):
+            faq = []
     except Exception:
         faq = []
 
+    # Apply hard caps
+    social_bio = _truncate_at_word(social_bio_raw, 150)
+    descriptions = {
+        "website": (website_desc or "").strip(),
+        "gbp":     _truncate_at_word(gbp_desc, 700),
+        "yelp":    (yelp_desc or "").strip(),
+    }
+
+    # Server-side validation (warnings only -- still ship the content)
+    validation_warnings = _validate_content(descriptions, faq, social_bio)
+
+    # Deterministic schema -- never LLM-generated
+    schema_obj = build_schema(business, description=descriptions["website"])
+    schema_raw = json.dumps(schema_obj, indent=2, ensure_ascii=False)
+    schema_missing = find_missing_required_fields(business)
+
+    # Deterministic FAQPage schema from the LLM-generated Q&A list
+    faq_schema_obj = build_faq_schema(faq) if faq else None
+    faq_schema_raw = (json.dumps(faq_schema_obj, indent=2, ensure_ascii=False)
+                      if faq_schema_obj else None)
+
     supabase_admin.table("aeo_content").insert({
-        "business_id":    business["id"],
-        "description":    description,
-        "faq":            faq,
-        "schema_markup":  schema_raw,
-        "social_bio":     social_bio,
+        "business_id":   business["id"],
+        "description":   descriptions["website"],   # legacy column for backward compat
+        "descriptions":  descriptions,
+        "faq":           faq,
+        "faq_schema":    faq_schema_raw,
+        "schema_markup": schema_raw,
+        "social_bio":    social_bio,
+        "language":      language,
+        "paa_questions": paa_questions,
     }).execute()
 
     return {
-        "description":   description,
-        "faq":           faq,
-        "schema_markup": schema_raw,
-        "social_bio":    social_bio,
+        "language":              language,
+        "descriptions":          descriptions,
+        "social_bio":            social_bio,
+        "faq":                   faq,
+        "faq_schema":            faq_schema_raw,
+        "schema_markup":         schema_raw,
+        "schema_missing_fields": schema_missing,
+        "paa_questions":         paa_questions,
+        "validation_warnings":   validation_warnings,
     }

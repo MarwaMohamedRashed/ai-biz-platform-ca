@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { createClient } from '@/lib/supabase'
+import HoursEditor, { HoursValue } from './HoursEditor'
 
 const COUNTRIES = [
   'Canada', 'United States', 'United Kingdom', 'Australia', 'France',
@@ -26,6 +27,7 @@ async function apiAuth(path: string, options: RequestInit = {}) {
 
 export default function SettingsPage() {
   const t = useTranslations('dashboard.settings')
+  const tPlan = useTranslations('dashboard.plan')
   const locale = useLocale()
 
   // ── Business profile state ─────────────────────────────────────────────────
@@ -36,6 +38,13 @@ export default function SettingsPage() {
   const [bizCountry, setBizCountry] = useState('Canada')
   const [bizWebsite, setBizWebsite] = useState('')
   const [bizServices, setBizServices] = useState('')
+  // Schema-generator fields (migration 015)
+  const [bizStreet, setBizStreet] = useState('')
+  const [bizPostal, setBizPostal] = useState('')
+  const [bizPhone, setBizPhone] = useState('')
+  const [bizImage, setBizImage] = useState('')
+  const [bizPriceRange, setBizPriceRange] = useState('')
+  const [bizHours, setBizHours] = useState<HoursValue>({})
   const [bizSaving, setBizSaving] = useState(false)
   const [bizSaved, setBizSaved] = useState(false)
   const [bizError, setBizError] = useState('')
@@ -53,6 +62,9 @@ export default function SettingsPage() {
   const [revSaved, setRevSaved] = useState(false)
   const [revError, setRevError] = useState('')
 
+  const [portalLoading, setPortalLoading] = useState(false)
+  const [portalError, setPortalError] = useState('')
+
   const bizSavedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const revSavedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -67,6 +79,12 @@ export default function SettingsPage() {
         setBizCountry(data.country ?? 'Canada')
         setBizWebsite(data.website ?? '')
         setBizServices(data.services ?? '')
+        setBizStreet(data.street_address ?? '')
+        setBizPostal(data.postal_code ?? '')
+        setBizPhone(data.phone ?? '')
+        setBizImage(data.image_url ?? '')
+        setBizPriceRange(data.price_range ?? '')
+        setBizHours(data.hours ?? {})
       })
       .catch(() => {/* silently ignore — fields stay blank */})
 
@@ -100,6 +118,12 @@ export default function SettingsPage() {
           name: bizName, type: bizType, city: bizCity,
           province: bizProvince || null, country: bizCountry,
           website: bizWebsite || null, services: bizServices || null,
+          street_address: bizStreet || null,
+          postal_code: bizPostal || null,
+          phone: bizPhone || null,
+          image_url: bizImage || null,
+          price_range: bizPriceRange || null,
+          hours: Object.keys(bizHours).length ? bizHours : null,
         }),
       })
       setBizSaved(true)
@@ -109,6 +133,22 @@ export default function SettingsPage() {
       setBizError(t('businessProfile.errorSave'))
     } finally {
       setBizSaving(false)
+    }
+  }
+
+  // ── Manage subscription ───────────────────────────────────────────────────
+  async function handleManageSubscription() {
+    setPortalLoading(true)
+    setPortalError('')
+    try {
+      const data = await apiAuth('/api/v1/billing/portal-session', {
+        method: 'POST',
+        body: JSON.stringify({ locale }),
+      })
+      window.location.href = data.url
+    } catch {
+      setPortalError(tPlan('portalError'))
+      setPortalLoading(false)
     }
   }
 
@@ -193,6 +233,56 @@ export default function SettingsPage() {
           <p className="text-[10px] text-slate-400 mt-1">{t('businessProfile.servicesHint')}</p>
         </div>
 
+        {/* ── Schema generator fields ──────────────────────────────────── */}
+        <div className="mt-6 pt-5 border-t border-slate-100">
+          <h3 className="text-xs font-extrabold text-[#1e293b] mb-1">{t('businessProfile.schemaSectionTitle')}</h3>
+          <p className="text-[11px] text-slate-500 mb-4">{t('businessProfile.schemaSectionSubtitle')}</p>
+
+          <div className="mb-4">
+            <label className={labelClass}>{t('businessProfile.streetAddressLabel')}</label>
+            <input type="text" value={bizStreet} onChange={e => setBizStreet(e.target.value)} className={inputClass}
+              placeholder={t('businessProfile.streetAddressPlaceholder')} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div>
+              <label className={labelClass}>{t('businessProfile.postalCodeLabel')}</label>
+              <input type="text" value={bizPostal} onChange={e => setBizPostal(e.target.value)} className={inputClass}
+                placeholder={t('businessProfile.postalCodePlaceholder')} />
+            </div>
+            <div>
+              <label className={labelClass}>{t('businessProfile.phoneLabel')}</label>
+              <input type="tel" value={bizPhone} onChange={e => setBizPhone(e.target.value)} className={inputClass}
+                placeholder={t('businessProfile.phonePlaceholder')} />
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <label className={labelClass}>{t('businessProfile.imageUrlLabel')}</label>
+            <input type="url" value={bizImage} onChange={e => setBizImage(e.target.value)} className={inputClass}
+              placeholder={t('businessProfile.imageUrlPlaceholder')} />
+            <p className="text-[10px] text-slate-400 mt-1">{t('businessProfile.imageUrlHint')}</p>
+          </div>
+
+          <div className="mb-4">
+            <label className={labelClass}>{t('businessProfile.priceRangeLabel')}</label>
+            <select value={bizPriceRange} onChange={e => setBizPriceRange(e.target.value)} className={inputClass}>
+              <option value="">—</option>
+              <option value="$">$</option>
+              <option value="$$">$$</option>
+              <option value="$$$">$$$</option>
+              <option value="$$$$">$$$$</option>
+            </select>
+            <p className="text-[10px] text-slate-400 mt-1">{t('businessProfile.priceRangeHint')}</p>
+          </div>
+
+          <div className="mb-4">
+            <label className={labelClass}>{t('businessProfile.hoursLabel')}</label>
+            <p className="text-[10px] text-slate-400 mb-2">{t('businessProfile.hoursHint')}</p>
+            <HoursEditor value={bizHours} onChange={setBizHours} />
+          </div>
+        </div>
+
         {bizError && <p className="text-xs text-red-500 mb-3">{bizError}</p>}
 
         <div className="flex items-center gap-3">
@@ -203,6 +293,25 @@ export default function SettingsPage() {
           {bizSaved && <span className="text-xs text-green-600 font-semibold">✓ {t('businessProfile.saved')}</span>}
         </div>
       </form>
+
+      {/* ── Subscription ─────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 mb-5
+                      flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-extrabold text-[#1e293b]">{tPlan('title')}</h2>
+          <p className="text-[11px] text-slate-500 mt-0.5">{tPlan('subtitle')}</p>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <button
+            type="button"
+            onClick={handleManageSubscription}
+            disabled={portalLoading}
+            className="text-xs font-semibold text-[#4f46e5] hover:underline disabled:opacity-50 whitespace-nowrap">
+            {portalLoading ? '…' : tPlan('manageBtn')} →
+          </button>
+          {portalError && <p className="text-[10px] text-red-500">{portalError}</p>}
+        </div>
+      </div>
 
       {/* ── Review response settings ─────────────────────────────────────── */}
       <form onSubmit={handleRevSave} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 mb-6">

@@ -15,6 +15,7 @@ interface Breakdown {
 
 interface RawResults {
   perplexity?: { mentioned: boolean; snippet?: string | null }
+  chatgpt?: { mentioned: boolean; snippet?: string | null }
   google?: {
     ai_overview?: { mentioned: boolean; snippet?: string | null }
     local_pack?: { present: boolean; position: number | null }
@@ -78,6 +79,10 @@ export default function AeoAuditCard({ businessId, initialAudit, initialRecommen
         },
         body: JSON.stringify({ business_id: businessId }),
       })
+      if (res.status === 402) {
+        setError('upgrade_required')
+        return
+      }
       if (!res.ok) throw new Error('Audit failed')
       const data = await res.json()
       setAudit({
@@ -157,7 +162,18 @@ export default function AeoAuditCard({ businessId, initialAudit, initialRecommen
           </div>
         )}
 
-        {error && <p className="text-xs text-red-500 mb-2">{error}</p>}
+        {error === 'upgrade_required' ? (
+          <div className="mb-3 p-3 bg-amber-50 border border-amber-100 rounded-xl">
+            <p className="text-xs text-amber-700 font-semibold mb-1">Your trial has ended</p>
+            <p className="text-[11px] text-amber-600 mb-2">Upgrade to continue running audits.</p>
+            <a href={`/${locale}/dashboard/plan`}
+              className="text-xs font-semibold text-[#4f46e5] hover:underline">
+              View plans →
+            </a>
+          </div>
+        ) : error ? (
+          <p className="text-xs text-red-500 mb-2">{error}</p>
+        ) : null}
 
         <div className="flex items-center gap-2 flex-wrap">
           <button
@@ -268,6 +284,7 @@ function RawDataDrawer({
   const lp = rawResults?.google?.local_pack
   const ws = rawResults?.website
   const perplexity = rawResults?.perplexity
+  const chatgpt    = rawResults?.chatgpt
   const aiOverview = rawResults?.google?.ai_overview?.snippet
 
   return (
@@ -328,7 +345,18 @@ function RawDataDrawer({
               </DrawerSection>
 
               <DrawerSection title="AI Citations" pts={breakdown?.ai_citation ?? 0} max={18}>
-                <Signal label="Mentioned by Perplexity"       value={perplexity?.mentioned} />
+                <Signal label="Mentioned by ChatGPT" value={chatgpt?.mentioned} />
+                {chatgpt?.snippet && (
+                  <p className="text-[10px] text-slate-500 italic mt-1 mb-2 leading-relaxed">
+                    &quot;{chatgpt.snippet.slice(0, 200)}{chatgpt.snippet.length > 200 ? '…' : ''}&quot;
+                  </p>
+                )}
+                {chatgpt !== undefined && !chatgpt?.mentioned && (
+                  <p className="text-[10px] text-slate-400 mb-2">
+                    ChatGPT answers from training data — improvements appear in future model updates (6–12 months).
+                  </p>
+                )}
+                <Signal label="Mentioned by Perplexity" value={perplexity?.mentioned} />
                 {perplexity?.snippet && (
                   <p className="text-[10px] text-slate-500 italic mt-1 mb-2 leading-relaxed">
                     &quot;{perplexity.snippet.slice(0, 200)}{perplexity.snippet.length > 200 ? '…' : ''}&quot;

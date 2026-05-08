@@ -23,6 +23,7 @@ from startup.router import router as startup_router
 from insights.router import router as insights_router
 from settings.router import router as settings_router
 from google_auth.router import router as google_auth_router
+from billing.router import router as billing_router
 
 
 app = FastAPI(
@@ -55,7 +56,7 @@ app.include_router(insights_router,  prefix="/api/v1/insights",  tags=["insights
 app.include_router(settings_router,  prefix="/api/v1/settings",  tags=["settings"])
 app.include_router(google_auth_router, prefix="/api/v1/google-auth", tags=["google-auth"])
 app.include_router(aeo_router, prefix="/api/v1/aeo", tags=["aeo"])
-
+app.include_router(billing_router, prefix="/api/v1/billing", tags=["billing"])
 
 # ─── Health check ─────────────────────────────────────────────────────────────
 @app.get("/health")

@@ -1,5 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { getTranslations } from 'next-intl/server'
+import { getTranslations, getLocale } from 'next-intl/server'
 import UserMenu from '@/components/dashboard/UserMenu'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import PlanPage from '@/components/dashboard/PlanPage'
@@ -8,6 +8,7 @@ export default async function PlanRoute() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   const t = await getTranslations('dashboard.plan')
+  const locale = await getLocale()
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -27,7 +28,7 @@ export default async function PlanRoute() {
   const { data: subscription } = business
     ? await supabase
         .from('subscriptions')
-        .select('status, plan_tier')
+        .select('status, plan_tier, stripe_customer_id')
         .eq('business_id', business.id)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -36,6 +37,7 @@ export default async function PlanRoute() {
 
   const planTier = (subscription?.plan_tier ?? 'starter') as 'starter' | 'pro' | 'business'
   const planStatus = subscription?.status ?? 'trialing'
+  const hasSubscription = !!subscription?.stripe_customer_id
 
   return (
     <div className="flex flex-col h-full">
@@ -66,7 +68,7 @@ export default async function PlanRoute() {
         </div>
       </div>
 
-      <PlanPage currentTier={planTier} planStatus={planStatus} />
+      <PlanPage currentTier={planTier} planStatus={planStatus} hasSubscription={hasSubscription} locale={locale} />
     </div>
   )
 }

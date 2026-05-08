@@ -45,18 +45,51 @@ interface CompetitorInsights {
   reviews_analysed: number
 }
 
+interface CitationGaps {
+  user?: string[]
+  competitors?: Record<string, string[]>
+  gaps?: string[]
+}
+
 interface Audit {
   score: number
   score_breakdown: Breakdown | null
   raw_results: {
     competitors?: Competitor[]
     competitor_insights?: CompetitorInsights
+    citation_gaps?: CitationGaps
     google?: {
       competitors?: Competitor[]
       local_pack?: { present: boolean; position: number | null }
     }
   } | null
   created_at: string
+}
+
+// Map directory labels (from backend) to the URL we'd send the user to claim a listing.
+const DIRECTORY_CLAIM_URLS: Record<string, string> = {
+  'Yelp':         'https://biz.yelp.com/signup',
+  'Yellow Pages': 'https://www.yellowpages.ca/account/register',
+  'BBB':          'https://www.bbb.org/get-listed',
+  'TripAdvisor':  'https://www.tripadvisor.com/Owners',
+  'Facebook':     'https://www.facebook.com/business/pages/set-up',
+  'Instagram':    'https://business.instagram.com/getting-started',
+  'LinkedIn':     'https://www.linkedin.com/company/setup/new/',
+  'Foursquare':   'https://business.foursquare.com/',
+  'Nextdoor':     'https://business.nextdoor.com/local',
+  'RateMDs':      'https://www.ratemds.com/profile/claim/',
+  'Healthgrades': 'https://partner.healthgrades.com/',
+  '411.ca':       'https://411.ca/business',
+  'Canada411':    'https://www.canada411.ca',
+  'MapQuest':     'https://www.mapquest.com/business',
+  'Opencare':     'https://www.opencare.com/dentists/join/',
+  'Zocdoc':       'https://www.zocdoc.com/join',
+  'Wellness.com': 'https://www.wellness.com/dir/practitioner_signup.aspx',
+  'Houzz':        'https://www.houzz.com/proSignup',
+  'HomeStars':    'https://homestars.com/create-account',
+  'TrustedPros':  'https://www.trustedpros.ca/contractor',
+  'Angi':         'https://pro.angi.com/',
+  'Thumbtack':    'https://www.thumbtack.com/pro/',
 }
 
 interface Props {
@@ -179,6 +212,12 @@ export default function CompetitorsPage({ businessId, businessName, latestAudit,
         localPackPosition={userPosition}
       />
 
+      <ComparisonTable
+        userScore={latestAudit.score}
+        userBreakdown={latestAudit.score_breakdown}
+        competitors={[...competitors].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, 3)}
+      />
+
       <div className="flex flex-col gap-3 mt-4">
         {[...competitors]
           .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
@@ -194,6 +233,10 @@ export default function CompetitorsPage({ businessId, businessName, latestAudit,
       {latestAudit.raw_results?.competitor_insights &&
         Object.keys(latestAudit.raw_results.competitor_insights).length > 0 && (
         <CompetitorInsightsSection insights={latestAudit.raw_results.competitor_insights} />
+      )}
+
+      {latestAudit.raw_results?.citation_gaps && (
+        <CitationGapSection gaps={latestAudit.raw_results.citation_gaps} />
       )}
 
       <div className="mt-4">
@@ -441,6 +484,151 @@ function PillarBar({ label, points, max, userPoints }: {
       </div>
       <span className="text-[10px] text-slate-500 w-10 text-right flex-shrink-0">{points}/{max}</span>
       {delta}
+    </div>
+  )
+}
+
+function ComparisonTable({ userScore, userBreakdown, competitors }: {
+  userScore: number
+  userBreakdown: Breakdown | null
+  competitors: Competitor[]
+}) {
+  if (!userBreakdown || competitors.length === 0) return null
+
+  const cols = [
+    { label: 'You', score: userScore, breakdown: userBreakdown, isUser: true },
+    ...competitors.map((c, i) => ({
+      label: `#${c.position ?? i + 1} ${c.name ?? ''}`,
+      score: c.score ?? null,
+      breakdown: c.breakdown ?? null,
+      isUser: false,
+    })),
+  ]
+
+  return (
+    <div className="mt-4 bg-white border border-slate-100 rounded-2xl p-4 overflow-x-auto">
+      <p className="text-sm font-semibold text-[#1e293b] mb-3">You vs. top {competitors.length}</p>
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="text-left text-slate-500">
+            <th className="pb-2 font-medium w-20"></th>
+            {cols.map((c, i) => (
+              <th key={i}
+                  className={`pb-2 font-semibold truncate max-w-[120px] ${c.isUser ? 'text-[#4f46e5]' : 'text-slate-700'}`}
+                  title={c.label}>
+                {c.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          <tr className="border-t border-slate-100">
+            <td className="py-2 text-slate-500 font-medium">Total</td>
+            {cols.map((c, i) => (
+              <td key={i}
+                  className={`py-2 font-extrabold ${scoreColorClass(c.score)}`}>
+                {c.score != null ? c.score : '—'}
+              </td>
+            ))}
+          </tr>
+          {PILLARS.map(p => (
+            <tr key={p.key} className="border-t border-slate-50">
+              <td className="py-1.5 text-slate-500">{p.label}</td>
+              {cols.map((c, i) => {
+                const v = c.breakdown?.[p.key]
+                const max = p.max
+                const pct = v != null && max ? (v / max) * 100 : 0
+                const color =
+                  v == null ? 'text-slate-300'
+                  : pct >= 75 ? 'text-green-600'
+                  : pct >= 40 ? 'text-amber-600'
+                  : 'text-red-500'
+                return (
+                  <td key={i} className={`py-1.5 font-semibold ${color}`}>
+                    {v != null ? `${v}/${max}` : '—'}
+                  </td>
+                )
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function CitationGapSection({ gaps }: { gaps: CitationGaps }) {
+  const userDirs = gaps.user ?? []
+  const gapList = gaps.gaps ?? []
+
+  // No data at all → don't render the card at all (would just confuse)
+  if (userDirs.length === 0 && gapList.length === 0) return null
+
+  return (
+    <div className="mt-6 bg-white border border-slate-100 rounded-2xl p-5">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-base">🔗</span>
+        <h2 className="text-sm font-extrabold text-[#1e293b]">Directory Presence</h2>
+      </div>
+      <p className="text-[11px] text-slate-500 mb-4">
+        Where you and your competitors are listed across major directories.
+        Each directory listing is a citation that AI engines weigh as a trust signal.
+      </p>
+
+      {userDirs.length > 0 && (
+        <div className="mb-4">
+          <p className="text-[11px] font-semibold text-slate-600 mb-1.5">You appear on</p>
+          <div className="flex flex-wrap gap-1.5">
+            {userDirs.map(d => (
+              <span key={d}
+                    className="text-[11px] font-semibold text-green-700 bg-green-50 border border-green-100 px-2 py-0.5 rounded-full">
+                ✓ {d}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {gapList.length > 0 ? (
+        <div>
+          <p className="text-[11px] font-semibold text-slate-600 mb-1.5">
+            Gaps — competitors are listed here, you are not
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {gapList.map(d => {
+              const url = DIRECTORY_CLAIM_URLS[d]
+              return (
+                <div key={d}
+                     className="flex items-center justify-between gap-3 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-amber-600">⚠</span>
+                    <span className="text-xs font-semibold text-amber-900 truncate">{d}</span>
+                  </div>
+                  {url ? (
+                    <a href={url} target="_blank" rel="noopener noreferrer"
+                       className="text-[11px] font-semibold text-amber-900 underline underline-offset-2 hover:text-amber-700 whitespace-nowrap flex-shrink-0">
+                      Claim listing →
+                    </a>
+                  ) : null}
+                </div>
+              )
+            })}
+          </div>
+          <p className="text-[10px] text-slate-400 mt-3 italic">
+            Each directory listing strengthens your AI search visibility — competitors cited
+            on more directories are more likely to be cited by ChatGPT and Perplexity.
+          </p>
+        </div>
+      ) : userDirs.length > 0 ? (
+        <p className="text-[11px] text-green-700">
+          No directory gaps detected — you appear wherever your competitors do.
+        </p>
+      ) : (
+        <p className="text-[11px] text-slate-500">
+          We didn&apos;t detect any directory listings for you or your competitors in this audit&apos;s
+          search results. This is normal for very local or very new businesses.
+        </p>
+      )}
     </div>
   )
 }
