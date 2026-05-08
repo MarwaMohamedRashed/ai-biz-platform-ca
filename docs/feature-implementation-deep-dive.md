@@ -1,11 +1,11 @@
 # LeapOne — Built Functionality, Implementation & Competitive Notes
 
-**Date:** 2026-05-08 (updated with Canadian vertical expansion)
+**Date:** 2026-05-08 (updated with Canadian vertical expansion + Reddit/LinkedIn citation surfaces)
 **Audience:** Founder / sales conversations / competitive comparisons
 **Companion docs:**
 [feature-inventory-current.md](feature-inventory-current.md) (what exists, by surface) ·
 [honest-evaluation-content-feature.md](honest-evaluation-content-feature.md) (vs competitors) ·
-[canadian-vertical-expansion-plan.md](canadian-vertical-expansion-plan.md) (today's expansion)
+[canadian-vertical-expansion-plan.md](canadian-vertical-expansion-plan.md) (vertical expansion plan)
 
 This doc goes deeper than the inventory: for each shipped feature, it explains
 **what it does**, **how it's implemented** (libraries, APIs, file pointers), and
@@ -330,8 +330,9 @@ are listed on that the user is not. Frontend renders this with "Claim listing �
 deep links to the right vendor signup page.
 
 **How:**
-- **27 known directory domains** in `DIRECTORY_DOMAINS` (Canadian + US +
-  international + niche health/professional + vertical-specific)
+- **28 known directory domains** in `DIRECTORY_DOMAINS` (Canadian + US +
+  international + niche health/professional + vertical-specific +
+  community)
   - Universal: Yelp (.com/.ca), Yellow Pages (.com/.ca), BBB, TripAdvisor
     (.com/.ca), Facebook, Instagram, LinkedIn, Foursquare, Nextdoor
   - Health: RateMDs, Healthgrades, Wellness.com, Opencare, Zocdoc
@@ -340,6 +341,10 @@ deep links to the right vendor signup page.
     411.ca
   - Vertical-specific Canadian (added 2026-05-08): Realtor.ca,
     LawyerLocate, OpenTable (.com/.ca)
+  - Community / UGC (added 2026-05-08): **Reddit** — top-3 AI citation
+    domain after Google's $60M Reddit data licensing deal. Treated
+    specially in the UI (not a "claim listing" action; instead a
+    "Browse mentions →" link to the relevant city subreddit).
   - Other: MapQuest
 - Each organic result's URL is bucketed to its directory label via
   endswith-matching for subdomains
@@ -455,19 +460,66 @@ Google's index — we can't detect existing presence, so we always nudge.
 | Apple Business Connect | Feeds Apple Maps + Apple Intelligence on iPhone/iPad. Free, under-claimed by Canadian SMBs. | businessconnect.apple.com |
 | Bing Places | Feeds Microsoft Copilot's local search answers. Auto-imports from Google Business Profile. | bingplaces.com |
 
+### Reddit recommendation — community citation surface (added 2026-05-08)
+Reddit is treated as a **citation surface, not a directory** because
+there's no business listing to claim. The rec fires for any business not
+detected in Reddit results.
+
+- **Detection:** standard `_user_directories_only()` heuristic — business
+  name in title/snippet of a `reddit.com` (or subdomain) result
+- **Action target:** city-specific subreddit URL when the city is in our
+  `CITY_SUBREDDITS` map (33 Canadian cities mapped today: Toronto, Ottawa,
+  Vancouver, Montreal, Calgary, Edmonton, Halifax, Winnipeg, Quebec City,
+  Mississauga, Brampton, Hamilton, London, Kitchener-Waterloo, Saskatoon,
+  Regina, Victoria, Windsor, Burnaby, Richmond, Surrey, Markham, Vaughan,
+  Oakville, Burlington, Guelph, Barrie, Kelowna, etc.). Falls back to a
+  Reddit search URL when city isn't mapped.
+- **Difficulty: hard** — explicitly framed as long-term community
+  engagement, not a quick win
+- **Impact: +3**
+- **Honest framing:** the rec text **explicitly warns against
+  astroturfing** — Reddit detects and bans self-promotion fast, and the
+  public shaming that follows is worse than no presence. Our test suite
+  verifies this warning is in the rec text.
+
+### LinkedIn Company Page recommendation — B2B verticals only (added 2026-05-08)
+For professional services where LinkedIn presence is a real AI citation
+signal. New `_is_b2b_business()` detector covers:
+- Lawyers / paralegals / notaries
+- Accountants / bookkeepers / CPAs
+- Consultants / advisors / business coaches
+- IT services / managed services / tech consultants
+- Marketing / advertising / digital agencies
+- Financial advisors / wealth managers
+- Recruiters / staffing agencies
+- Real estate agents (intentional overlap with realtor detector)
+- Architects / engineering firms
+- Software / SaaS companies
+
+**Recommendation properties:**
+- **Difficulty: medium** (ongoing weekly posting commitment, not a
+  one-time profile claim)
+- **Impact: +3**
+- Action: Create or activate Company Page, commit to one industry-relevant
+  post per week, get employees + clients to follow
+
+**Intentional overlaps:** lawyers get BOTH LawyerLocate AND LinkedIn.
+Realtors get BOTH Realtor.ca AND LinkedIn. They serve different surfaces;
+we don't deduplicate.
+
 ### Coverage outcome (Canadian SMB market)
-| Vertical | % of CA SMBs | Vertical-specific rec | Universal recs |
-|---|---|---|---|
-| Trades | ~15% | ✅ HomeStars + TrustedPros | ✅ Apple + Bing |
-| Healthcare | ~10% | ✅ RateMDs (+ Opencare for dentists) | ✅ Apple + Bing |
-| Restaurants | ~12% | ✅ OpenTable + TripAdvisor | ✅ Apple + Bing |
-| Legal | ~3% | ✅ LawyerLocate | ✅ Apple + Bing |
-| Realtor | ~2% | ✅ Realtor.ca | ✅ Apple + Bing |
-| Beauty / personal | ~10% | ❌ (no specific Canadian dirs) | ✅ Apple + Bing |
-| Retail | ~15% | ❌ | ✅ Apple + Bing |
-| Auto | ~5% | ❌ (CAA-Approved possible later) | ✅ Apple + Bing |
-| Professional services | ~7% | ❌ (sparse Canadian dir landscape) | ✅ Apple + Bing |
-| **Coverage** | **~42% with vertical-specific recs** | | **100% with universal recs** |
+| Vertical | % of CA SMBs | Vertical-specific rec | B2B (LinkedIn) | Reddit | Universal (Apple+Bing) |
+|---|---|---|---|---|---|
+| Trades | ~15% | ✅ HomeStars + TrustedPros | ❌ | ✅ | ✅ |
+| Healthcare | ~10% | ✅ RateMDs (+ Opencare for dentists) | ❌ | ✅ | ✅ |
+| Restaurants | ~12% | ✅ OpenTable + TripAdvisor | ❌ | ✅ | ✅ |
+| Legal | ~3% | ✅ LawyerLocate | ✅ LinkedIn | ✅ | ✅ |
+| Realtor | ~2% | ✅ Realtor.ca | ✅ LinkedIn | ✅ | ✅ |
+| Accounting / consulting / B2B services | ~7% | ❌ | ✅ LinkedIn | ✅ | ✅ |
+| Beauty / personal | ~10% | ❌ | ❌ | ✅ | ✅ |
+| Retail | ~15% | ❌ | ❌ | ✅ | ✅ |
+| Auto | ~5% | ❌ (CAA-Approved possible later) | ❌ | ✅ | ✅ |
+| **Coverage** | **~49% with vertical-specific recs** | | **B2B verticals covered** | **100%** | **100%** |
 
 ### Roadmap
 - Action tracking — when a user marks a recommendation done, re-check that
@@ -627,17 +679,18 @@ supports French variants. Audit queries respect locale.
   zero-mention rather than aborting the audit.
 
 ### Test infrastructure
-- `api/tests/` (added 2026-05-07, expanded 2026-05-08) — **147 pytest cases**
-  across 6 suites covering schema builder, validators, citation gaps,
-  content helpers, trades recs, and Canadian vertical recs (healthcare,
-  food, legal, realtor + universal Apple/Bing + Quebec inLanguage).
-  Pure-Python, no auth needed.
-- Run: `pytest tests/ -v` (~2.2s).
+- `api/tests/` (added 2026-05-07, expanded twice on 2026-05-08) —
+  **185 pytest cases** across 7 suites covering schema builder,
+  validators, citation gaps, content helpers, trades recs, Canadian
+  vertical recs (healthcare/food/legal/realtor + universal Apple/Bing
+  + Quebec inLanguage), and Reddit/LinkedIn recs (city subreddits, B2B
+  detection, astroturfing-warning content). Pure-Python, no auth needed.
+- Run: `pytest tests/ -v` (~2.5s).
 
 ### What's deliberately missing today (gaps you should know about)
 | Feature | Why deferred |
 |---|---|
-| **Reddit citation tracking + competitor sentiment mining** | Reddit is a top-3 AI citation source after Google's $60M Reddit data deal. Detection is straightforward (add reddit.com to DIRECTORY_DOMAINS); recommendations are nuanced because you can't "claim" a Reddit profile the way you do Yelp. **High-value next sprint** — see end of doc for proposal. |
+| **Reddit competitor sentiment mining** (Phase 5.4) | Reddit *detection* and the universal Reddit recommendation shipped 2026-05-08. The next layer — scraping competitor mentions on Reddit and running sentiment analysis to surface complaint themes (parallel to what we already do for Google Maps reviews) — is deferred. Real differentiation when shipped because Reddit comments are usually more candid than Google Maps reviews. |
 | AI-crawler analytics (GPTBot/PerplexityBot/ClaudeBot traffic) | Requires server logs / pixel / Cloudflare API. Multi-week feature, no SerpApi shortcut. |
 | Per-tier audit rate limiting | Not yet wired; once `BILLING_ENABLED=true`, Starter is unbounded. F9 sprint. |
 | `extruct` library for schema parsing on customer websites | Substring scan today — modest accuracy improvement when upgraded. |
@@ -671,17 +724,24 @@ SMB-tier tool we're aware of combines:
 
 - Deterministic schema generation with industry-specific Schema.org subtypes
 - Competitor weak-point mining (review sentiment + complaint themes)
-- Citation gap analysis with claim-listing deep links across 27 directories
+- Citation gap analysis with claim-listing deep links across **28 directories**
+  (universal + health + trades + Canadian general + Canadian vertical-specific
+  + community/UGC)
 - 5-pillar audit + 3 AI engines (ChatGPT + Perplexity + Google AI Overview) in parallel
 - Bilingual EN/FR with Quebec-specific schema signals
 - **Vertical-specific Canadian directory recommendations** (HomeStars,
   TrustedPros, RateMDs, Opencare, OpenTable, LawyerLocate, Realtor.ca)
+- **B2B vertical LinkedIn recommendations** (lawyers, accountants,
+  consultants, agencies, financial advisors, recruiters, realtors, etc.)
+- **Reddit citation surface** with city-specific subreddit guidance
+  (33 Canadian cities mapped) and explicit anti-astroturfing framing
 - **Apple Business Connect + Bing Places nudges** as growing AI citation
   surfaces beyond Google's ecosystem
 
-The vertical-specific Canadian recs are the freshest moat — they require
-local-market knowledge that US-built AEO tools (Otterly, AthenaHQ,
-Profound, HubSpot AEO, Surfer, Writesonic GEO) literally cannot match
-without hiring Canadian researchers. We hand the answer to a plumber in
-Mississauga or a dentist in Ottawa; competitors hand them generic
-"claim your Yelp listing" copy.
+The vertical-specific + Reddit + LinkedIn recs together are the freshest
+moat. They require local-market knowledge and AI-search literacy that
+US-built AEO tools (Otterly, AthenaHQ, Profound, HubSpot AEO, Surfer,
+Writesonic GEO) literally cannot match without hiring Canadian
+researchers. We hand the answer to a plumber in Mississauga, a dentist
+in Ottawa, an accountant in Calgary, or a Toronto realtor; competitors
+hand them generic "claim your Yelp listing" copy.

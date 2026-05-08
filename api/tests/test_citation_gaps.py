@@ -176,6 +176,9 @@ class TestDirectoryDomainsConst:
         assert DIRECTORY_DOMAINS["opentable.com"]   == "OpenTable"
         assert DIRECTORY_DOMAINS["opentable.ca"]    == "OpenTable"
 
+    def test_has_reddit_as_community_citation_source(self):
+        assert DIRECTORY_DOMAINS["reddit.com"] == "Reddit"
+
     def test_has_global_majors(self):
         for d in ["yelp.com", "tripadvisor.com", "bbb.org", "facebook.com",
                   "linkedin.com", "instagram.com", "foursquare.com"]:

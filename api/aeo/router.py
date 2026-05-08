@@ -1184,21 +1184,14 @@ def generate_recommendations(
     # ─── Canadian vertical-specific directory recommendations ─────
     # Each block is gated by a vertical detector AND by whether the user
     # is already detected on that directory in their organic results.
-    # Compute user_dirs once, lazily — only when at least one vertical fires.
+    # We always compute user_dirs because Reddit detection is universal
+    # (fires for every business) so we always need the directory presence
+    # data anyway.
     btype = business.get("type")
-    needs_vertical_check = (
-        _is_trades_business(btype)
-        or _is_healthcare_business(btype)
-        or _is_food_business(btype)
-        or _is_legal_business(btype)
-        or _is_realtor_business(btype)
+    user_dirs = _user_directories_only(
+        google.get("per_query", []),
+        business.get("name", ""),
     )
-    user_dirs: set[str] = set()
-    if needs_vertical_check:
-        user_dirs = _user_directories_only(
-            google.get("per_query", []),
-            business.get("name", ""),
-        )
 
     # Trades — HomeStars + TrustedPros
     if _is_trades_business(btype):
@@ -1291,6 +1284,46 @@ def generate_recommendations(
             "difficulty": "easy",
             "impact": 4,
             "url": "https://www.crea.ca/membership/",
+        })
+
+    # B2B / professional services — LinkedIn Company Page
+    # AI engines (especially Perplexity and Google AI Overview) cite
+    # LinkedIn pages heavily when answering questions about professional
+    # services, B2B vendors, lawyers, accountants, etc.
+    if _is_b2b_business(btype) and "LinkedIn" not in user_dirs:
+        recs.append({
+            "pillar": "ai_citation",
+            "title": "Activate your LinkedIn Company Page",
+            "description": "For B2B and professional services, LinkedIn is one of the highest-leverage AI citation surfaces. AI engines weight LinkedIn pages heavily when answering 'find me a <profession> in <city>' queries. Static profiles are ignored — pages with weekly posting and active engagement get cited far more often.",
+            "action": "Create or activate your LinkedIn Company Page. Commit to one industry-relevant post per week. Have employees and clients follow the page. Pin a clear value-proposition post at the top.",
+            "difficulty": "medium",
+            "impact": 3,
+            "url": "https://www.linkedin.com/company/setup/new/",
+        })
+
+    # ─── Reddit (community citation surface, every vertical) ──────
+    # Reddit is a top-3 AI citation domain after Google's $60M Reddit data
+    # licensing deal. Citations come from organic discussion (you can't
+    # claim a Reddit listing the way you do Yelp), so the action is
+    # community engagement — explicitly framed as long-term, not a quick
+    # win. We surface this for every vertical because it applies broadly.
+    if "Reddit" not in user_dirs:
+        city = business.get("city") or ""
+        subreddit_url = _city_to_subreddit_url(city)
+        recs.append({
+            "pillar": "ai_citation",
+            "title": "Build authentic Reddit presence",
+            "description": "Reddit is one of the most-cited AI citation sources in 2026 — Google licensed Reddit data for $60M and AI Overview / Perplexity / ChatGPT all weight Reddit threads heavily for 'best X in <city>' queries. Reddit citations come from real community discussion, not paid listings. This is a long-term play, not a quick win.",
+            "action": (
+                f"Engage authentically in r/{CITY_SUBREDDITS.get(city.strip().lower(), 'your city subreddit')} "
+                "and industry-relevant subreddits. Answer questions in your area of expertise without "
+                "self-promoting. Ask satisfied customers to share their experience when relevant threads "
+                "come up. Avoid astroturfing — Reddit detects and bans it fast, and the public shaming "
+                "is worse than no presence."
+            ),
+            "difficulty": "hard",
+            "impact": 3,
+            "url": subreddit_url,
         })
 
     # ─── Universal AI-engine listings (any vertical) ──────────────
@@ -1770,7 +1803,62 @@ DIRECTORY_DOMAINS: dict[str, str] = {
     "lawyerlocate.ca":      "LawyerLocate",
     "opentable.com":        "OpenTable",
     "opentable.ca":         "OpenTable",
+    # Community / UGC citation surfaces (added 2026-05-08)
+    # Reddit is a top-3 AI citation domain since Google's $60M Reddit data
+    # licensing deal. Detection works the same as for directories, but the
+    # frontend treats it specially -- you don't "claim" a Reddit listing.
+    "reddit.com":           "Reddit",
 }
+
+
+# City -> subreddit name mapping for Canadian recommendations.
+# Used by Reddit recommendation to send users to the most relevant local
+# subreddit. Falls back to a Reddit search when city isn't mapped.
+CITY_SUBREDDITS: dict[str, str] = {
+    "toronto":         "toronto",
+    "ottawa":          "ottawa",
+    "vancouver":       "vancouver",
+    "montreal":        "montreal",
+    "montréal":        "montreal",
+    "calgary":         "Calgary",
+    "edmonton":        "Edmonton",
+    "halifax":         "halifax",
+    "winnipeg":        "Winnipeg",
+    "quebec city":     "quebeccity",
+    "québec":          "quebeccity",
+    "quebec":          "quebeccity",
+    "mississauga":     "mississauga",
+    "brampton":        "brampton",
+    "hamilton":        "Hamilton",
+    "london":          "londonontario",
+    "kitchener":       "waterloo",
+    "waterloo":        "waterloo",
+    "saskatoon":       "saskatoon",
+    "regina":          "Regina",
+    "victoria":        "VictoriaBC",
+    "windsor":         "windsorontario",
+    "burnaby":         "burnaby",
+    "richmond":        "richmondbc",
+    "surrey":          "surreybc",
+    "markham":         "markham",
+    "vaughan":         "Vaughan",
+    "oakville":        "oakville",
+    "burlington":      "burlingtonontario",
+    "guelph":          "Guelph",
+    "barrie":          "Barrie",
+    "kelowna":         "kelowna",
+}
+
+
+def _city_to_subreddit_url(city: str | None) -> str:
+    """Returns a Reddit URL pointing at the city's subreddit if known,
+    otherwise a Reddit search for the city name."""
+    if not city:
+        return "https://www.reddit.com/r/canada"
+    sub = CITY_SUBREDDITS.get(city.strip().lower())
+    if sub:
+        return f"https://www.reddit.com/r/{sub}"
+    return f"https://www.reddit.com/search/?q={city.replace(' ', '+')}"
 
 # Canadian trades-business detector — used by recommendations engine
 # to suggest HomeStars/TrustedPros listings for plumbers, electricians, etc.
@@ -1823,6 +1911,23 @@ _REALTOR_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+# B2B / professional services detector — gates the LinkedIn Company Page
+# recommendation. Intentionally broad: covers services where LinkedIn
+# presence is a real AI citation signal beyond just consumer-facing reviews.
+_B2B_PATTERN = re.compile(
+    r"\blawyer|\battorney|\blegal\s+service|\blaw\s+(firm|office)|\bparalegal|\bnotary"
+    r"|\baccount\w+|\bbookkeep\w+|\bcpa\b|\bauditor"
+    r"|\bconsult\w+|\badvisor\b|\badvisory"
+    r"|\bIT\s+services|\bmanaged\s+services|\bIT\s+consulting|\btech\s+consult"
+    r"|\bmarketing\s+agency|\badvertising\s+agency|\bdigital\s+agency|\bweb\s+design"
+    r"|\bfinancial\s+(advisor|planner)|\bwealth\s+management"
+    r"|\bbusiness\s+coach|\bexecutive\s+coach"
+    r"|\brecruit\w+|\bstaffing"
+    r"|\breal\s+estate|\brealtor\b"
+    r"|\barchitect|\bengineering\s+firm|\bsoftware\s+(company|consult)|\bSaaS",
+    re.IGNORECASE,
+)
+
 
 def _is_healthcare_business(business_type: str | None) -> bool:
     return bool(business_type and _HEALTHCARE_PATTERN.search(business_type))
@@ -1842,6 +1947,15 @@ def _is_legal_business(business_type: str | None) -> bool:
 
 def _is_realtor_business(business_type: str | None) -> bool:
     return bool(business_type and _REALTOR_PATTERN.search(business_type))
+
+
+def _is_b2b_business(business_type: str | None) -> bool:
+    """True for professional services / B2B verticals where a LinkedIn
+    Company Page is a meaningful AI citation signal. Intentionally
+    overlaps with _is_legal_business and _is_realtor_business -- a lawyer
+    benefits from BOTH the LawyerLocate rec AND the LinkedIn rec; they
+    serve different surfaces."""
+    return bool(business_type and _B2B_PATTERN.search(business_type))
 
 
 def _user_directories_only(per_query_results: list[dict], business_name: str) -> set[str]:

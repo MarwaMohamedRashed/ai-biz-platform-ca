@@ -97,6 +97,14 @@ const DIRECTORY_CLAIM_URLS: Record<string, string> = {
   'Realtor.ca':   'https://www.crea.ca/membership/',
   'LawyerLocate': 'https://www.lawyerlocate.ca/lawyers/register',
   'OpenTable':   'https://restaurant.opentable.com',
+  // Community citation source (no profile to claim — search by name)
+  'Reddit':       'https://www.reddit.com/search/?q=',
+}
+
+// Directories where the user-facing action isn't "claim a listing".
+// Currently just Reddit (community/UGC) — others may be added later.
+const DIRECTORY_ACTION_LABEL: Record<string, string> = {
+  'Reddit': 'Browse mentions',
 }
 
 interface Props {
@@ -604,6 +612,7 @@ function CitationGapSection({ gaps }: { gaps: CitationGaps }) {
           <div className="flex flex-col gap-1.5">
             {gapList.map(d => {
               const url = DIRECTORY_CLAIM_URLS[d]
+              const actionLabel = DIRECTORY_ACTION_LABEL[d] ?? 'Claim listing'
               return (
                 <div key={d}
                      className="flex items-center justify-between gap-3 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
@@ -614,7 +623,7 @@ function CitationGapSection({ gaps }: { gaps: CitationGaps }) {
                   {url ? (
                     <a href={url} target="_blank" rel="noopener noreferrer"
                        className="text-[11px] font-semibold text-amber-900 underline underline-offset-2 hover:text-amber-700 whitespace-nowrap flex-shrink-0">
-                      Claim listing →
+                      {actionLabel} →
                     </a>
                   ) : null}
                 </div>

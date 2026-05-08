@@ -950,6 +950,111 @@ Already covered in 8.3 — keep this row to mark the auth gate is intentional.
 
 ---
 
+---
+
+## 22. Reddit citation surface (added 2026-05-08)
+
+Reddit is detected as an organic-result source for citations and surfaces a
+universal "Build authentic Reddit presence" recommendation. UI uses a
+"Browse mentions →" action label instead of "Claim listing →".
+
+### 22.1 — Reddit detection from organic results
+**Preconditions:** Audit a business that genuinely shows up in a Reddit thread (e.g. a popular Toronto restaurant or a clinic that's been mentioned on r/HomeImprovement).
+**Steps:**
+1. Run a fresh audit.
+2. Open Supabase → newest `aeo_audits` row → `raw_results.citation_gaps.user`.
+3. **Expected:** if a Reddit thread mentioning the business appeared in any of the 3 Google queries' top-10 organic results, `"Reddit"` appears in the `user` array.
+
+### 22.2 — Reddit appears in the Directory Presence section
+**Steps:**
+1. After 22.1, visit `/en/dashboard/competitors`.
+2. Scroll to "🔗 Directory Presence" section.
+3. **Expected:** if you appear on Reddit, a green "✓ Reddit" pill is shown alongside other directories. If you don't, Reddit appears in the amber gap list (when at least one competitor is detected on it).
+
+### 22.3 — Reddit gap shows "Browse mentions →" not "Claim listing →"
+**Steps:**
+1. With Reddit in the gap list, find its row.
+2. **Expected:** the action label reads **"Browse mentions →"**, not "Claim listing →". Click → opens Reddit search.
+
+### 22.4 — Reddit recommendation fires on a fresh audit
+**Steps:**
+1. Audit any business that doesn't appear on Reddit.
+2. Open dashboard → Insights / recommendations.
+3. **Expected:** a recommendation titled "Build authentic Reddit presence" appears.
+4. **Expected difficulty:** "hard" (not "easy" — community engagement is genuinely long-term).
+5. **Expected action text:** must include the word "astroturf" — we explicitly warn against self-promotion-disguised-as-engagement.
+
+### 22.5 — Reddit rec links to city-specific subreddit when known
+**Steps:**
+1. Set business city to "Toronto", "Ottawa", or "Vancouver" in Settings.
+2. Re-run audit.
+3. View the Reddit recommendation.
+4. **Expected:** the action URL points to `https://www.reddit.com/r/<city_subreddit>` (e.g. r/toronto, r/ottawa).
+
+### 22.6 — Reddit rec falls back gracefully for unknown cities
+**Steps:**
+1. Set business city to an obscure value not in the `CITY_SUBREDDITS` map (e.g. "Smallville").
+2. Re-run audit.
+3. **Expected:** Reddit rec URL is `https://www.reddit.com/search/?q=Smallville` (search-fallback). NOT a 404 to a non-existent subreddit.
+
+### 22.7 — Reddit rec does NOT fire when already detected
+**Steps:**
+1. Audit a business that's already on Reddit (e.g. a well-known business mentioned in r/<city> threads).
+2. Confirm `Reddit` appears in `raw_results.citation_gaps.user`.
+3. **Expected:** no Reddit recommendation in the list. The user already has the citation.
+
+### 22.8 — Astroturfing warning is in the rec text (regression check)
+**Why:** The original product spec required honest framing — telling customers to spam Reddit would actively harm them.
+**Steps:**
+1. Inspect the Reddit recommendation `action` field.
+2. **Expected:** contains the word "astroturf" or equivalent warning. Pytest enforces this via `test_reddit_rec_warns_against_astroturfing`.
+
+---
+
+## 23. LinkedIn B2B vertical recommendation (added 2026-05-08)
+
+For professional services / B2B verticals, a LinkedIn Company Page is a
+real AI citation signal. New `_is_b2b_business()` detector covers lawyers,
+accountants, consultants, agencies, financial advisors, recruiters,
+realtors, architects, software/SaaS companies. Recommendation fires only
+when the business is B2B AND not already detected on LinkedIn.
+
+### 23.1 — Lawyer gets BOTH LinkedIn and LawyerLocate recs
+**Preconditions:** Business with type "law firm" or "lawyer".
+**Steps:**
+1. Run audit, view recommendations.
+2. **Expected:** both "Activate your LinkedIn Company Page" AND "Claim your LawyerLocate profile" appear (intentional overlap — they serve different surfaces).
+
+### 23.2 — Accountant gets LinkedIn rec
+**Preconditions:** Business type contains "accountant" / "CPA" / "bookkeeper" / "accounting firm".
+**Steps:**
+1. Run audit.
+2. **Expected:** LinkedIn rec appears.
+
+### 23.3 — Marketing agency / consultant / financial advisor get LinkedIn rec
+**Steps:** Repeat 23.2 with these business types. **Expected:** LinkedIn rec appears for each.
+
+### 23.4 — Realtor gets BOTH LinkedIn and Realtor.ca recs
+**Steps:**
+1. Business type "real estate agent" or "realtor".
+2. **Expected:** both Realtor.ca AND LinkedIn recs appear.
+
+### 23.5 — Consumer verticals do NOT get LinkedIn rec
+**Steps:** For each of these business types — "dentist", "restaurant", "hair salon", "plumber", "bakery", "physiotherapy clinic" — confirm NO LinkedIn recommendation.
+**Expected:** these are not B2B verticals. LinkedIn is irrelevant to their citation strategy. False positives here are bad UX.
+
+### 23.6 — LinkedIn rec does NOT fire when already on LinkedIn
+**Steps:**
+1. Audit a B2B business whose LinkedIn page appears in their organic results.
+2. **Expected:** no LinkedIn recommendation. Rec is gated on "not already detected".
+
+### 23.7 — LinkedIn rec difficulty is "medium"
+**Why:** LinkedIn presence is an ongoing weekly-posting commitment, not a one-time profile claim. Framing this as "easy" sets wrong expectations.
+**Steps:** Inspect the LinkedIn recommendation `difficulty` field.
+**Expected:** `"medium"`. Pytest enforces this.
+
+---
+
 ## Sign-off
 
 When all sections are PASS, Path A is launch-ready and the F11/F12 polish is shipped.
@@ -977,6 +1082,8 @@ When all sections are PASS, Path A is launch-ready and the F11/F12 polish is shi
 | 19. Multi-business |   |   |
 | 20. Error paths (non-SerpApi) |   |   |
 | 21. Cron + webhook edges |   |   |
+| 22. Reddit citation surface |   |   |
+| 23. LinkedIn B2B rec |   |   |
 
 ---
 
