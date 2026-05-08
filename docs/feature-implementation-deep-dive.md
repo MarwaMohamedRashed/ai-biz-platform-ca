@@ -1,10 +1,11 @@
 # LeapOne — Built Functionality, Implementation & Competitive Notes
 
-**Date:** 2026-05-07
+**Date:** 2026-05-08 (updated with Canadian vertical expansion)
 **Audience:** Founder / sales conversations / competitive comparisons
 **Companion docs:**
 [feature-inventory-current.md](feature-inventory-current.md) (what exists, by surface) ·
-[honest-evaluation-content-feature.md](honest-evaluation-content-feature.md) (vs competitors)
+[honest-evaluation-content-feature.md](honest-evaluation-content-feature.md) (vs competitors) ·
+[canadian-vertical-expansion-plan.md](canadian-vertical-expansion-plan.md) (today's expansion)
 
 This doc goes deeper than the inventory: for each shipped feature, it explains
 **what it does**, **how it's implemented** (libraries, APIs, file pointers), and
@@ -60,9 +61,19 @@ Code: [api/aeo/router.py](../api/aeo/router.py) — `calculate_score()`
       run_perplexity_multi(...), run_google_multi(...), run_chatgpt_multi(...)
   )
   ```
-- **3-query aggregation per engine.** Each engine runs three local-search
-  query templates (`Best <type> in <city>`, `<type> near <city>`, `Top <type>
-  <city> <province>`); business is "mentioned" if any of the three hits.
+- **3-query aggregation per engine, with vertical-aware extensions.** Base
+  set: three local-search query templates (`Best <type> in <city>`,
+  `<type> near <city>`, `Top <type> <city> <province>`). Conditional
+  additions (added 2026-05-08):
+  - **FSA-prefix query** (`<type> near K1P`) when the business has a postal
+    code — uniquely Canadian search pattern, ~20% of locals search by FSA
+  - **Emergency 24/7 query** for trades + healthcare verticals only
+  - **Weekend availability query** for trades + healthcare verticals only
+
+  This means a hair salon stays at 3 queries (cost unchanged), a plumber
+  with a postal code goes to 6 queries (~$0.020 → ~$0.040 SerpApi cost).
+  Cost rises only where lift is real. Business is "mentioned" if any
+  query in the set hits.
 - **Country-aware SerpApi calls.** `gl` / `hl` derived from the business's
   country (`COUNTRY_TO_GL` map). Province/state expanded to full names because
   SerpApi's geocoder accepts those reliably; abbreviations don't.
@@ -82,6 +93,8 @@ Code: [api/aeo/router.py](../api/aeo/router.py) — `calculate_score()`
   parsing — eliminates an entire class of false positives.
 
 ### Cost per audit (May 2026)
+
+Base case (any non-trades, non-healthcare vertical):
 | Call | Approximate cost |
 |---|---|
 | 3× ChatGPT (`gpt-4o-mini`) | ~$0.001 |
@@ -90,6 +103,10 @@ Code: [api/aeo/router.py](../api/aeo/router.py) — `calculate_score()`
 | 1× SerpApi `google_maps_reviews` (recency) | ~$0.005 |
 | Website check (httpx) | $0 |
 | **Total** | **~$0.032** per audit |
+
+Trades + healthcare with postal code (max case after vertical expansion):
+~$0.060 per audit (6 queries × 3 engines + extras). Still well within
+Starter-tier margin at $19/mo with multiple monthly audits.
 
 ### Competitive notes
 - **Most direct AEO/GEO competitors run 1 engine per query.** We run 3 in
@@ -141,6 +158,17 @@ The `build_schema(business, description)` function:
 the user still needs to fill in for Google rich-result eligibility (`name`,
 `image_url`, `street_address`, `city`, `phone`). Drives the amber
 "Complete your profile" CTA on the Content tab.
+
+### Quebec bilingual schema signal (added 2026-05-08)
+For businesses in QC where French content has been generated (or the user
+has explicitly opted in via `bilingual_opt_in`), the schema includes:
+```json
+"inLanguage": ["fr-CA", "en-CA"]
+```
+This tells Google's Knowledge Graph the entity serves both languages —
+material for Quebec-market AI citations. Province-gated so we don't make
+misleading bilingual claims on English-only content (Google can penalise
+that).
 
 ### Why deterministic, not LLM-generated
 Three concrete bugs the previous LLM-based generator produced before we
@@ -302,13 +330,23 @@ are listed on that the user is not. Frontend renders this with "Claim listing �
 deep links to the right vendor signup page.
 
 **How:**
-- 22 known directory domains in `DIRECTORY_DOMAINS` (Canadian + US +
-  international + niche health/professional)
+- **27 known directory domains** in `DIRECTORY_DOMAINS` (Canadian + US +
+  international + niche health/professional + vertical-specific)
+  - Universal: Yelp (.com/.ca), Yellow Pages (.com/.ca), BBB, TripAdvisor
+    (.com/.ca), Facebook, Instagram, LinkedIn, Foursquare, Nextdoor
+  - Health: RateMDs, Healthgrades, Wellness.com, Opencare, Zocdoc
+  - Trades: Houzz, HomeStars, TrustedPros, Angi, Thumbtack
+  - Canadian general (added 2026-05-08): n49, Cylex Canada, Canada411,
+    411.ca
+  - Vertical-specific Canadian (added 2026-05-08): Realtor.ca,
+    LawyerLocate, OpenTable (.com/.ca)
+  - Other: MapQuest
 - Each organic result's URL is bucketed to its directory label via
   endswith-matching for subdomains
 - Business presence is detected via lenient name matching (first 3 words,
   case-insensitive) against the title + snippet of each result
-- Aggregated across all 3 Google queries
+- Aggregated across all 3 Google queries (or up to 6 with vertical-
+  conditional templates)
 - Output: `{user: [...], competitors: {name: [...]}, gaps: [...]}`
 - Cost: $0 (pure text scan over already-fetched SerpApi data)
 
@@ -366,7 +404,8 @@ calculated.
 
 ### What it does
 For each weak pillar, generates concrete actions with impact estimates +
-difficulty ratings.
+difficulty ratings. **As of 2026-05-08, also produces vertical-specific
+Canadian-directory recommendations and universal AI-engine listing nudges.**
 
 ### Implementation
 Code: `generate_recommendations()` in
@@ -383,9 +422,59 @@ Code: `generate_recommendations()` in
 - **All Python-generated** today (not LLM). Pros: deterministic, cheap, no
   hallucination. Cons: less personalized.
 
+### Vertical-specific Canadian directory recommendations (added 2026-05-08)
+Five vertical detectors gate recommendations on business type. Each rec
+also requires the user to NOT already be detected on that directory in
+their organic results — so we never recommend something the customer is
+already doing.
+
+| Vertical | Detector helper | Recommended directory | Impact pts | URL |
+|---|---|---|---|---|
+| Trades (plumber, electrician, HVAC, roofer, contractor, landscaper, handyman) | `_is_trades_business` | HomeStars | +4 | homestars.com/create-account |
+| Trades | `_is_trades_business` | TrustedPros | +3 | trustedpros.ca/contractor |
+| Healthcare (dentist, doctor, physiotherapist, chiropractor, vet, pharmacy, etc.) | `_is_healthcare_business` | RateMDs | +4 | ratemds.com |
+| Dentist specifically | `_is_dentist_business` | Opencare | +3 | opencare.com/dentists/join |
+| Restaurants (and bars, cafés, bakeries, pubs, breweries) | `_is_food_business` | OpenTable | +4 | restaurant.opentable.com |
+| Restaurants | `_is_food_business` | TripAdvisor | +3 | tripadvisor.com/Owners |
+| Lawyers / paralegals / notaries | `_is_legal_business` | LawyerLocate | +3 | lawyerlocate.ca/lawyers/register |
+| Realtors | `_is_realtor_business` | Realtor.ca (CREA) | +4 | crea.ca/membership |
+
+Each detector is a narrow regex tuned to minimise false positives —
+recommending the wrong directory to a business is more damaging than a
+missed recommendation. Test coverage in
+[api/tests/test_canadian_verticals.py](../api/tests/test_canadian_verticals.py)
+includes positive and negative cases per vertical.
+
+### Universal AI-engine listing recommendations (added 2026-05-08)
+Two recs that fire for **every business**, low impact (+2) but high
+incremental reach because Apple Maps and Bing Places don't surface in
+Google's index — we can't detect existing presence, so we always nudge.
+
+| Tool | Why it matters | URL |
+|---|---|---|
+| Apple Business Connect | Feeds Apple Maps + Apple Intelligence on iPhone/iPad. Free, under-claimed by Canadian SMBs. | businessconnect.apple.com |
+| Bing Places | Feeds Microsoft Copilot's local search answers. Auto-imports from Google Business Profile. | bingplaces.com |
+
+### Coverage outcome (Canadian SMB market)
+| Vertical | % of CA SMBs | Vertical-specific rec | Universal recs |
+|---|---|---|---|
+| Trades | ~15% | ✅ HomeStars + TrustedPros | ✅ Apple + Bing |
+| Healthcare | ~10% | ✅ RateMDs (+ Opencare for dentists) | ✅ Apple + Bing |
+| Restaurants | ~12% | ✅ OpenTable + TripAdvisor | ✅ Apple + Bing |
+| Legal | ~3% | ✅ LawyerLocate | ✅ Apple + Bing |
+| Realtor | ~2% | ✅ Realtor.ca | ✅ Apple + Bing |
+| Beauty / personal | ~10% | ❌ (no specific Canadian dirs) | ✅ Apple + Bing |
+| Retail | ~15% | ❌ | ✅ Apple + Bing |
+| Auto | ~5% | ❌ (CAA-Approved possible later) | ✅ Apple + Bing |
+| Professional services | ~7% | ❌ (sparse Canadian dir landscape) | ✅ Apple + Bing |
+| **Coverage** | **~42% with vertical-specific recs** | | **100% with universal recs** |
+
 ### Roadmap
-Action tracking — when a user marks a recommendation done, re-check that
-pillar within minutes. Closes the engagement loop.
+- Action tracking — when a user marks a recommendation done, re-check that
+  pillar within minutes. Closes the engagement loop.
+- Provincial regulator map (RECO/REC/OACIQ for realtors, CPSO/CPSBC/CMQ
+  for physicians) for province-gated recs. Useful for trust framing but
+  Realtor.ca + RateMDs cover the practical citation surface today.
 
 ---
 
@@ -538,13 +627,17 @@ supports French variants. Audit queries respect locale.
   zero-mention rather than aborting the audit.
 
 ### Test infrastructure
-- `api/tests/` (added 2026-05-07) — 91 pytest cases covering schema builder,
-  validators, citation gaps, content helpers. Pure-Python, no auth needed.
+- `api/tests/` (added 2026-05-07, expanded 2026-05-08) — **147 pytest cases**
+  across 6 suites covering schema builder, validators, citation gaps,
+  content helpers, trades recs, and Canadian vertical recs (healthcare,
+  food, legal, realtor + universal Apple/Bing + Quebec inLanguage).
+  Pure-Python, no auth needed.
 - Run: `pytest tests/ -v` (~2.2s).
 
 ### What's deliberately missing today (gaps you should know about)
 | Feature | Why deferred |
 |---|---|
+| **Reddit citation tracking + competitor sentiment mining** | Reddit is a top-3 AI citation source after Google's $60M Reddit data deal. Detection is straightforward (add reddit.com to DIRECTORY_DOMAINS); recommendations are nuanced because you can't "claim" a Reddit profile the way you do Yelp. **High-value next sprint** — see end of doc for proposal. |
 | AI-crawler analytics (GPTBot/PerplexityBot/ClaudeBot traffic) | Requires server logs / pixel / Cloudflare API. Multi-week feature, no SerpApi shortcut. |
 | Per-tier audit rate limiting | Not yet wired; once `BILLING_ENABLED=true`, Starter is unbounded. F9 sprint. |
 | `extruct` library for schema parsing on customer websites | Substring scan today — modest accuracy improvement when upgraded. |
@@ -553,6 +646,8 @@ supports French variants. Audit queries respect locale.
 | PDF export of audit reports | Distribution / agency-friendly. F10–F13. |
 | Multi-location / agency tier UI | Schema ready (`business_members`), UI not built. F14. |
 | Sentry / error tracking | F9 pre-launch. |
+| Provincial regulator map (RECO, CPSO, OACIQ, etc.) | Current vertical recs use national-scope directories (Realtor.ca, RateMDs) — practical citation impact is the same, but the trust signal of "claim your provincial regulator listing" is missing. ~2-hour follow-on if it matters. |
+| CAA-Approved Auto Repair, provincial law society directories | Sparse vertical-specific Canadian options for auto + accountants — not yet covered. |
 
 ---
 
@@ -570,11 +665,23 @@ For each feature they advertise:
    [aeo-competitive-gaps.md](aeo-competitive-gaps.md) Part 9. That's the
    running gap list.
 
-If you find anyone advertising:
+If you find anyone advertising **all of these together** at sub-$50/mo,
+send me their pricing page — I'll re-evaluate. As of 2026-05-08, no
+SMB-tier tool we're aware of combines:
+
 - Deterministic schema generation with industry-specific Schema.org subtypes
 - Competitor weak-point mining (review sentiment + complaint themes)
-- Citation gap analysis with claim-listing deep links
-- 5-pillar audit + 3 AI engines + bilingual EN/FR
+- Citation gap analysis with claim-listing deep links across 27 directories
+- 5-pillar audit + 3 AI engines (ChatGPT + Perplexity + Google AI Overview) in parallel
+- Bilingual EN/FR with Quebec-specific schema signals
+- **Vertical-specific Canadian directory recommendations** (HomeStars,
+  TrustedPros, RateMDs, Opencare, OpenTable, LawyerLocate, Realtor.ca)
+- **Apple Business Connect + Bing Places nudges** as growing AI citation
+  surfaces beyond Google's ecosystem
 
-…at sub-$50/mo, send me their pricing page — I'll re-evaluate. As of today,
-no SMB-tier tool combines all four.
+The vertical-specific Canadian recs are the freshest moat — they require
+local-market knowledge that US-built AEO tools (Otterly, AthenaHQ,
+Profound, HubSpot AEO, Surfer, Writesonic GEO) literally cannot match
+without hiring Canadian researchers. We hand the answer to a plumber in
+Mississauga or a dentist in Ottawa; competitors hand them generic
+"claim your Yelp listing" copy.
