@@ -3,7 +3,10 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase'
 
-type Tier = 'starter' | 'pro' | 'business'
+// 'business' (agency) tier is not yet shipped -- intentionally omitted from
+// the plan picker. Translation strings remain in en.json/fr.json so the
+// tier can be re-added without re-translating when we ship agency.
+type Tier = 'starter' | 'pro'
 
 interface Props {
   currentTier: Tier
@@ -12,7 +15,7 @@ interface Props {
   locale: string
 }
 
-const TIERS: Tier[] = ['starter', 'pro', 'business']
+const TIERS: Tier[] = ['starter', 'pro']
 
 async function apiAuth(path: string, options: RequestInit = {}) {
   const { data: { session } } = await createClient().auth.getSession()
@@ -83,11 +86,9 @@ export default function PlanPage({ currentTier, planStatus, hasSubscription, loc
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 max-w-2xl">
         {TIERS.map(tier => {
           const isCurrent = tier === currentTier
-          const isAgency = tier === 'business'
-          const isUpgrade = !isCurrent && !isAgency
           const isLoading = loadingTier === tier
 
           return (
@@ -134,8 +135,6 @@ export default function PlanPage({ currentTier, planStatus, hasSubscription, loc
                   className="w-full py-2 rounded-xl bg-slate-100 text-slate-400 text-xs font-semibold cursor-default">
                   {t('currentBadge')}
                 </button>
-              ) : isAgency ? (
-                <span className="text-center text-[10px] text-slate-400">{t('contactBtn')}</span>
               ) : (
                 <button
                   onClick={() => handleUpgrade(tier)}

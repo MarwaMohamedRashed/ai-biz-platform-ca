@@ -12,7 +12,7 @@ LeapOne offers subscription plans for Canadian small businesses that want to imp
 |---|---|---|
 | **Starter** | $19 CAD/month | Single-location businesses that want to establish AI search presence |
 | **Pro** | $49 CAD/month | Growth-focused businesses that want weekly monitoring and deeper reporting |
-| **Agency** | $149 CAD/month | Marketing agencies managing multiple client locations |
+| ~~**Agency**~~ | ~~$149 CAD/month~~ | **Removed from v1 plan picker (2026-05-08).** Deferred to Phase 2 — requires multi-location UI, white-label / custom-branded reports, and an agency dashboard that aren't in scope for the initial launch. Translation strings + pricing copy are preserved in `en.json` / `fr.json` for re-introduction. |
 
 All prices are in Canadian dollars. Billing is monthly, recurring.
 

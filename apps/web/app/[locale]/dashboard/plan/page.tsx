@@ -35,7 +35,11 @@ export default async function PlanRoute() {
         .single()
     : { data: null }
 
-  const planTier = (subscription?.plan_tier ?? 'starter') as 'starter' | 'pro' | 'business'
+  // Agency ('business') tier is not yet shipped. If a row somehow has it
+  // (legacy data, manual DB edit), treat it as 'pro' for display so the
+  // PlanPage type stays narrow.
+  const rawTier = subscription?.plan_tier ?? 'starter'
+  const planTier = (rawTier === 'starter' || rawTier === 'pro' ? rawTier : 'pro') as 'starter' | 'pro'
   const planStatus = subscription?.status ?? 'trialing'
   const hasSubscription = !!subscription?.stripe_customer_id
 

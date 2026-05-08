@@ -15,7 +15,7 @@ LeapOne is an **Answer Engine Optimization (AEO) platform for Canadian small bus
 - Generated content (description, FAQ, schema markup, social bio) to act on those recommendations.
 - A monthly auto-audit that re-scores them, with email alerts if the score moves significantly.
 
-**Pricing tiers (built):** Starter $19/mo, Pro $49/mo, Agency (contact sales). Stripe-integrated, billing gate optional via `BILLING_ENABLED` env flag.
+**Pricing tiers (v1 plan picker):** Starter $19/mo, Pro $49/mo. Agency tier was removed from the v1 plan picker on 2026-05-08 — it requires multi-location UI + white-label reports + agency dashboard work that isn't in scope for v1. Translation strings are kept in `en.json`/`fr.json` for re-introduction in Phase 2. Stripe-integrated, billing gate optional via `BILLING_ENABLED` env flag.
 
 **Languages:** English + French (full UI translations, including dashboard).
 
@@ -146,7 +146,7 @@ Built and tested:
 Tiers (configured via Stripe Price IDs in env):
 - Starter — $19/mo (1 audit/day per F6 plan, billing-gated)
 - Pro — $49/mo (3 audits/day, future)
-- Agency — contact sales (no self-serve checkout)
+- ~~Agency — contact sales~~ — removed from v1 plan picker (deferred to Phase 2)
 
 **Not yet wired:** per-tier daily audit rate-limits (Phase 6 of original billing plan).
 
