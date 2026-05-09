@@ -135,6 +135,58 @@ class TestBuildContentPrompts:
         # Should NOT have the "real customer questions" prefix
         assert "real customer questions" not in p["faq"]
 
+    # ─── Phase 2: custom seed questions ───────────────────────────────
+    def test_custom_seeds_included_verbatim_in_faq_prompt_en(self):
+        seeds = ["Can I bring my dog?", "Do you accept Sunlife insurance?"]
+        p = _build_content_prompts("en", "ctx", "", [], seeds)
+        assert "Can I bring my dog?" in p["faq"]
+        assert "Do you accept Sunlife insurance?" in p["faq"]
+        # Asks LLM to use them verbatim, not rephrase
+        assert "verbatim" in p["faq"].lower() or "exactly" in p["faq"].lower()
+
+    def test_custom_seeds_included_verbatim_in_faq_prompt_fr(self):
+        seeds = ["Puis-je amener mon chien ?", "Acceptez-vous Sunlife ?"]
+        p = _build_content_prompts("fr", "ctx", "", [], seeds)
+        assert "Puis-je amener mon chien" in p["faq"]
+        assert "telles quelles" in p["faq"].lower() or "exactement" in p["faq"].lower()
+
+    def test_custom_seeds_block_omitted_when_empty(self):
+        p = _build_content_prompts("en", "ctx", "", [], [])
+        assert "OWNER'S CUSTOM QUESTIONS" not in p["faq"]
+        p2 = _build_content_prompts("en", "ctx", "", [])  # arg omitted
+        assert "OWNER'S CUSTOM QUESTIONS" not in p2["faq"]
+
+    def test_custom_seeds_capped_at_10(self):
+        seeds = [f"Question {i}?" for i in range(15)]
+        p = _build_content_prompts("en", "ctx", "", [], seeds)
+        # First 10 should be present
+        assert "Question 0?" in p["faq"]
+        assert "Question 9?" in p["faq"]
+        # 11+ should NOT be in the prompt
+        assert "Question 10?" not in p["faq"]
+        assert "Question 14?" not in p["faq"]
+
+    def test_custom_seeds_empty_strings_dropped(self):
+        seeds = ["", "  ", "Real question?", ""]
+        p = _build_content_prompts("en", "ctx", "", [], seeds)
+        assert "Real question?" in p["faq"]
+        # Block should reference 1 question (not 4)
+        assert "first 1 question" in p["faq"]
+
+    def test_custom_seeds_remaining_count_in_prompt(self):
+        # 3 seeds -> LLM asked to generate 7 more
+        p = _build_content_prompts("en", "ctx", "", [], ["Q1?", "Q2?", "Q3?"])
+        assert "generate 7 additional" in p["faq"].lower()
+
+    def test_custom_seeds_only_affects_faq_not_other_prompts(self):
+        seeds = ["Custom seed question 1?"]
+        p = _build_content_prompts("en", "ctx", "", [], seeds)
+        # Seeds must appear in the FAQ prompt
+        assert "Custom seed question 1?" in p["faq"]
+        # But NOT in description / bio prompts (defensive — wrong wiring would leak)
+        for key in ("website_desc", "gbp_desc", "yelp_desc", "social_bio"):
+            assert "Custom seed question 1?" not in p[key], f"leaked into {key}"
+
     def test_bio_prompt_includes_format_constraint(self):
         # Regression for the "markdown header + alternatives" bug —
         # the bio prompt must explicitly forbid the bad output patterns

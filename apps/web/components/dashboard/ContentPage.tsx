@@ -26,6 +26,7 @@ interface Content {
   schema_missing_fields?: string[]
   social_bio?: string
   paa_questions?: string[]
+  custom_faq_seeds?: string[]      // owner-provided real customer questions
   validation_warnings?: string[]
   verified?: Record<string, boolean>
 }
@@ -160,6 +161,13 @@ export default function ContentPage({ businessId, initialContent }: Props) {
     initialContent?.language === 'fr' ? 'fr' : (locale === 'fr' ? 'fr' : 'en')
   )
 
+  // Phase 2 — owner's custom FAQ seed questions (one per line in the textarea).
+  // Persisted in aeo_content.custom_faq_seeds; sent on every Regenerate so
+  // the LLM uses them verbatim as the first N items of the FAQ.
+  const [customFaqSeedsText, setCustomFaqSeedsText] = useState<string>(
+    (initialContent?.custom_faq_seeds ?? []).join('\n')
+  )
+
   function goNext() {
     const i = STEPS.findIndex(s => s.key === step)
     if (i < STEPS.length - 1) setStep(STEPS[i + 1].key)
@@ -181,7 +189,14 @@ export default function ContentPage({ businessId, initialContent }: Props) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token}`,
         },
-        body: JSON.stringify({ business_id: businessId, language }),
+        body: JSON.stringify({
+          business_id: businessId,
+          language,
+          custom_faq_seeds: customFaqSeedsText
+            .split('\n')
+            .map(s => s.trim())
+            .filter(Boolean),
+        }),
       })
       if (!res.ok) throw new Error('Generation failed')
       setContent(await res.json())
@@ -373,6 +388,34 @@ export default function ContentPage({ businessId, initialContent }: Props) {
                     } : prev)
                   }}
                 />
+              </div>
+            )}
+
+            {/* ── Custom seed questions (Phase 2) ────────────────────────── */}
+            {step === 'faq' && (
+              <div className="bg-white rounded-2xl border border-slate-100 p-4">
+                <p className="text-sm font-semibold text-[#1e293b]">Questions you actually hear (optional)</p>
+                <p className="text-xs text-slate-500 mt-0.5 mb-2">
+                  Paste questions you hear from real customers, one per line.
+                  We&apos;ll use them <strong>verbatim</strong> as the first questions in your FAQ
+                  and generate the rest. Up to 10. Saved with your content; you only have to type these once.
+                </p>
+                <textarea
+                  value={customFaqSeedsText}
+                  onChange={e => setCustomFaqSeedsText(e.target.value)}
+                  rows={5}
+                  placeholder={
+                    "What insurance plans do you accept?\n" +
+                    "Do you offer same-day appointments?\n" +
+                    "Where exactly are you located?"
+                  }
+                  className="w-full text-xs text-slate-700 border border-slate-200 rounded-xl px-3 py-2
+                             focus:outline-none focus:border-[#4f46e5] resize-y font-mono leading-relaxed"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  {customFaqSeedsText.split('\n').filter(s => s.trim()).length} / 10 questions ·
+                  click <strong>Regenerate</strong> to apply
+                </p>
               </div>
             )}
 

@@ -1795,6 +1795,10 @@ class AuditRequest(BaseModel):
 class GenerateContentRequest(BaseModel):
     business_id: str
     language: str = "en"  # 'en' | 'fr'
+    # Phase 2 — owner provides questions they hear from real customers.
+    # Used verbatim as the first N entries in the generated FAQ. Remaining
+    # slots are LLM-generated. Capped to 10 items, 200 chars each.
+    custom_faq_seeds: list[str] = []
 
 
 # ─── Directory presence (citation gap analysis) ───────────────────────────
@@ -2484,8 +2488,14 @@ async def _fetch_people_also_ask(business_type: str, city: str,
 
 
 def _build_content_prompts(language: str, base_context: str, services: str,
-                           paa_questions: list[str]) -> dict[str, str]:
-    """Localized prompt templates for the four LLM calls."""
+                           paa_questions: list[str],
+                           custom_faq_seeds: list[str] | None = None) -> dict[str, str]:
+    """Localized prompt templates for the four LLM calls.
+
+    `custom_faq_seeds` (Phase 2): owner-provided questions they hear from
+    real customers. Used verbatim as the first N items in the generated FAQ.
+    The LLM fills the remaining (10 - N) slots itself. Improves FAQ
+    relevance dramatically when the owner engages."""
     services_line_en = f"\nServices to highlight: {services}" if services else ""
     services_line_fr = f"\nServices à mettre en avant : {services}" if services else ""
 
@@ -2494,6 +2504,34 @@ def _build_content_prompts(language: str, base_context: str, services: str,
     # api/knowledge/faq_generation_aeo.md at module import time.
     faq_aeo_kb = kb.for_faq()
     faq_kb_block = f"\n\n=== AEO BEST PRACTICES — APPLY EVERY ONE ===\n{faq_aeo_kb}\n=== END BEST PRACTICES ===\n" if faq_aeo_kb else ""
+
+    # Custom seed questions block — uses the owner's verbatim questions
+    # as the first N items, then asks the LLM to generate the rest.
+    seeds = [s.strip() for s in (custom_faq_seeds or []) if s and s.strip()][:10]
+    custom_seed_block_en = ""
+    custom_seed_block_fr = ""
+    if seeds:
+        joined = "\n".join(f'  {i+1}. "{s}"' for i, s in enumerate(seeds))
+        remaining = max(0, 10 - len(seeds))
+        custom_seed_block_en = (
+            f"\n\n=== OWNER'S CUSTOM QUESTIONS — USE VERBATIM ===\n"
+            f"The owner says these are real questions they hear from customers. "
+            f"Use them EXACTLY as the first {len(seeds)} questions in your output "
+            f"(do not rephrase or rewrite). Write high-quality answers for each "
+            f"that follow the best practices below.\n{joined}\n"
+            f"Then generate {remaining} additional FAQ questions to complete the "
+            f"set of 10 total Q&As.\n=== END CUSTOM QUESTIONS ===\n"
+        )
+        custom_seed_block_fr = (
+            f"\n\n=== QUESTIONS PERSONNALISÉES DU PROPRIÉTAIRE — UTILISE TELLES QUELLES ===\n"
+            f"Le propriétaire dit que ce sont de vraies questions qu'il entend des "
+            f"clients. Utilise-les EXACTEMENT comme les {len(seeds)} premières "
+            f"questions de ta sortie (ne reformule pas). Écris des réponses de "
+            f"qualité pour chacune en suivant les meilleures pratiques ci-dessous.\n"
+            f"{joined}\n"
+            f"Ensuite, génère {remaining} questions FAQ additionnelles pour "
+            f"compléter l'ensemble de 10 Q&R au total.\n=== FIN QUESTIONS PERSONNALISÉES ===\n"
+        )
     paa_block_en = ""
     paa_block_fr = ""
     if paa_questions:
@@ -2570,6 +2608,7 @@ def _build_content_prompts(language: str, base_context: str, services: str,
                 "Chaque réponse doit faire 40-80 mots, être factuelle et utile pour citation par les IA.\n"
                 "Format: tableau JSON [{\"question\": \"...\", \"answer\": \"...\"}]. "
                 "Retourne uniquement du JSON valide."
+                + custom_seed_block_fr
                 + paa_block_fr
                 + faq_kb_block
             ),
@@ -2605,6 +2644,7 @@ def _build_content_prompts(language: str, base_context: str, services: str,
             "Each answer should be 40-80 words, factual, and useful for AI to cite verbatim.\n"
             "Format as JSON array: [{\"question\": \"...\", \"answer\": \"...\"}]. "
             "Return only valid JSON."
+            + custom_seed_block_en
             + paa_block_en
             + faq_kb_block
         ),
@@ -2778,7 +2818,15 @@ async def generate_content(
     # People-Also-Ask seeds for FAQ grounding (best-effort)
     paa_questions = await _fetch_people_also_ask(btype, city, country, language)
 
-    prompts = _build_content_prompts(language, base_context, services, paa_questions)
+    # Phase 2: owner's custom seed questions. Sanitize: cap length per item
+    # and total count, drop empties.
+    custom_faq_seeds = [
+        s.strip()[:200] for s in (request.custom_faq_seeds or [])
+        if s and s.strip()
+    ][:10]
+
+    prompts = _build_content_prompts(language, base_context, services,
+                                     paa_questions, custom_faq_seeds)
 
     # System prompts enforce output format at the model level (more reliable
     # than user-prompt instructions). Particularly important for the bio,
@@ -2853,6 +2901,7 @@ async def generate_content(
         "social_bio":    social_bio,
         "language":      language,
         "paa_questions": paa_questions,
+        "custom_faq_seeds": custom_faq_seeds,
     }).execute()
     content_id = (insert_res.data[0]["id"]
                   if insert_res.data and insert_res.data[0].get("id") else None)
@@ -2867,6 +2916,7 @@ async def generate_content(
         "schema_markup":         schema_raw,
         "schema_missing_fields": schema_missing,
         "paa_questions":         paa_questions,
+        "custom_faq_seeds":      custom_faq_seeds,
         "validation_warnings":   validation_warnings,
         "verified":              {},
     }
