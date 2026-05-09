@@ -1,0 +1,86 @@
+# LeapOne web app — robots.txt
+# Last updated: 2026-05-08
+#
+# The dashboard app at app.leapone.ca / leapone.ca/<locale> hosts public
+# trust pages (methodology, login, signup landing) plus auth-gated
+# dashboard routes. We crawl public pages, block auth routes.
+
+User-agent: *
+Allow: /
+
+# Public trust pages — explicitly welcomed
+Allow: /en/methodology
+Allow: /fr/methodology
+
+# Auth-gated dashboard routes — not for crawlers
+Disallow: /en/dashboard/
+Disallow: /fr/dashboard/
+Disallow: /en/onboarding
+Disallow: /fr/onboarding
+
+# Auth flow endpoints — not useful as search results
+Disallow: /en/auth/
+Disallow: /fr/auth/
+
+# AI search crawlers explicitly welcomed (same list as the landing page)
+User-agent: GPTBot
+Allow: /
+Disallow: /en/dashboard/
+Disallow: /fr/dashboard/
+
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /en/dashboard/
+Disallow: /fr/dashboard/
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /en/dashboard/
+Disallow: /fr/dashboard/
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /en/dashboard/
+Disallow: /fr/dashboard/
+
+User-agent: Claude-Web
+Allow: /
+Disallow: /en/dashboard/
+Disallow: /fr/dashboard/
+
+User-agent: anthropic-ai
+Allow: /
+Disallow: /en/dashboard/
+Disallow: /fr/dashboard/
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /en/dashboard/
+Disallow: /fr/dashboard/
+
+User-agent: Perplexity-User
+Allow: /
+Disallow: /en/dashboard/
+Disallow: /fr/dashboard/
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /en/dashboard/
+Disallow: /fr/dashboard/
+
+User-agent: Applebot
+Allow: /
+Disallow: /en/dashboard/
+Disallow: /fr/dashboard/
+
+User-agent: Applebot-Extended
+Allow: /
+Disallow: /en/dashboard/
+Disallow: /fr/dashboard/
+
+User-agent: CCBot
+Allow: /
+Disallow: /en/dashboard/
+Disallow: /fr/dashboard/
+
+Sitemap: https://leapone.ca/sitemap.xml

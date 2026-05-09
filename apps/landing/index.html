@@ -81,6 +81,71 @@
   }
   </script>
 
+  <!-- SoftwareApplication JSON-LD — what LeapOne actually IS as a product.
+       AI engines weight this strongly when answering "what is X" / "is X a good Y" /
+       "how much does X cost" queries. The Offer entries make pricing crawlable. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "@id": "https://leapone.ca/#software",
+    "name": "LeapOne",
+    "applicationCategory": "BusinessApplication",
+    "applicationSubCategory": "Answer Engine Optimization",
+    "operatingSystem": "Web",
+    "url": "https://leapone.ca",
+    "description": "Answer Engine Optimization (AEO) platform for Canadian small businesses. Audits visibility across ChatGPT, Perplexity, and Google AI Overview; benchmarks against top local competitors; generates schema markup, descriptions, and FAQs ready to deploy. Bilingual EN/FR.",
+    "publisher": { "@id": "https://leapone.ca/#leapone" },
+    "featureList": [
+      "Audit across ChatGPT, Perplexity, and Google AI Overview in parallel",
+      "5-pillar AI Visibility Score (0-100)",
+      "Top-3 competitor benchmarking with side-by-side pillar scoring",
+      "Competitor weak-point mining (review sentiment + complaint themes)",
+      "Citation gap analysis across 28 directories (Yelp, BBB, Yellow Pages, HomeStars, TrustedPros, RateMDs, Opencare, OpenTable, LawyerLocate, Realtor.ca, Reddit, and more)",
+      "Deterministic Schema.org JSON-LD generator with 50+ industry-specific subtypes",
+      "FAQPage JSON-LD generator grounded in real Google People-Also-Ask questions",
+      "Per-platform content variants (website, Google Business Profile, Yelp, social bio)",
+      "Bilingual content generation in English and French",
+      "Quebec inLanguage schema signal for Quebec-market businesses",
+      "Vertical-specific Canadian directory recommendations (trades, healthcare, restaurants, legal, realtor, B2B)",
+      "Apple Business Connect and Bing Places listing nudges",
+      "Reddit citation surface tracking with city-specific subreddit guidance",
+      "Monthly auto-audit with email alerts on score movements"
+    ],
+    "offers": [
+      {
+        "@type": "Offer",
+        "name": "Starter",
+        "description": "Single-location businesses establishing AI search presence. Monthly audits, content generator, competitor intelligence.",
+        "price": "19.00",
+        "priceCurrency": "CAD",
+        "priceValidUntil": "2027-12-31",
+        "availability": "https://schema.org/InStock",
+        "category": "Subscription"
+      },
+      {
+        "@type": "Offer",
+        "name": "Pro",
+        "description": "Growth-focused businesses. Weekly monitoring cadence, deeper competitor analysis, all Starter features.",
+        "price": "49.00",
+        "priceCurrency": "CAD",
+        "priceValidUntil": "2027-12-31",
+        "availability": "https://schema.org/InStock",
+        "category": "Subscription"
+      }
+    ],
+    "audience": {
+      "@type": "BusinessAudience",
+      "audienceType": "Canadian small businesses",
+      "geographicArea": {
+        "@type": "Country",
+        "name": "Canada"
+      }
+    },
+    "inLanguage": ["en-CA", "fr-CA"]
+  }
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />

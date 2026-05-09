@@ -1,0 +1,69 @@
+# LeapOne — robots.txt
+# Last updated: 2026-05-08
+#
+# We explicitly welcome AI search crawlers because that's the entire
+# point of LeapOne: showing up in AI search answers. Many competitors'
+# robots.txt either silently allow or accidentally block AI bots; we
+# allow them on purpose, by name, with a comment so it's auditable.
+
+User-agent: *
+Allow: /
+
+# OpenAI (ChatGPT)
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+# Anthropic (Claude)
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+# Perplexity
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+# Google's AI / Bard / Gemini extension to standard Googlebot
+User-agent: Google-Extended
+Allow: /
+
+# Microsoft / Bing Copilot
+User-agent: Bingbot
+Allow: /
+
+User-agent: msnbot
+Allow: /
+
+# Apple Intelligence / Apple Maps crawler
+User-agent: Applebot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+# Common Crawl (feeds many LLM training pipelines)
+User-agent: CCBot
+Allow: /
+
+# Meta AI
+User-agent: Meta-ExternalAgent
+Allow: /
+
+User-agent: Meta-ExternalFetcher
+Allow: /
+
+# Sitemap location
+Sitemap: https://leapone.ca/sitemap.xml
