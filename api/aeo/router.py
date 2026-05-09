@@ -12,6 +12,7 @@ import logging
 import re
 from core.ai_engine import AIEngine
 from .schema_builder import build_schema, build_faq_schema, find_missing_required_fields
+from . import knowledge as kb
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -2487,6 +2488,12 @@ def _build_content_prompts(language: str, base_context: str, services: str,
     """Localized prompt templates for the four LLM calls."""
     services_line_en = f"\nServices to highlight: {services}" if services else ""
     services_line_fr = f"\nServices à mettre en avant : {services}" if services else ""
+
+    # AEO best-practices knowledge appended to the FAQ prompt so the LLM
+    # produces citation-optimized Q&As. Loaded from
+    # api/knowledge/faq_generation_aeo.md at module import time.
+    faq_aeo_kb = kb.for_faq()
+    faq_kb_block = f"\n\n=== AEO BEST PRACTICES — APPLY EVERY ONE ===\n{faq_aeo_kb}\n=== END BEST PRACTICES ===\n" if faq_aeo_kb else ""
     paa_block_en = ""
     paa_block_fr = ""
     if paa_questions:
@@ -2564,6 +2571,7 @@ def _build_content_prompts(language: str, base_context: str, services: str,
                 "Format: tableau JSON [{\"question\": \"...\", \"answer\": \"...\"}]. "
                 "Retourne uniquement du JSON valide."
                 + paa_block_fr
+                + faq_kb_block
             ),
         }
 
@@ -2598,6 +2606,7 @@ def _build_content_prompts(language: str, base_context: str, services: str,
             "Format as JSON array: [{\"question\": \"...\", \"answer\": \"...\"}]. "
             "Return only valid JSON."
             + paa_block_en
+            + faq_kb_block
         ),
     }
 
@@ -3255,7 +3264,8 @@ _COACH_MESSAGE_CAP = 2000
 
 def _build_coach_system_prompt(rec: CoachRecommendation, business: dict, language: str) -> str:
     """Builds the system prompt that grounds the coach in (a) this specific
-    recommendation, (b) the owner's business context, and (c) the tone +
+    recommendation, (b) the owner's business context, (c) platform-specific
+    knowledge from api/knowledge/<key>.md when available, and (d) the tone +
     behaviour rules that make the coach genuinely useful for non-technical
     Canadian SMB owners."""
     biz_name     = business.get("name", "the business")
@@ -3264,6 +3274,25 @@ def _build_coach_system_prompt(rec: CoachRecommendation, business: dict, languag
     biz_province = business.get("province", "")
     biz_country  = business.get("country", "Canada")
     biz_website  = business.get("website") or ""
+
+    # Load platform-specific knowledge for THIS recommendation if we have a
+    # matching entry. Lets the coach answer Canadian-specific platform
+    # questions (HomeStars HST/GST format, RateMDs auto-claim flow, etc.)
+    # that generic LLM training data gets wrong or out of date.
+    rec_kb = kb.for_recommendation(rec.title)
+    kb_block_en = (
+        "\n\n=== PLATFORM-SPECIFIC KNOWLEDGE (use this — more accurate "
+        "than your general training data on Canadian platforms) ===\n"
+        f"{rec_kb}\n"
+        "=== END PLATFORM KNOWLEDGE ===\n"
+    ) if rec_kb else ""
+    kb_block_fr = (
+        "\n\n=== CONNAISSANCES SPÉCIFIQUES À LA PLATEFORME (utilise-les — "
+        "plus précises que tes données d'entraînement générales sur les "
+        "plateformes canadiennes) ===\n"
+        f"{rec_kb}\n"
+        "=== FIN CONNAISSANCES PLATEFORME ===\n"
+    ) if rec_kb else ""
 
     if language == "fr":
         return (
@@ -3294,6 +3323,7 @@ def _build_coach_system_prompt(rec: CoachRecommendation, business: dict, languag
             "6. Termine par « Autre chose ? » ou une question similaire pour maintenir la conversation.\n"
             "7. N'invente jamais d'étapes. Si tu n'es pas sûr du fonctionnement d'une plateforme, dis-le honnêtement.\n"
             "8. Réponds en français du Québec, naturellement, comme un humain.\n"
+            + kb_block_fr
         )
 
     return (
@@ -3325,6 +3355,7 @@ def _build_coach_system_prompt(rec: CoachRecommendation, business: dict, languag
         "7. Never invent steps. If you're not sure how a specific platform works, "
         "say so honestly and suggest they check the platform's help docs or ask their developer.\n"
         "8. Be conversational. You're a coach, not a manual.\n"
+        + kb_block_en
     )
 
 
