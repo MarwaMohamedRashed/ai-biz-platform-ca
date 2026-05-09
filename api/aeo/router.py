@@ -39,7 +39,11 @@ content_llm = AIEngine(
 )
 coach_llm = AIEngine(
     provider=os.getenv("COACH_PROVIDER", "gemini"),
-    model=os.getenv("COACH_MODEL", "gemini-3-flash"),
+    # gemini-3.1-flash-lite is the cost-optimal default for chat-style
+    # coaching. If you notice the model dropping subtler instructions
+    # (Quebec French register, the 'offer to write the email' rule, etc.)
+    # in testing, override with COACH_MODEL=gemini-3.1-pro in .env.
+    model=os.getenv("COACH_MODEL", "gemini-3.1-flash-lite"),
 )
 logger.info(
     f"[LLM] audit={audit_llm.provider}/{audit_llm._model} | "
