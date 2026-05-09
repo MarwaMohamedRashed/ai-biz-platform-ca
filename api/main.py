@@ -4,7 +4,10 @@ Entry point: uvicorn main:app --reload
 Auto-generated docs: http://localhost:8000/docs  (like Swagger in ASP.NET)
 """
 from dotenv import load_dotenv
-load_dotenv()
+# override=True so .env is the single source of truth even when an OS-level
+# env var (Windows User scope, shell export, etc.) is set with the same key.
+# Without this, a stale OS-level OPENAI_API_KEY silently shadows .env.
+load_dotenv(override=True)
 
 import logging
 logging.basicConfig(
