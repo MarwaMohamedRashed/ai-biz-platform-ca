@@ -50,13 +50,17 @@ const DESC_TABS = [
 ] as const
 
 // Stepped layout — one step shown at a time so we don't drown
-// non-technical owners on first contact. Schema (technical) is the last
-// step so it's tucked away by default.
+// non-technical owners on first contact. The two schema steps come
+// last (technical territory). FAQ Q&As and FAQ Schema are SEPARATE
+// steps because they have different audiences: the owner verifies
+// the Q&As, the developer (or self-serve via platform settings)
+// deploys the schema.
 const STEPS = [
-  { key: 'description', label: 'Description', sublabel: 'Per platform' },
-  { key: 'social',      label: 'Social bio',  sublabel: '≤ 150 chars' },
-  { key: 'faq',         label: 'FAQ',         sublabel: '10 Q&As + schema' },
-  { key: 'schema',      label: 'Schema markup', sublabel: 'Technical' },
+  { key: 'description', label: 'Description',   sublabel: 'Per platform' },
+  { key: 'social',      label: 'Social bio',    sublabel: '≤ 150 chars' },
+  { key: 'faq',         label: 'FAQ',           sublabel: '10 Q&As' },
+  { key: 'faq_schema',  label: 'FAQ schema',    sublabel: 'JSON-LD' },
+  { key: 'schema',      label: 'Schema markup', sublabel: 'JSON-LD' },
 ] as const
 
 type StepKey = typeof STEPS[number]['key']
@@ -94,16 +98,29 @@ const STEP_GUIDANCE: Record<StepKey, {
       'operation; consistent bios suggest legitimacy.',
   },
   faq: {
-    whatItIs: '10 Q&As and the matching FAQPage JSON-LD that wraps them as structured data.',
+    whatItIs: '10 question-and-answer pairs written for the questions real customers ask AI engines.',
     whereToPaste:
-      'Build a /faq page on your website. Paste the Q&As as visible page content. Paste the FAQ ' +
-      'Schema (JSON-LD) inside the <head> tag of that same /faq page (the Copy button wraps it in ' +
-      'a complete <script> tag).',
+      'Build a /faq page on your website (or add a FAQ section to your homepage / About page). ' +
+      'Paste the Q&As as visible page content — the same way you would write any other article. ' +
+      'No HTML or code involved at this step.',
     whyItMatters:
       'FAQs are the highest-leverage AEO content per word. AI engines — especially ChatGPT and ' +
-      'Perplexity — cite FAQ answers verbatim when responding to user questions that match. The ' +
-      'JSON-LD schema also unlocks Google rich-result snippets (the expandable Q&A boxes you see in ' +
-      'search results), which dramatically increases click-through rate.',
+      'Perplexity — cite FAQ answers verbatim when responding to user questions that match. ' +
+      'Verify each answer carefully — a wrong FAQ answer published on your site is worse than no ' +
+      'FAQ at all. The next step (FAQ schema) is the technical wrapper that turns these Q&As into ' +
+      'a Google rich-result snippet.',
+  },
+  faq_schema: {
+    whatItIs: 'A JSON-LD wrapper around your FAQ Q&As that tells Google + AI engines exactly which question goes with which answer.',
+    whereToPaste:
+      'Inside the <head> tag of your /faq page (the same page where you pasted the Q&As in step 3). ' +
+      'The Copy button wraps it in a complete <script type="application/ld+json"> tag — paste it as-is. ' +
+      'If you don\'t maintain your own website code, forward this to your web administrator.',
+    whyItMatters:
+      'This unlocks Google\'s expandable FAQ rich snippets — the boxes that appear directly in search ' +
+      'results showing question-and-answer previews. Rich snippets dramatically increase click-through ' +
+      'rate. AI engines also use the schema to understand the Q&A structure beyond just reading text. ' +
+      'The schema and the visible Q&As work together: one without the other gets you partial benefit.',
   },
   schema: {
     whatItIs: 'Machine-readable description of your business in the format AI crawlers prefer.',
@@ -403,7 +420,7 @@ export default function ContentPage({ businessId, initialContent }: Props) {
               </div>
             )}
 
-            {step === 'faq' && content.faq_schema && (
+            {step === 'faq_schema' && content.faq_schema && (
               <div className="bg-white rounded-2xl border border-slate-100 p-4">
                 <div className="flex items-start justify-between mb-2 gap-3">
                   <div>
@@ -430,6 +447,16 @@ export default function ContentPage({ businessId, initialContent }: Props) {
                 </p>
                 <p className="text-[10px] text-slate-400 mt-2">
                   Copy includes the &lt;script type=&quot;application/ld+json&quot;&gt; wrapper.
+                </p>
+              </div>
+            )}
+
+            {step === 'faq_schema' && !content.faq_schema && (
+              <div className="bg-white rounded-2xl border border-slate-100 p-6 text-center">
+                <p className="text-xs font-semibold text-[#1e293b] mb-1">No FAQ schema yet</p>
+                <p className="text-[11px] text-slate-500">
+                  The FAQ schema is generated automatically from your FAQ Q&amp;As. Go back to
+                  step 3 to verify your FAQs, or click Regenerate to create new ones.
                 </p>
               </div>
             )}
