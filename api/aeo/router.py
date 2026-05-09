@@ -2803,7 +2803,7 @@ async def generate_content(
     faq_schema_raw = (json.dumps(faq_schema_obj, indent=2, ensure_ascii=False)
                       if faq_schema_obj else None)
 
-    supabase_admin.table("aeo_content").insert({
+    insert_res = supabase_admin.table("aeo_content").insert({
         "business_id":   business["id"],
         "description":   descriptions["website"],   # legacy column for backward compat
         "descriptions":  descriptions,
@@ -2814,8 +2814,11 @@ async def generate_content(
         "language":      language,
         "paa_questions": paa_questions,
     }).execute()
+    content_id = (insert_res.data[0]["id"]
+                  if insert_res.data and insert_res.data[0].get("id") else None)
 
     return {
+        "id":                    content_id,
         "language":              language,
         "descriptions":          descriptions,
         "social_bio":            social_bio,
@@ -2825,4 +2828,358 @@ async def generate_content(
         "schema_missing_fields": schema_missing,
         "paa_questions":         paa_questions,
         "validation_warnings":   validation_warnings,
+        "verified":              {},
     }
+
+
+# ─── Verify-and-edit endpoints (migration 017) ────────────────────────────
+# Pattern: AI generates content -> owner reviews -> owner edits inline OR
+# regenerates with notes -> owner verifies. Mirrors the reviews-module
+# pattern. Three endpoints below: PATCH for edits, /verify for the
+# verified-state toggle, /regenerate-item for "rewrite this with these
+# notes." All scoped to the calling user's business via RLS + manual check.
+
+
+class ContentPatchRequest(BaseModel):
+    """Body of PATCH /content/{id}. updates is a flat map of dotted-path keys
+    to new string values. Keys: 'description.<website|gbp|yelp>', 'social_bio',
+    'faq.<idx>.<question|answer>'."""
+    updates: dict[str, str]
+
+
+class ContentVerifyRequest(BaseModel):
+    key: str       # 'description.website' | 'social_bio' | 'faq.<idx>'
+    verified: bool
+
+
+class ContentRegenerateItemRequest(BaseModel):
+    key: str       # same as verify.key but only the supported regenerate keys
+    notes: str = ""
+
+
+# Dotted-path keys the verified-state map is allowed to track. Anything else
+# raises a 422 to prevent typos from silently storing weird state.
+_VERIFY_KEY_RE = re.compile(
+    r"^(description\.(website|gbp|yelp)|social_bio|faq\.\d+)$"
+)
+_PATCH_KEY_RE = re.compile(
+    r"^(description\.(website|gbp|yelp)|social_bio|faq\.\d+\.(question|answer))$"
+)
+_REGENERATE_KEY_RE = re.compile(
+    r"^(description\.(website|gbp|yelp)|social_bio|faq\.\d+)$"
+)
+
+
+def _apply_content_patch(row: dict, key: str, value: str) -> None:
+    """Mutate `row` to apply a single dotted-path update. Raises ValueError
+    on bad keys or out-of-range FAQ indices."""
+    if not _PATCH_KEY_RE.match(key):
+        raise ValueError(f"Invalid update key: {key}")
+
+    if key.startswith("description."):
+        sub = key.split(".", 1)[1]
+        descs = dict(row.get("descriptions") or {})
+        descs[sub] = value
+        row["descriptions"] = descs
+        # Keep legacy `description` column synced when website variant changes,
+        # so anything still reading the old shape sees the latest text.
+        if sub == "website":
+            row["description"] = value
+        return
+
+    if key == "social_bio":
+        row["social_bio"] = value
+        return
+
+    if key.startswith("faq."):
+        _, idx_str, field = key.split(".", 2)
+        idx = int(idx_str)
+        faq = list(row.get("faq") or [])
+        if not (0 <= idx < len(faq)):
+            raise ValueError(f"FAQ index {idx} out of range (0..{len(faq) - 1})")
+        item = dict(faq[idx])
+        item[field] = value
+        faq[idx] = item
+        row["faq"] = faq
+        return
+
+    raise ValueError(f"Unknown key: {key}")  # unreachable given the regex
+
+
+async def _load_content_for_user(content_id: str, current_user: dict) -> tuple[dict, dict]:
+    """Fetch an aeo_content row + verify it belongs to the calling user's
+    business. Returns (content_row, business_row). Raises HTTPException
+    on miss / access denied."""
+    business = await get_business_by_user(current_user["id"])
+    if not business:
+        raise HTTPException(status_code=404, detail="Business profile not found")
+
+    res = supabase_admin.table("aeo_content") \
+        .select("*").eq("id", content_id).limit(1).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Content not found")
+    content = res.data[0]
+
+    if str(content.get("business_id")) != str(business["id"]):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    return content, business
+
+
+@router.patch("/content/{content_id}")
+async def patch_content(
+    content_id: str,
+    request: ContentPatchRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """Apply inline edits to one aeo_content row. Body: { updates: {key: value, ...} }
+    where keys are dotted paths (description.website, social_bio, faq.0.answer, etc).
+    Multiple updates apply atomically (single supabase write).
+    Also rebuilds the FAQ schema if any FAQ field changes (keeps JSON-LD in sync)."""
+    content, _ = await _load_content_for_user(content_id, current_user)
+
+    if not request.updates:
+        raise HTTPException(status_code=422, detail="No updates provided")
+
+    # Apply each update. Validation errors -> 422 with the offending key.
+    faq_changed = False
+    for key, value in request.updates.items():
+        try:
+            _apply_content_patch(content, key, value)
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        if key.startswith("faq."):
+            faq_changed = True
+
+    # If any FAQ Q/A changed, rebuild the FAQPage JSON-LD so the schema
+    # stays in sync with the human-readable Q&As.
+    if faq_changed:
+        faq_items = content.get("faq") or []
+        if faq_items:
+            schema_obj = build_faq_schema(faq_items)
+            content["faq_schema"] = json.dumps(schema_obj, indent=2, ensure_ascii=False)
+        else:
+            content["faq_schema"] = None
+
+    # Persist
+    update_payload = {
+        "descriptions":   content.get("descriptions"),
+        "description":    content.get("description"),
+        "social_bio":     content.get("social_bio"),
+        "faq":            content.get("faq"),
+        "faq_schema":     content.get("faq_schema"),
+        "last_edited_at": "now()",
+    }
+    supabase_admin.table("aeo_content").update(update_payload).eq("id", content_id).execute()
+
+    return {
+        "id":          content_id,
+        "descriptions": content.get("descriptions"),
+        "social_bio":   content.get("social_bio"),
+        "faq":          content.get("faq"),
+        "faq_schema":   content.get("faq_schema"),
+    }
+
+
+@router.post("/content/{content_id}/verify")
+async def verify_content_item(
+    content_id: str,
+    request: ContentVerifyRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """Toggle the verified state for a single item key. Stored as JSONB map
+    on aeo_content.verified. Used to track which items the owner has
+    reviewed and approved before they're considered safe to publish."""
+    content, _ = await _load_content_for_user(content_id, current_user)
+
+    if not _VERIFY_KEY_RE.match(request.key):
+        raise HTTPException(status_code=422, detail=f"Invalid verify key: {request.key}")
+
+    verified = dict(content.get("verified") or {})
+    if request.verified:
+        verified[request.key] = True
+    else:
+        verified.pop(request.key, None)
+
+    supabase_admin.table("aeo_content").update({"verified": verified}) \
+        .eq("id", content_id).execute()
+    return {"id": content_id, "verified": verified}
+
+
+def _build_regenerate_prompts(
+    business: dict, language: str, services: str, notes: str,
+) -> dict[str, tuple[str, int, float]]:
+    """Map regenerate keys -> (prompt, max_tokens, temperature) tuples.
+    Notes are appended as 'User notes:' to whichever base prompt is used."""
+    btype    = business["type"]
+    name     = business["name"]
+    city     = business["city"]
+    province = business.get("province") or ""
+    website  = business.get("website") or ""
+
+    base_context = (
+        f"Business name: {name}\n"
+        f"Business type: {btype}\n"
+        f"City: {city}{', ' + province if province else ''}\n"
+        f"Services: {services}\n"
+        f"Website: {website}\n"
+    )
+
+    # Re-use the same prompt builder that generate_content uses, with empty
+    # paa_questions (we don't re-fetch PAA on per-item regenerate -- it's
+    # already in the DB and the user's notes are the new signal).
+    prompts = _build_content_prompts(language, base_context, services, [])
+    notes_block = f"\n\nUser notes for this regenerate: {notes.strip()}\n" if notes.strip() else ""
+
+    out: dict[str, tuple[str, int, float]] = {
+        "description.website": (prompts["website_desc"] + notes_block, 700, 0.7),
+        "description.gbp":     (prompts["gbp_desc"]     + notes_block, 350, 0.7),
+        "description.yelp":    (prompts["yelp_desc"]    + notes_block, 500, 0.7),
+        "social_bio":          (prompts["social_bio"]   + notes_block, 120, 0.5),
+    }
+    return out
+
+
+@router.post("/content/{content_id}/regenerate-item")
+async def regenerate_content_item(
+    content_id: str,
+    request: ContentRegenerateItemRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """Regenerate a single item with optional user notes ('make it shorter',
+    'remove Invisalign — we don't do that'). Saves the new value AND clears
+    that item's verified flag (it's a new value, owner needs to re-verify)."""
+    content, business = await _load_content_for_user(content_id, current_user)
+
+    if not _REGENERATE_KEY_RE.match(request.key):
+        raise HTTPException(status_code=422,
+            detail=f"Cannot regenerate item with key: {request.key}")
+
+    if BILLING_ENABLED:
+        sub = await get_active_subscription(str(business["id"]))
+        if not sub:
+            raise HTTPException(status_code=402, detail="Active subscription required")
+
+    language = (content.get("language") == "fr" and "fr") or "en"
+    services = business.get("services") or ""
+
+    # ─── Description / social bio ─────────────────────────────────────────
+    if request.key.startswith("description.") or request.key == "social_bio":
+        prompts_map = _build_regenerate_prompts(business, language, services, request.notes)
+        prompt, max_tokens, temperature = prompts_map[request.key]
+
+        if request.key == "social_bio":
+            sys_prompt = (
+                "You produce only the bio text — a single short sentence or phrase "
+                "under 150 characters. No markdown, no headers, no quotation marks, "
+                "no labels, no alternatives, no character counts."
+            )
+        else:
+            sys_prompt = (
+                "You produce only the description text in plain prose. "
+                "No markdown, no preamble, no alternatives, no character counts, no labels."
+            )
+
+        raw = await ai_engine.generate(
+            prompt=prompt, max_tokens=max_tokens, temperature=temperature,
+            system_prompt=sys_prompt,
+        )
+
+        if request.key == "social_bio":
+            value = _truncate_at_word(_clean_bio(raw), 150)
+        elif request.key == "description.gbp":
+            value = _truncate_at_word(_clean_description(raw), 700)
+        else:
+            value = _clean_description(raw)
+
+        # Save + clear verified flag for this item (new value -> needs re-review)
+        try:
+            _apply_content_patch(content, request.key, value)
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        verified = dict(content.get("verified") or {})
+        verified.pop(request.key, None)
+
+        supabase_admin.table("aeo_content").update({
+            "descriptions":   content.get("descriptions"),
+            "description":    content.get("description"),
+            "social_bio":     content.get("social_bio"),
+            "verified":       verified,
+            "last_edited_at": "now()",
+        }).eq("id", content_id).execute()
+
+        return {"key": request.key, "value": value, "verified": verified}
+
+    # ─── FAQ item ─────────────────────────────────────────────────────────
+    # Regenerate one Q&A pair. Prompt asks for ONE question and answer in
+    # JSON. Notes ("the answer is wrong about Invisalign") drive a rewrite.
+    if request.key.startswith("faq."):
+        idx = int(request.key.split(".", 1)[1])
+        existing = (content.get("faq") or [])
+        if not (0 <= idx < len(existing)):
+            raise HTTPException(status_code=422, detail=f"FAQ index out of range")
+
+        original = existing[idx]
+        original_q = original.get("question", "")
+        original_a = original.get("answer", "")
+
+        notes_block = f"\nUser notes: {request.notes.strip()}\n" if request.notes.strip() else ""
+        if language == "fr":
+            faq_prompt = (
+                f"Entreprise: {business['name']} ({business['type']}, {business['city']})\n"
+                f"Question FAQ existante: {original_q}\n"
+                f"Réponse existante: {original_a}\n"
+                f"{notes_block}"
+                f"Réécris cette FAQ. La réponse doit faire 40-80 mots, factuelle, "
+                f"utile pour citation par les IA. Format JSON: "
+                f"{{\"question\": \"...\", \"answer\": \"...\"}}. "
+                f"Retourne uniquement du JSON valide."
+            )
+        else:
+            faq_prompt = (
+                f"Business: {business['name']} ({business['type']}, {business['city']})\n"
+                f"Existing FAQ question: {original_q}\n"
+                f"Existing answer: {original_a}\n"
+                f"{notes_block}"
+                f"Rewrite this Q&A. The answer should be 40-80 words, factual, "
+                f"useful for AI to cite verbatim. Format as JSON: "
+                f"{{\"question\": \"...\", \"answer\": \"...\"}}. "
+                f"Return only valid JSON."
+            )
+
+        raw = await ai_engine.generate(
+            prompt=faq_prompt, max_tokens=400, temperature=0.5,
+            system_prompt="Return only valid JSON, no markdown.",
+        )
+        try:
+            new_item = json.loads(re.sub(r'^```(?:json)?\s*|\s*```$', '',
+                                          raw.strip(), flags=re.MULTILINE))
+            if not isinstance(new_item, dict) or "question" not in new_item or "answer" not in new_item:
+                raise ValueError("Bad shape")
+        except Exception:
+            raise HTTPException(status_code=502, detail="Regenerate failed -- LLM returned invalid JSON")
+
+        # Apply
+        faq = list(content.get("faq") or [])
+        faq[idx] = {"question": str(new_item["question"]), "answer": str(new_item["answer"])}
+        content["faq"] = faq
+
+        # Rebuild FAQ schema since the item changed
+        schema_obj = build_faq_schema(faq)
+        new_faq_schema = json.dumps(schema_obj, indent=2, ensure_ascii=False)
+
+        # Clear verified flag for this item
+        verified = dict(content.get("verified") or {})
+        verified.pop(request.key, None)
+
+        supabase_admin.table("aeo_content").update({
+            "faq":            faq,
+            "faq_schema":     new_faq_schema,
+            "verified":       verified,
+            "last_edited_at": "now()",
+        }).eq("id", content_id).execute()
+
+        return {"key": request.key, "value": faq[idx], "verified": verified}
+
+    # Should be unreachable given the regex check above
+    raise HTTPException(status_code=422, detail=f"Unsupported key: {request.key}")
