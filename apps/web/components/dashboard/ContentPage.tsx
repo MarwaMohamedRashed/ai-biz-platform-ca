@@ -58,6 +58,63 @@ const STEPS = [
 
 type StepKey = typeof STEPS[number]['key']
 
+// Per-step guidance card -- explains what each piece of content is FOR,
+// WHERE to paste it, and WHY it matters for AI search visibility. Without
+// this, owners don't understand why a 49-character social bio is worth
+// generating; with it, they understand each piece is a different AEO lever.
+const STEP_GUIDANCE: Record<StepKey, {
+  whatItIs: string
+  whereToPaste: string
+  whyItMatters: string
+}> = {
+  description: {
+    whatItIs: 'Three description variants — one tuned for each platform you publish on.',
+    whereToPaste:
+      "Website: paste in your homepage About section (and use as the page's meta description). " +
+      'Google: sign in to business.google.com → Edit profile → Business description. ' +
+      'Yelp: biz.yelp.com → Edit Business Information → Description.',
+    whyItMatters:
+      'Highest-impact AEO content. Direct signal to ChatGPT, Perplexity, and Google AI Overview. ' +
+      'AI engines crawl your homepage + GBP + Yelp listings and cite the description text verbatim ' +
+      'when answering "what does <business> do?" / "best <type> in <city>?" queries.',
+  },
+  social: {
+    whatItIs: 'A short bio used consistently across every social platform you have.',
+    whereToPaste:
+      'Instagram bio · Facebook Page About → Short Description · X (Twitter) bio · ' +
+      'LinkedIn personal headline · TikTok bio · YouTube channel description (first line).',
+    whyItMatters:
+      'Indirect but real citation source. Facebook + Instagram pages appear in Google search results ' +
+      'and AI engines do cite them. Using the SAME bio across platforms creates Name + Address + ' +
+      'Phone (NAP) consistency — a trust signal AI engines weigh when deciding whether your business ' +
+      'is "real enough" to recommend. Inconsistent bios across platforms suggest a fly-by-night ' +
+      'operation; consistent bios suggest legitimacy.',
+  },
+  faq: {
+    whatItIs: '10 Q&As and the matching FAQPage JSON-LD that wraps them as structured data.',
+    whereToPaste:
+      'Build a /faq page on your website. Paste the Q&As as visible page content. Paste the FAQ ' +
+      'Schema (JSON-LD) inside the <head> tag of that same /faq page (the Copy button wraps it in ' +
+      'a complete <script> tag).',
+    whyItMatters:
+      'FAQs are the highest-leverage AEO content per word. AI engines — especially ChatGPT and ' +
+      'Perplexity — cite FAQ answers verbatim when responding to user questions that match. The ' +
+      'JSON-LD schema also unlocks Google rich-result snippets (the expandable Q&A boxes you see in ' +
+      'search results), which dramatically increases click-through rate.',
+  },
+  schema: {
+    whatItIs: 'Machine-readable description of your business in the format AI crawlers prefer.',
+    whereToPaste:
+      'Inside the <head> tag of your homepage (and any other key pages — About, Contact, Services). ' +
+      'The Copy button wraps it in a complete <script type="application/ld+json"> tag — paste it as-is.',
+    whyItMatters:
+      'Most direct signal you can give Google\'s Knowledge Graph + AI Overview. Required for rich-' +
+      'result eligibility (review stars, opening hours, price range showing in search results). ' +
+      'Every AI crawler reads this — including GPTBot, PerplexityBot, ClaudeBot. A single correct ' +
+      'JSON-LD block is worth more than 1000 words of marketing copy for AEO purposes.',
+  },
+}
+
 function wrapAsScriptTag(jsonLd: string): string {
   return `<script type="application/ld+json">\n${jsonLd}\n</script>`
 }
@@ -212,6 +269,8 @@ export default function ContentPage({ businessId, initialContent }: Props) {
               <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                 Step {stepIndex + 1} of {STEPS.length}
               </p>
+
+              <StepGuidance step={step} />
 
             {/* ── Descriptions (per-platform) ─────────────────────────────── */}
             {step === 'description' && (
@@ -403,6 +462,24 @@ export default function ContentPage({ businessId, initialContent }: Props) {
           </div>
         )}
 
+      </div>
+    </div>
+  )
+}
+
+function StepGuidance({ step }: { step: StepKey }) {
+  const g = STEP_GUIDANCE[step]
+  return (
+    <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
+      <p className="text-xs font-extrabold text-indigo-900 mb-2">What this is for</p>
+      <p className="text-xs text-slate-700 leading-relaxed mb-3">{g.whatItIs}</p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-xs">
+        <span className="font-semibold text-indigo-900">📍 Where to paste</span>
+        <span className="text-slate-700 leading-relaxed">{g.whereToPaste}</span>
+
+        <span className="font-semibold text-indigo-900">💡 Why it matters</span>
+        <span className="text-slate-700 leading-relaxed">{g.whyItMatters}</span>
       </div>
     </div>
   )
