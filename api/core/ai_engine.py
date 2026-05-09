@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 # Set AI_PROVIDER=openai or AI_PROVIDER=gemini in your .env file
 AI_PROVIDER = os.getenv("AI_PROVIDER", "claude")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash")
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
 
 

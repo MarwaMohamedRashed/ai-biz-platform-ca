@@ -20,7 +20,10 @@ _audit_openai = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 # generation). Falls back to ai_engine if GEMINI_API_KEY isn't set so
 # the coach still works for users on other providers.
 _coach_gemini = None
-_COACH_MODEL = os.getenv("COACH_MODEL", "gemini-1.5-flash")
+# gemini-3-flash is the 2026 successor to 1.5-flash. Override to
+# gemini-3.1-flash-lite for cheaper/faster, or gemini-3.1-pro for higher
+# reasoning quality. 1.5-flash is deprecated as of 2026.
+_COACH_MODEL = os.getenv("COACH_MODEL", "gemini-3-flash")
 _GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 if _GEMINI_KEY:
     try:
