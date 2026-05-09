@@ -1792,6 +1792,13 @@ class AuditRequest(BaseModel):
     business_id: str
 
 
+class ExistingFaq(BaseModel):
+    """One owner-supplied Q+A pair already published on their site.
+    Preserved verbatim in the final FAQ; never rewritten by the LLM."""
+    question: str
+    answer: str
+
+
 class GenerateContentRequest(BaseModel):
     business_id: str
     language: str = "en"  # 'en' | 'fr'
@@ -1799,6 +1806,11 @@ class GenerateContentRequest(BaseModel):
     # Used verbatim as the first N entries in the generated FAQ. Remaining
     # slots are LLM-generated. Capped to 10 items, 200 chars each.
     custom_faq_seeds: list[str] = []
+    # Phase 4 — owner's existing Q+A pairs from their website. Preserved
+    # verbatim (LLM never rewrites these). LLM generates additional Q&As
+    # that don't duplicate the topics covered here, filling to 15 total.
+    # Capped to 50 items, 200 char Q + 1000 char A.
+    existing_faqs: list[ExistingFaq] = []
 
 
 # ─── Directory presence (citation gap analysis) ───────────────────────────
@@ -2487,15 +2499,25 @@ async def _fetch_people_also_ask(business_type: str, city: str,
         return []
 
 
+FAQ_TARGET_COUNT = 15  # 2026 sweet spot per AEO research (10 was low-end)
+
+
 def _build_content_prompts(language: str, base_context: str, services: str,
                            paa_questions: list[str],
-                           custom_faq_seeds: list[str] | None = None) -> dict[str, str]:
+                           custom_faq_seeds: list[str] | None = None,
+                           existing_faqs: list[dict] | None = None) -> dict[str, str]:
     """Localized prompt templates for the four LLM calls.
 
     `custom_faq_seeds` (Phase 2): owner-provided questions they hear from
     real customers. Used verbatim as the first N items in the generated FAQ.
-    The LLM fills the remaining (10 - N) slots itself. Improves FAQ
-    relevance dramatically when the owner engages."""
+
+    `existing_faqs` (Phase 4): owner-supplied Q+A pairs already on their
+    website. Passed to the LLM as 'topics already covered — generate NEW
+    questions that don't duplicate these'. The LLM only writes new Qs+As;
+    the owner's existing pairs are merged back verbatim by the caller.
+
+    The LLM is told to generate enough new Qs+As to bring the TOTAL
+    (existing + custom seeds + new) to FAQ_TARGET_COUNT (15)."""
     services_line_en = f"\nServices to highlight: {services}" if services else ""
     services_line_fr = f"\nServices à mettre en avant : {services}" if services else ""
 
@@ -2505,33 +2527,90 @@ def _build_content_prompts(language: str, base_context: str, services: str,
     faq_aeo_kb = kb.for_faq()
     faq_kb_block = f"\n\n=== AEO BEST PRACTICES — APPLY EVERY ONE ===\n{faq_aeo_kb}\n=== END BEST PRACTICES ===\n" if faq_aeo_kb else ""
 
-    # Custom seed questions block — uses the owner's verbatim questions
-    # as the first N items, then asks the LLM to generate the rest.
+    # Phase 2 — owner's custom seed questions (verbatim Qs the LLM answers).
     seeds = [s.strip() for s in (custom_faq_seeds or []) if s and s.strip()][:10]
+
+    # Phase 4 — owner's existing Q+A pairs from their website. The LLM is
+    # told these topics are ALREADY COVERED — write NEW questions. Existing
+    # pairs are merged back into the final FAQ list by the caller (verbatim).
+    existing = []
+    for f in (existing_faqs or [])[:50]:
+        q = (f.get("question") or "").strip()[:200] if isinstance(f, dict) else ""
+        a = (f.get("answer")   or "").strip()[:1000] if isinstance(f, dict) else ""
+        if q and a:
+            existing.append({"question": q, "answer": a})
+
+    # How many NEW Q+As (LLM picks both Q and A on a topic NOT already
+    # covered by existing or seeds). Total target (existing + seeds + new)
+    # = FAQ_TARGET_COUNT, but never less than 5 new ones — even an owner
+    # with 20 existing FAQs still gets fresh AEO-optimized content from us.
+    new_target = max(5, FAQ_TARGET_COUNT - len(existing) - len(seeds))
+    # llm_output_count = what the LLM writes in its JSON array. This includes
+    # the seed Qs (LLM writes their answers) PLUS the new_target new Q+A pairs.
+    # Existing pairs are NOT in this count -- they're merged in by the caller
+    # after the LLM call.
+    llm_output_count = len(seeds) + new_target
+
+    # Build the existing-FAQs block — what the LLM should NOT duplicate.
+    # Note: existing pairs are NOT in the LLM's output array; they're merged
+    # back by the caller after the LLM call.
+    existing_block_en = ""
+    existing_block_fr = ""
+    if existing:
+        existing_listing = "\n".join(
+            f"  {i+1}. Q: {f['question']}\n     A: {f['answer']}"
+            for i, f in enumerate(existing)
+        )
+        existing_block_en = (
+            f"\n\n=== TOPICS ALREADY COVERED ON OWNER'S WEBSITE — DO NOT DUPLICATE ===\n"
+            f"The owner already has {len(existing)} Q+A pair(s) on their site. "
+            f"DO NOT write questions that cover the same topics. None of your "
+            f"{llm_output_count} output items should duplicate any of these. "
+            f"The owner's existing FAQs are merged back automatically.\n"
+            f"{existing_listing}\n=== END EXISTING TOPICS ===\n"
+        )
+        existing_block_fr = (
+            f"\n\n=== SUJETS DÉJÀ COUVERTS SUR LE SITE DU PROPRIÉTAIRE — NE PAS DUPLIQUER ===\n"
+            f"Le propriétaire a déjà {len(existing)} paire(s) Q+R sur son site. NE PAS "
+            f"écrire de questions sur les mêmes sujets. Aucun de tes {llm_output_count} "
+            f"éléments de sortie ne doit dupliquer ceux-ci. Les FAQ existantes "
+            f"sont fusionnées automatiquement.\n{existing_listing}\n"
+            f"=== FIN SUJETS EXISTANTS ===\n"
+        )
+
+    # Custom seed questions block — owner's verbatim Qs, LLM writes answers.
+    # These count toward llm_output_count.
     custom_seed_block_en = ""
     custom_seed_block_fr = ""
     if seeds:
         joined = "\n".join(f'  {i+1}. "{s}"' for i, s in enumerate(seeds))
-        remaining = max(0, 10 - len(seeds))
+        remaining_after_seeds = llm_output_count - len(seeds)
         custom_seed_block_en = (
             f"\n\n=== OWNER'S CUSTOM QUESTIONS — USE VERBATIM ===\n"
             f"The owner says these are real questions they hear from customers. "
             f"Use them EXACTLY as the first {len(seeds)} questions in your output "
             f"(do not rephrase or rewrite). Write high-quality answers for each "
-            f"that follow the best practices below.\n{joined}\n"
-            f"Then generate {remaining} additional FAQ questions to complete the "
-            f"set of 10 total Q&As.\n=== END CUSTOM QUESTIONS ===\n"
+            f"that follow the best practices below. Then generate "
+            f"{remaining_after_seeds} additional NEW Q+A pairs to complete your "
+            f"set of {llm_output_count}.\n{joined}\n=== END CUSTOM QUESTIONS ===\n"
         )
         custom_seed_block_fr = (
             f"\n\n=== QUESTIONS PERSONNALISÉES DU PROPRIÉTAIRE — UTILISE TELLES QUELLES ===\n"
             f"Le propriétaire dit que ce sont de vraies questions qu'il entend des "
             f"clients. Utilise-les EXACTEMENT comme les {len(seeds)} premières "
             f"questions de ta sortie (ne reformule pas). Écris des réponses de "
-            f"qualité pour chacune en suivant les meilleures pratiques ci-dessous.\n"
-            f"{joined}\n"
-            f"Ensuite, génère {remaining} questions FAQ additionnelles pour "
-            f"compléter l'ensemble de 10 Q&R au total.\n=== FIN QUESTIONS PERSONNALISÉES ===\n"
+            f"qualité pour chacune. Génère ensuite {remaining_after_seeds} paires "
+            f"Q+R additionnelles pour compléter ton ensemble de {llm_output_count}.\n"
+            f"{joined}\n=== FIN QUESTIONS PERSONNALISÉES ===\n"
         )
+
+    # Total count instruction — what the LLM puts in its JSON array.
+    faq_count_instruction_en = (
+        f"\nOutput {llm_output_count} Q+A pairs in a single JSON array."
+    )
+    faq_count_instruction_fr = (
+        f"\nProduis {llm_output_count} paires Q+R dans un seul tableau JSON."
+    )
     paa_block_en = ""
     paa_block_fr = ""
     if paa_questions:
@@ -2604,10 +2683,11 @@ def _build_content_prompts(language: str, base_context: str, services: str,
                 + bio_format_fr
             ),
             "faq": (
-                f"{base_context}\nGénère 10 questions et réponses FAQ qu'un client poserait sur cette entreprise.\n"
-                "Chaque réponse doit faire 40-80 mots, être factuelle et utile pour citation par les IA.\n"
+                f"{base_context}{faq_count_instruction_fr}\n"
+                "Chaque réponse doit faire 40-60 mots, être factuelle et utile pour citation par les IA.\n"
                 "Format: tableau JSON [{\"question\": \"...\", \"answer\": \"...\"}]. "
                 "Retourne uniquement du JSON valide."
+                + existing_block_fr
                 + custom_seed_block_fr
                 + paa_block_fr
                 + faq_kb_block
@@ -2640,10 +2720,11 @@ def _build_content_prompts(language: str, base_context: str, services: str,
             + bio_format_en
         ),
         "faq": (
-            f"{base_context}\nGenerate 10 FAQ questions and answers a customer would ask about this business.\n"
-            "Each answer should be 40-80 words, factual, and useful for AI to cite verbatim.\n"
+            f"{base_context}{faq_count_instruction_en}\n"
+            "Each answer should be 40-60 words, factual, and useful for AI to cite verbatim.\n"
             "Format as JSON array: [{\"question\": \"...\", \"answer\": \"...\"}]. "
             "Return only valid JSON."
+            + existing_block_en
             + custom_seed_block_en
             + paa_block_en
             + faq_kb_block
@@ -2825,8 +2906,18 @@ async def generate_content(
         if s and s.strip()
     ][:10]
 
+    # Phase 4: owner's existing Q+A pairs from their site. Sanitize:
+    # cap count + lengths, drop empties or malformed pairs.
+    existing_faqs = []
+    for f in (request.existing_faqs or [])[:50]:
+        q = (f.question or "").strip()[:200]
+        a = (f.answer   or "").strip()[:1000]
+        if q and a:
+            existing_faqs.append({"question": q, "answer": a})
+
     prompts = _build_content_prompts(language, base_context, services,
-                                     paa_questions, custom_faq_seeds)
+                                     paa_questions, custom_faq_seeds,
+                                     existing_faqs)
 
     # System prompts enforce output format at the model level (more reliable
     # than user-prompt instructions). Particularly important for the bio,
@@ -2861,12 +2952,25 @@ async def generate_content(
 
     # Parse FAQ JSON, tolerant of fenced code blocks the LLM sometimes emits
     try:
-        faq = json.loads(re.sub(r'^```(?:json)?\s*|\s*```$', '', faq_raw.strip(),
-                                flags=re.MULTILINE))
-        if not isinstance(faq, list):
-            faq = []
+        llm_faq = json.loads(re.sub(r'^```(?:json)?\s*|\s*```$', '', faq_raw.strip(),
+                                     flags=re.MULTILINE))
+        if not isinstance(llm_faq, list):
+            llm_faq = []
     except Exception:
-        faq = []
+        llm_faq = []
+
+    # Phase 4 — merge: owner's existing Q+A pairs come FIRST (verbatim),
+    # then the LLM-generated new ones. Existing pairs preserve the owner's
+    # exact wording for content already published on their website.
+    faq: list[dict] = []
+    for f in existing_faqs:
+        faq.append({"question": f["question"], "answer": f["answer"]})
+    for item in llm_faq:
+        if isinstance(item, dict) and item.get("question") and item.get("answer"):
+            faq.append({
+                "question": str(item["question"]).strip(),
+                "answer":   str(item["answer"]).strip(),
+            })
 
     # Clean LLM output (strip markdown headers, "Alternative" sections,
     # bold-line wrappers, character-count meta) BEFORE applying char caps,
@@ -2902,6 +3006,7 @@ async def generate_content(
         "language":      language,
         "paa_questions": paa_questions,
         "custom_faq_seeds": custom_faq_seeds,
+        "existing_faqs": existing_faqs,
     }).execute()
     content_id = (insert_res.data[0]["id"]
                   if insert_res.data and insert_res.data[0].get("id") else None)
@@ -2917,6 +3022,7 @@ async def generate_content(
         "schema_missing_fields": schema_missing,
         "paa_questions":         paa_questions,
         "custom_faq_seeds":      custom_faq_seeds,
+        "existing_faqs":         existing_faqs,
         "validation_warnings":   validation_warnings,
         "verified":              {},
     }

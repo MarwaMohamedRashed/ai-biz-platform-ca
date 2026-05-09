@@ -174,9 +174,13 @@ class TestBuildContentPrompts:
         assert "first 1 question" in p["faq"]
 
     def test_custom_seeds_remaining_count_in_prompt(self):
-        # 3 seeds -> LLM asked to generate 7 more
+        # 3 seeds, no existing -> output count = 15, of which 3 are seed Qs
+        # so the LLM has to generate 12 additional NEW pairs.
         p = _build_content_prompts("en", "ctx", "", [], ["Q1?", "Q2?", "Q3?"])
-        assert "generate 7 additional" in p["faq"].lower()
+        # Total LLM output count is 15 (3 seeds + 12 new)
+        assert "Output 15" in p["faq"] or "15 Q+A" in p["faq"]
+        # Seed block tells it 12 more new pairs after the 3 verbatim
+        assert "12 additional NEW" in p["faq"]
 
     def test_custom_seeds_only_affects_faq_not_other_prompts(self):
         seeds = ["Custom seed question 1?"]
@@ -186,6 +190,79 @@ class TestBuildContentPrompts:
         # But NOT in description / bio prompts (defensive — wrong wiring would leak)
         for key in ("website_desc", "gbp_desc", "yelp_desc", "social_bio"):
             assert "Custom seed question 1?" not in p[key], f"leaked into {key}"
+
+    # ─── Phase 4: existing FAQs from owner's website ───────────────────
+    def test_existing_faqs_listed_in_prompt_as_already_covered(self):
+        existing = [
+            {"question": "Do you accept Sunlife?", "answer": "Yes, we accept Sunlife direct billing."},
+            {"question": "Where are you located?", "answer": "1 Main St, Mississauga ON."},
+        ]
+        p = _build_content_prompts("en", "ctx", "", [], None, existing)
+        # Both Q&As must appear (LLM needs to know what NOT to duplicate)
+        assert "Do you accept Sunlife?" in p["faq"]
+        assert "Yes, we accept Sunlife direct billing." in p["faq"]
+        assert "Where are you located?" in p["faq"]
+        # Explicitly told NOT to duplicate
+        assert "DO NOT DUPLICATE" in p["faq"] or "DO NOT" in p["faq"]
+        assert "ALREADY COVERED" in p["faq"]
+
+    def test_existing_faqs_count_in_prompt_drives_new_target(self):
+        # 2 existing, 0 seeds -> LLM outputs max(5, 15-2-0) = 13 fresh pairs
+        existing = [
+            {"question": f"Existing Q{i}?", "answer": f"Existing A{i}"} for i in range(2)
+        ]
+        p = _build_content_prompts("en", "ctx", "", [], None, existing)
+        assert "Output 13" in p["faq"] or "13 Q+A" in p["faq"]
+
+    def test_existing_faqs_minimum_5_new_even_when_many_existing(self):
+        # 20 existing -> LLM should still output at least 5 NEW (so the
+        # owner gets fresh AEO content even if their site is already heavy on FAQs)
+        existing = [
+            {"question": f"Q{i}?", "answer": f"A{i}"} for i in range(20)
+        ]
+        p = _build_content_prompts("en", "ctx", "", [], None, existing)
+        # max(5, 15 - 20) = 5
+        assert "Output 5" in p["faq"] or "5 Q+A" in p["faq"]
+
+    def test_existing_faqs_with_seeds_combined_target(self):
+        # 3 existing + 4 seeds -> LLM outputs 4 (seeds) + max(5, 15-3-4)=8 (new)
+        # = 12 total pairs in JSON. Existing 3 are merged in by caller -> final 15.
+        existing = [{"question": f"Q{i}?", "answer": f"A{i}"} for i in range(3)]
+        seeds = ["Seed 1?", "Seed 2?", "Seed 3?", "Seed 4?"]
+        p = _build_content_prompts("en", "ctx", "", [], seeds, existing)
+        # Total LLM output = 12
+        assert "Output 12" in p["faq"] or "12 Q+A" in p["faq"]
+        # Of those 12, 4 are seed verbatim, 8 are new
+        assert "8 additional NEW" in p["faq"]
+
+    def test_existing_faqs_block_omitted_when_empty(self):
+        p = _build_content_prompts("en", "ctx", "", [], None, [])
+        assert "ALREADY COVERED" not in p["faq"]
+        assert "DO NOT DUPLICATE" not in p["faq"]
+
+    def test_existing_faqs_malformed_dropped(self):
+        # Empty Q or A should be dropped
+        existing = [
+            {"question": "Real Q?", "answer": "Real A"},
+            {"question": "", "answer": "Has answer"},        # bad — empty Q
+            {"question": "Has Q?", "answer": ""},             # bad — empty A
+        ]
+        p = _build_content_prompts("en", "ctx", "", [], None, existing)
+        assert "Real Q?" in p["faq"]
+        assert "Has answer" not in p["faq"]
+        # Block should reference 1 (not 3)
+        assert "1 Q+A pair" in p["faq"] or " 1 " in p["faq"]
+
+    def test_existing_faqs_french_block(self):
+        existing = [{"question": "Acceptez-vous Sunlife?", "answer": "Oui, facturation directe."}]
+        p = _build_content_prompts("fr", "ctx", "", [], None, existing)
+        assert "Acceptez-vous Sunlife?" in p["faq"]
+        assert "DÉJÀ COUVERTS" in p["faq"] or "NE PAS DUPLIQUER" in p["faq"]
+
+    def test_default_count_15_when_no_existing(self):
+        p = _build_content_prompts("en", "ctx", "", [])
+        # 2026 sweet spot per AEO research is 15, was 10 in earlier versions
+        assert "15" in p["faq"]
 
     def test_bio_prompt_includes_format_constraint(self):
         # Regression for the "markdown header + alternatives" bug —

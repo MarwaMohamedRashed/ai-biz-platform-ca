@@ -27,8 +27,27 @@ interface Content {
   social_bio?: string
   paa_questions?: string[]
   custom_faq_seeds?: string[]      // owner-provided real customer questions
+  existing_faqs?: FaqItem[]        // owner's Q+A pairs from their existing site
   validation_warnings?: string[]
   verified?: Record<string, boolean>
+}
+
+/** Parse the "existing FAQs" textarea into Q+A pairs.
+ *  Format: question on one line, answer on the next, blank line between pairs.
+ *  Tolerant of multi-line answers — joins answer lines until the next blank line.
+ *  Returns a clean list of {question, answer} pairs (drops malformed blocks). */
+function parseExistingFaqsText(raw: string): FaqItem[] {
+  const blocks = raw.split(/\r?\n\s*\r?\n/).map(b => b.trim()).filter(Boolean)
+  const out: FaqItem[] = []
+  for (const block of blocks) {
+    const lines = block.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+    if (lines.length < 2) continue
+    const question = lines[0]
+    const answer   = lines.slice(1).join(' ').trim()
+    if (!question || !answer) continue
+    out.push({ question, answer })
+  }
+  return out
 }
 
 interface Props {
@@ -168,6 +187,17 @@ export default function ContentPage({ businessId, initialContent }: Props) {
     (initialContent?.custom_faq_seeds ?? []).join('\n')
   )
 
+  // Phase 4 — owner's existing Q+A pairs from their website. Q on one line,
+  // A on the next, blank line between pairs. Persisted in
+  // aeo_content.existing_faqs; merged verbatim into the final FAQ list so
+  // the owner's existing site content is preserved exactly.
+  const [existingFaqsText, setExistingFaqsText] = useState<string>(
+    (initialContent?.existing_faqs ?? [])
+      .map(f => `${f.question}\n${f.answer}`)
+      .join('\n\n')
+  )
+  const parsedExistingFaqs = parseExistingFaqsText(existingFaqsText)
+
   function goNext() {
     const i = STEPS.findIndex(s => s.key === step)
     if (i < STEPS.length - 1) setStep(STEPS[i + 1].key)
@@ -196,6 +226,7 @@ export default function ContentPage({ businessId, initialContent }: Props) {
             .split('\n')
             .map(s => s.trim())
             .filter(Boolean),
+          existing_faqs: parsedExistingFaqs,
         }),
       })
       if (!res.ok) throw new Error('Generation failed')
@@ -415,6 +446,39 @@ export default function ContentPage({ businessId, initialContent }: Props) {
                 <p className="text-[10px] text-slate-400 mt-1">
                   {customFaqSeedsText.split('\n').filter(s => s.trim()).length} / 10 questions ·
                   click <strong>Regenerate</strong> to apply
+                </p>
+              </div>
+            )}
+
+            {/* ── Existing FAQs from owner's website (Phase 4) ───────────── */}
+            {step === 'faq' && (
+              <div className="bg-white rounded-2xl border border-slate-100 p-4">
+                <p className="text-sm font-semibold text-[#1e293b]">Existing FAQs from your website (optional)</p>
+                <p className="text-xs text-slate-500 mt-0.5 mb-2">
+                  Already have an FAQ page? Paste it here. We&apos;ll use your existing
+                  Q&amp;As <strong>verbatim</strong> and generate fresh AEO-optimized
+                  questions on different topics — combined into one valid FAQ schema.
+                  <br/>
+                  Format: question on one line, answer on the next, blank line between pairs.
+                </p>
+                <textarea
+                  value={existingFaqsText}
+                  onChange={e => setExistingFaqsText(e.target.value)}
+                  rows={8}
+                  placeholder={
+                    "Do you accept Sunlife insurance?\n" +
+                    "Yes — we accept Sunlife direct billing for cleanings, fillings, and X-rays.\n\n" +
+                    "What are your weekend hours?\n" +
+                    "We're open Saturdays from 9 AM to 3 PM in our Mississauga clinic. Closed Sundays.\n\n" +
+                    "Where are you located?\n" +
+                    "1234 Hurontario St, Mississauga, just north of the QEW. Free parking on-site."
+                  }
+                  className="w-full text-xs text-slate-700 border border-slate-200 rounded-xl px-3 py-2
+                             focus:outline-none focus:border-[#4f46e5] resize-y font-mono leading-relaxed"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Detected <strong>{parsedExistingFaqs.length}</strong> Q&amp;A pair{parsedExistingFaqs.length === 1 ? '' : 's'} ·
+                  total final FAQ count: <strong>{Math.max(15, parsedExistingFaqs.length + 5)}</strong>
                 </p>
               </div>
             )}
