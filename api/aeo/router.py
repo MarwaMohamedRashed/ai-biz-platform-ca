@@ -10,31 +10,42 @@ import json
 import os
 import logging
 import re
-from openai import AsyncOpenAI
+from core.ai_engine import AIEngine
 from .schema_builder import build_schema, build_faq_schema, find_missing_required_fields
-_audit_openai = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-# ─── Dedicated coach LLM client ───────────────────────────────────────────
-# AI execution coach uses Gemini Flash by default — cheapest model with
-# good chat quality. Decoupled from AI_PROVIDER (which controls content
-# generation). Falls back to ai_engine if GEMINI_API_KEY isn't set so
-# the coach still works for users on other providers.
-_coach_gemini = None
-# gemini-3-flash is the 2026 successor to 1.5-flash. Override to
-# gemini-3.1-flash-lite for cheaper/faster, or gemini-3.1-pro for higher
-# reasoning quality. 1.5-flash is deprecated as of 2026.
-_COACH_MODEL = os.getenv("COACH_MODEL", "gemini-3-flash")
-_GEMINI_KEY = os.getenv("GEMINI_API_KEY")
-if _GEMINI_KEY:
-    try:
-        import google.generativeai as _coach_genai
-        _coach_genai.configure(api_key=_GEMINI_KEY)
-        _coach_gemini = _coach_genai.GenerativeModel(_COACH_MODEL)
-    except Exception as _e:
-        _coach_gemini = None
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# ─── Per-workload LLM clients (env-configurable) ──────────────────────────
+# Each AI workload runs on its own provider+model picked via env vars so
+# swapping providers / handling deprecated models is a config change, not
+# a code release.
+#
+# AUDIT_PROVIDER + AUDIT_MODEL    -> ChatGPT pillar query (default
+#     openai/gpt-4o-mini). Caveat: switching this changes the semantic
+#     meaning of the "ChatGPT" AI Citations sub-pillar.
+# CONTENT_PROVIDER + CONTENT_MODEL -> Description/FAQ/social-bio gen.
+#     Defaults fall through to AI_PROVIDER + matching *_MODEL for back-
+#     compat with the original config.
+# COACH_PROVIDER + COACH_MODEL    -> AI execution coach (default
+#     gemini/gemini-3-flash -- cheapest with good chat quality).
+audit_llm = AIEngine(
+    provider=os.getenv("AUDIT_PROVIDER", "openai"),
+    model=os.getenv("AUDIT_MODEL", "gpt-4o-mini"),
+)
+content_llm = AIEngine(
+    provider=os.getenv("CONTENT_PROVIDER"),  # falls back to AI_PROVIDER
+    model=os.getenv("CONTENT_MODEL"),         # falls back to provider-specific *_MODEL
+)
+coach_llm = AIEngine(
+    provider=os.getenv("COACH_PROVIDER", "gemini"),
+    model=os.getenv("COACH_MODEL", "gemini-3-flash"),
+)
+logger.info(
+    f"[LLM] audit={audit_llm.provider}/{audit_llm._model} | "
+    f"content={content_llm.provider}/{content_llm._model} | "
+    f"coach={coach_llm.provider}/{coach_llm._model}"
+)
 
 PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -235,7 +246,7 @@ def _name_matches(candidate: str, search_name: str) -> bool:
 async def normalize_business_type(raw_type: str, business_name: str) -> str:
     if raw_type.lower() in KNOWN_TYPES:
         return raw_type
-    result = await ai_engine.generate(
+    result = await content_llm.generate(
         prompt=f'Given business name: "{business_name}" and type: "{raw_type}", translate to a short English phrase for a search query (e.g. "physiotherapy clinic", "italian restaurant"). Reply with only the phrase.',
         max_tokens=20,
         temperature=0.0,
@@ -330,23 +341,20 @@ async def run_perplexity_multi(
     }
 
 async def _chatgpt_one(business_name: str, query: str, city: str) -> dict:
-    response = await _audit_openai.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "You are a local business search assistant. "
-                    "A user is asking you to recommend businesses in their area. "
-                    "Answer based on your training knowledge, listing specific business names where you know them."
-                ),
-            },
-            {"role": "user", "content": query},
-        ],
+    """ChatGPT pillar measurement. Uses `audit_llm` (configured via
+    AUDIT_PROVIDER + AUDIT_MODEL env, default openai/gpt-4o-mini).
+    For semantic correctness AUDIT_PROVIDER should stay 'openai' since
+    this measures whether the business is cited *by ChatGPT specifically*."""
+    answer = await audit_llm.generate(
+        prompt=query,
+        system_prompt=(
+            "You are a local business search assistant. "
+            "A user is asking you to recommend businesses in their area. "
+            "Answer based on your training knowledge, listing specific business names where you know them."
+        ),
         max_tokens=500,
         temperature=0.0,
     )
-    answer = response.choices[0].message.content.strip()
     mentioned = extract_search_name(business_name, city).lower() in answer.lower()
     snippet = answer[:500] if mentioned else None
     print(f"[AEO] ChatGPT '{query}' → mentioned={mentioned}")
@@ -1617,7 +1625,7 @@ Respond ONLY with a JSON object in this exact format (no markdown, no explanatio
 Return at most 5 themes. Only include genuine complaints with 2+ mentions. If there are no clear complaints, return empty themes array."""
 
     try:
-        raw = await ai_engine.generate(
+        raw = await content_llm.generate(
             prompt=prompt,
             max_tokens=400,
             temperature=0.2,
@@ -1731,7 +1739,7 @@ Respond ONLY with a JSON object in this exact format (no markdown, no explanatio
 
 Return 2-5 strengths and 0-3 weaknesses as short phrases. Only include patterns mentioned by multiple reviewers."""
     try:
-        raw = await ai_engine.generate(
+        raw = await content_llm.generate(
             prompt=prompt,
             max_tokens=300,
             temperature=0.2,
@@ -2778,15 +2786,15 @@ async def generate_content(
 
     # Run all 5 LLM calls in parallel
     website_desc, gbp_desc, yelp_desc, social_bio_raw, faq_raw = await asyncio.gather(
-        ai_engine.generate(prompt=prompts["website_desc"], max_tokens=700, temperature=0.7,
+        content_llm.generate(prompt=prompts["website_desc"], max_tokens=700, temperature=0.7,
                            system_prompt=desc_system),
-        ai_engine.generate(prompt=prompts["gbp_desc"],     max_tokens=350, temperature=0.7,
+        content_llm.generate(prompt=prompts["gbp_desc"],     max_tokens=350, temperature=0.7,
                            system_prompt=desc_system),
-        ai_engine.generate(prompt=prompts["yelp_desc"],    max_tokens=500, temperature=0.7,
+        content_llm.generate(prompt=prompts["yelp_desc"],    max_tokens=500, temperature=0.7,
                            system_prompt=desc_system),
-        ai_engine.generate(prompt=prompts["social_bio"],   max_tokens=120, temperature=0.5,
+        content_llm.generate(prompt=prompts["social_bio"],   max_tokens=120, temperature=0.5,
                            system_prompt=bio_system),
-        ai_engine.generate(prompt=prompts["faq"],          max_tokens=2500, temperature=0.5,
+        content_llm.generate(prompt=prompts["faq"],          max_tokens=2500, temperature=0.5,
                            system_prompt="Return only valid JSON, no markdown."),
     )
 
@@ -3099,7 +3107,7 @@ async def regenerate_content_item(
                 "No markdown, no preamble, no alternatives, no character counts, no labels."
             )
 
-        raw = await ai_engine.generate(
+        raw = await content_llm.generate(
             prompt=prompt, max_tokens=max_tokens, temperature=temperature,
             system_prompt=sys_prompt,
         )
@@ -3166,7 +3174,7 @@ async def regenerate_content_item(
                 f"Return only valid JSON."
             )
 
-        raw = await ai_engine.generate(
+        raw = await content_llm.generate(
             prompt=faq_prompt, max_tokens=400, temperature=0.5,
             system_prompt="Return only valid JSON, no markdown.",
         )
@@ -3372,26 +3380,14 @@ async def recommendation_help(
     )
 
     # ─── Call the LLM ─────────────────────────────────────────────────────
-    # Prefer dedicated Gemini Flash coach client (cheaper, good chat quality);
-    # fall back to ai_engine for environments without GEMINI_API_KEY.
+    # Routes through `coach_llm` (configured via COACH_PROVIDER + COACH_MODEL).
     try:
-        if _coach_gemini is not None:
-            combined = f"{system_prompt}\n\n{full_prompt}"
-            response = await asyncio.to_thread(
-                _coach_gemini.generate_content,
-                combined,
-                generation_config=_coach_genai.GenerationConfig(
-                    max_output_tokens=600, temperature=0.5,
-                ),
-            )
-            reply = (response.text or "").strip()
-        else:
-            reply = await ai_engine.generate(
-                prompt=full_prompt,
-                system_prompt=system_prompt,
-                max_tokens=600,
-                temperature=0.5,
-            )
+        reply = await coach_llm.generate(
+            prompt=full_prompt,
+            system_prompt=system_prompt,
+            max_tokens=600,
+            temperature=0.5,
+        )
     except Exception as e:
         logger.warning(f"[COACH] LLM call failed: {e}")
         raise HTTPException(status_code=502, detail="Coach is temporarily unavailable. Try again in a moment.")

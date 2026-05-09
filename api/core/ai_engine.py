@@ -40,22 +40,39 @@ class AIEngine:
         services.AddSingleton<IAIEngine, AIEngine>();
     """
 
-    def __init__(self):
-        self.provider = AI_PROVIDER
+    def __init__(self, provider: Optional[str] = None, model: Optional[str] = None):
+        """
+        Construct an AI engine bound to one provider+model.
+
+        Args:
+            provider: 'openai' | 'gemini' | 'claude'. Defaults to AI_PROVIDER env.
+            model:    Model name (e.g. 'gpt-4o-mini', 'gemini-3-flash').
+                      Defaults to the provider-specific *_MODEL env (OPENAI_MODEL,
+                      GEMINI_MODEL, CLAUDE_MODEL).
+
+        Per-workload usage:
+            audit_llm   = AIEngine(provider='openai', model='gpt-4o-mini')
+            coach_llm   = AIEngine(provider='gemini', model='gemini-3-flash')
+            content_llm = AIEngine()  # uses AI_PROVIDER + matching *_MODEL env
+        """
+        self.provider = provider or AI_PROVIDER
 
         if self.provider == "openai":
             self._openai = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            self._model = model or OPENAI_MODEL
         elif self.provider == "gemini":
             genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-            self._gemini = genai.GenerativeModel(GEMINI_MODEL)
+            self._model = model or GEMINI_MODEL
+            self._gemini = genai.GenerativeModel(self._model)
         elif self.provider == "claude":
             self._claude = anthropic.AsyncAnthropic(
                 api_key=os.getenv("ANTHROPIC_API_KEY")
             )
+            self._model = model or CLAUDE_MODEL
         else:
-            raise ValueError(f"Unknown AI_PROVIDER: {self.provider}. Use 'openai', 'gemini', or 'claude'.")
+            raise ValueError(f"Unknown provider: {self.provider}. Use 'openai', 'gemini', or 'claude'.")
 
-        logger.info(f"AI engine initialised — provider: {self.provider}")
+        logger.info(f"AI engine initialised — provider: {self.provider}, model: {self._model}")
 
     async def generate(
         self,
@@ -98,7 +115,7 @@ class AIEngine:
         messages.append({"role": "user", "content": prompt})
 
         response = await self._openai.chat.completions.create(
-            model=OPENAI_MODEL,
+            model=self._model,
             messages=messages,
             max_tokens=max_tokens,
             temperature=temperature,
@@ -124,7 +141,7 @@ class AIEngine:
     ) -> str:
         messages = [{"role": "user", "content": prompt}]
         response = await self._claude.messages.create(
-            model=CLAUDE_MODEL,
+            model=self._model,
             max_tokens=max_tokens,
             system=system_prompt or "",
             messages=messages,
