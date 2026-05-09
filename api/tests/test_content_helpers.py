@@ -7,6 +7,8 @@ from aeo.router import (
     _truncate_at_word,
     _validate_content,
     _build_content_prompts,
+    _clean_bio,
+    _clean_description,
 )
 
 
@@ -132,3 +134,126 @@ class TestBuildContentPrompts:
         p = _build_content_prompts("en", "ctx", "", [])
         # Should NOT have the "real customer questions" prefix
         assert "real customer questions" not in p["faq"]
+
+    def test_bio_prompt_includes_format_constraint(self):
+        # Regression for the "markdown header + alternatives" bug —
+        # the bio prompt must explicitly forbid the bad output patterns
+        p = _build_content_prompts("en", "ctx", "", [])
+        bio = p["social_bio"].lower()
+        assert "no markdown" in bio
+        assert "no alternative" in bio or "no alternatives" in bio
+
+    def test_description_prompts_include_format_constraint(self):
+        p = _build_content_prompts("en", "ctx", "", [])
+        for k in ["website_desc", "gbp_desc", "yelp_desc"]:
+            assert "no markdown" in p[k].lower(), f"{k} missing format constraint"
+
+
+# ─── _clean_bio (regression for markdown + meta-commentary bug) ───────────
+class TestCleanBio:
+    def test_strips_markdown_header(self):
+        raw = "# LeapOne Bio\n\nAI Visibility for Tech Companies | Milton, ON"
+        assert _clean_bio(raw) == "AI Visibility for Tech Companies | Milton, ON"
+
+    def test_strips_bold_wrapper(self):
+        raw = "**AI Visibility for Tech Companies | Milton, ON**"
+        assert _clean_bio(raw) == "AI Visibility for Tech Companies | Milton, ON"
+
+    def test_strips_bold_after_header(self):
+        raw = "# LeapOne Bio\n\n**AI Visibility for Tech Companies | Milton, ON**"
+        assert _clean_bio(raw) == "AI Visibility for Tech Companies | Milton, ON"
+
+    def test_cuts_at_horizontal_rule(self):
+        raw = (
+            "Best plumber in Toronto, 24/7 emergency service.\n"
+            "---\n"
+            "*Character count: 50 characters*"
+        )
+        assert _clean_bio(raw) == "Best plumber in Toronto, 24/7 emergency service."
+
+    def test_cuts_at_alternative_section(self):
+        raw = (
+            "Best plumber in Toronto.\n\n"
+            "Alternative if you want shorter: GTA's emergency plumber."
+        )
+        assert _clean_bio(raw) == "Best plumber in Toronto."
+
+    def test_cuts_at_character_count_note(self):
+        raw = "Best plumber in Toronto.\n\n*Character count: 24 characters*"
+        assert _clean_bio(raw) == "Best plumber in Toronto."
+
+    def test_strips_label_prefix(self):
+        for prefix in ["Bio: ", "Social Bio: ", "Instagram Bio: ", "Caption: "]:
+            assert _clean_bio(prefix + "Best plumber in Toronto.") == "Best plumber in Toronto."
+
+    def test_strips_quotes(self):
+        assert _clean_bio('"Best plumber in Toronto."') == "Best plumber in Toronto."
+        assert _clean_bio("'Best plumber in Toronto.'") == "Best plumber in Toronto."
+
+    def test_real_world_example_from_screenshot(self):
+        # The exact pattern from the user's screenshot bug report
+        raw = (
+            "# LeapOne Bio\n\n"
+            "**AI Visibility for Tech Companies | Milton, ON**\n\n"
+            "---\n\n"
+            "*Character count: 50 characters (well under the 150 limit)*\n\n"
+            "**Alternative if..."
+        )
+        cleaned = _clean_bio(raw)
+        assert cleaned == "AI Visibility for Tech Companies | Milton, ON"
+        assert "#" not in cleaned
+        assert "**" not in cleaned
+        assert "Character count" not in cleaned
+        assert "Alternative" not in cleaned
+
+    def test_clean_bio_then_truncate_works_correctly(self):
+        # Defense-in-depth: clean first, then truncate. The original bug was
+        # that we truncated 150 chars of "# LeapOne Bio\n\n**actual bio**" —
+        # so the truncated output was mostly garbage.
+        raw = (
+            "# LeapOne Bio\n\n"
+            "**This is a long bio that goes way past one hundred and fifty "
+            "characters so it will be truncated by the next step in the pipeline.**"
+        )
+        cleaned = _clean_bio(raw)
+        truncated = _truncate_at_word(cleaned, 150)
+        assert "#" not in truncated and "**" not in truncated
+        assert truncated.startswith("This is a long bio")
+
+    def test_empty_returns_empty(self):
+        assert _clean_bio("") == ""
+        assert _clean_bio(None) == ""
+
+    def test_already_clean_passthrough(self):
+        assert _clean_bio("Best plumber in Toronto.") == "Best plumber in Toronto."
+
+
+# ─── _clean_description ──────────────────────────────────────────────────
+class TestCleanDescription:
+    def test_strips_here_is_preamble(self):
+        raw = "Here is the website description:\n\nAcme Plumbing serves Toronto..."
+        assert _clean_description(raw).startswith("Acme Plumbing")
+
+    def test_strips_label(self):
+        for prefix in ["Description: ", "Website Description: ", "Google Description: "]:
+            assert _clean_description(prefix + "Acme Plumbing serves...").startswith("Acme Plumbing")
+
+    def test_strips_markdown_header(self):
+        raw = "# Acme Plumbing\n\nServes Toronto and the GTA..."
+        assert _clean_description(raw).startswith("Serves Toronto")
+
+    def test_preserves_paragraph_content(self):
+        # Light cleanup — must NOT strip paragraph content
+        raw = (
+            "Acme Plumbing is a Toronto-based plumbing service serving the GTA.\n\n"
+            "We specialize in emergency repairs, drain cleaning, and water heater "
+            "installation. Available 24/7 with same-day appointments."
+        )
+        out = _clean_description(raw)
+        assert "Acme Plumbing" in out
+        assert "GTA" in out
+        assert "emergency repairs" in out
+
+    def test_empty_returns_empty(self):
+        assert _clean_description("") == ""
+        assert _clean_description(None) == ""

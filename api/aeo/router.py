@@ -2471,6 +2471,36 @@ def _build_content_prompts(language: str, base_context: str, services: str,
             + joined
         )
 
+    # Hard format rule appended to every prose-content prompt to prevent
+    # the LLM from emitting markdown headers, alternative versions, or
+    # character-count commentary on top of the actual content.
+    no_markdown_en = (
+        "\n\nIMPORTANT: Output only the description text in plain prose. "
+        "No markdown headers (# ##). No bold/italic markers. No 'Here is...' "
+        "preamble. No 'Alternative version' sections. No character-count "
+        "notes. No labels like 'Description:'. Just the prose itself."
+    )
+    no_markdown_fr = (
+        "\n\nIMPORTANT : Retourne uniquement le texte de description en prose. "
+        "Pas de titres markdown (# ##). Pas de gras/italique. Pas de préambule "
+        "« Voici... ». Pas de sections « Version alternative ». Pas de notes "
+        "sur le nombre de caractères. Pas d'étiquettes comme « Description : ». "
+        "Juste la prose."
+    )
+    bio_format_en = (
+        "\n\nIMPORTANT: Output ONLY the bio text — a single sentence or short "
+        "phrase under 150 characters. No markdown. No headers. No quotation "
+        "marks around the bio. No 'Bio:' label. No alternatives. No character-"
+        "count notes. No commentary. Just the bio words."
+    )
+    bio_format_fr = (
+        "\n\nIMPORTANT : Retourne UNIQUEMENT le texte de la biographie — une "
+        "seule phrase ou courte expression de moins de 150 caractères. Pas "
+        "de markdown. Pas de titres. Pas de guillemets. Pas d'étiquette « Bio : ». "
+        "Pas d'alternatives. Pas de notes sur le nombre de caractères. Juste "
+        "les mots de la biographie."
+    )
+
     if language == "fr":
         return {
             "website_desc": (
@@ -2478,20 +2508,24 @@ def _build_content_prompts(language: str, base_context: str, services: str,
                 "moteurs de recherche IA (ChatGPT, Perplexity, Google AI Overview). Sois précis, mentionne "
                 "la ville et les principaux services. Ton professionnel à la troisième personne."
                 + services_line_fr
+                + no_markdown_fr
             ),
             "gbp_desc": (
                 f"{base_context}\nÉcris une description Google Business Profile, MAXIMUM 700 caractères. "
                 "Va droit au but, mentionne la ville et les services, orientée bénéfices client."
                 + services_line_fr
+                + no_markdown_fr
             ),
             "yelp_desc": (
                 f"{base_context}\nÉcris une description style Yelp de 200-250 mots, ton concis, "
                 "troisième personne, mentionne les services."
                 + services_line_fr
+                + no_markdown_fr
             ),
             "social_bio": (
                 f"{base_context}\nÉcris une biographie de 150 caractères MAXIMUM pour Instagram/Facebook. "
                 "Style punchy, mentionne la ville et le service principal."
+                + bio_format_fr
             ),
             "faq": (
                 f"{base_context}\nGénère 10 questions et réponses FAQ qu'un client poserait sur cette entreprise.\n"
@@ -2508,20 +2542,24 @@ def _build_content_prompts(language: str, base_context: str, services: str,
             "engine answers (ChatGPT, Perplexity, Google AI Overview). Be specific, mention the city and "
             "key services. Write in third person, professional tone."
             + services_line_en
+            + no_markdown_en
         ),
         "gbp_desc": (
             f"{base_context}\nWrite a Google Business Profile description, MAX 700 characters. "
             "Direct, benefit-focused, mention the city and main services."
             + services_line_en
+            + no_markdown_en
         ),
         "yelp_desc": (
             f"{base_context}\nWrite a Yelp-style description, 200-250 words, concise tone, third person, "
             "mention services."
             + services_line_en
+            + no_markdown_en
         ),
         "social_bio": (
             f"{base_context}\nWrite a 150-character MAX social bio for Instagram/Facebook. Punchy, "
             "include city and main service."
+            + bio_format_en
         ),
         "faq": (
             f"{base_context}\nGenerate 10 FAQ questions and answers a customer would ask about this business.\n"
@@ -2539,6 +2577,97 @@ def _truncate_at_word(text: str, limit: int) -> str:
     if len(text) <= limit:
         return text
     return text[:limit - 1].rsplit(' ', 1)[0] + "…"
+
+
+# Markers we consider end-of-bio when the LLM tries to add commentary or
+# alternatives below the actual bio text. Order doesn't matter -- we cut at
+# the earliest match. Case-insensitive substring match.
+_BIO_END_MARKERS = (
+    "\n---", "\n***",
+    "\nalternative", "\nalt:", "\nalt.",
+    "\n*character count", "\n(character count",
+    "\n*note:", "\n_(",
+    "\n# ", "\n## ",
+    "\n**bio", "\n**social",
+    "\nbio:", "\nsocial bio:",
+    "\nversion 2", "\nversion 1",
+    "\nor:", "\nor,",
+    "\nhere is", "\nhere's",
+    "\nlet me know",
+)
+
+_BIO_LABEL_PREFIX = re.compile(
+    r"^(?:bio|social\s+bio|instagram\s+bio|facebook\s+bio|caption|tagline)\s*:\s*",
+    re.IGNORECASE,
+)
+_BIO_HEADING_LINE = re.compile(r"^#+\s+.*?\n+", re.MULTILINE)
+_BIO_BOLD_WRAPPER = re.compile(r"^\*\*(.+?)\*\*\s*$")
+
+
+def _clean_bio(raw: str) -> str:
+    """Extract clean bio text from an LLM response.
+
+    Defends against the LLM producing:
+      - markdown headers ("# LeapOne Bio")
+      - bold wrappers ("**actual bio**")
+      - character-count meta ("*Character count: 50*")
+      - "Alternative if..." sections
+      - leading "Bio:" / "Social Bio:" labels
+      - surrounding quotes
+    Returns the first clean bio sentence/line.
+    """
+    if not raw:
+        return ""
+    s = raw.strip()
+
+    # Cut at the first end-marker (case-insensitive)
+    s_lower = s.lower()
+    cut = len(s)
+    for marker in _BIO_END_MARKERS:
+        idx = s_lower.find(marker)
+        if 0 < idx < cut:
+            cut = idx
+    s = s[:cut].strip()
+
+    # Strip leading markdown heading line
+    s = _BIO_HEADING_LINE.sub("", s, count=1).strip()
+    # Strip leading "Bio:" / "Social Bio:" / etc.
+    s = _BIO_LABEL_PREFIX.sub("", s).strip()
+    # Take first non-empty line (bios are one line)
+    lines = [line.strip() for line in s.split("\n") if line.strip()]
+    if lines:
+        s = lines[0]
+    # Strip **bold** wrapper if the whole line is wrapped in it
+    m = _BIO_BOLD_WRAPPER.match(s)
+    if m:
+        s = m.group(1).strip()
+    # Strip surrounding quotes
+    s = s.strip("\"'").strip()
+    return s
+
+
+def _clean_description(raw: str) -> str:
+    """Light cleanup for descriptions.
+
+    Less aggressive than _clean_bio because descriptions are paragraph-form
+    and we want to preserve content. Only strips leading markdown headers
+    and obvious meta-prefixes ("Description:", "Here is the description:").
+    """
+    if not raw:
+        return ""
+    s = raw.strip()
+    # Strip leading "Here is..." / "Here's..." preambles
+    s = re.sub(r"^(here is|here's|here are)\s+(the\s+)?(\w+\s+){0,4}description:?\s*\n*",
+               "", s, count=1, flags=re.IGNORECASE).strip()
+    # Strip a leading markdown heading
+    s = _BIO_HEADING_LINE.sub("", s, count=1).strip()
+    # Strip a leading "Description:" / "Website Description:" label
+    s = re.sub(
+        r"^(?:description|website\s+description|google\s+description|gbp\s+description|"
+        r"google\s+business\s+profile\s+description|yelp\s+description)\s*:\s*",
+        "", s, flags=re.IGNORECASE,
+    ).strip()
+    return s
 
 
 def _validate_content(descriptions: dict, faq: list, social_bio: str) -> list[str]:
@@ -2611,12 +2740,33 @@ async def generate_content(
 
     prompts = _build_content_prompts(language, base_context, services, paa_questions)
 
+    # System prompts enforce output format at the model level (more reliable
+    # than user-prompt instructions). Particularly important for the bio,
+    # which the LLM otherwise treats as a creative-writing assignment and
+    # responds with markdown headers + alternatives + character-count notes.
+    desc_system = (
+        "You produce only the description text in plain prose. "
+        "No markdown headers, no bold/italic, no preamble, no alternatives, "
+        "no character counts, no labels. Output starts with the first word "
+        "of the description itself."
+    )
+    bio_system = (
+        "You produce only the bio text — a single short sentence or phrase "
+        "under 150 characters. No markdown, no headers, no quotation marks, "
+        "no labels, no alternatives, no character counts. Output starts and "
+        "ends with the bio words themselves."
+    )
+
     # Run all 5 LLM calls in parallel
     website_desc, gbp_desc, yelp_desc, social_bio_raw, faq_raw = await asyncio.gather(
-        ai_engine.generate(prompt=prompts["website_desc"], max_tokens=700, temperature=0.7),
-        ai_engine.generate(prompt=prompts["gbp_desc"],     max_tokens=350, temperature=0.7),
-        ai_engine.generate(prompt=prompts["yelp_desc"],    max_tokens=500, temperature=0.7),
-        ai_engine.generate(prompt=prompts["social_bio"],   max_tokens=120, temperature=0.8),
+        ai_engine.generate(prompt=prompts["website_desc"], max_tokens=700, temperature=0.7,
+                           system_prompt=desc_system),
+        ai_engine.generate(prompt=prompts["gbp_desc"],     max_tokens=350, temperature=0.7,
+                           system_prompt=desc_system),
+        ai_engine.generate(prompt=prompts["yelp_desc"],    max_tokens=500, temperature=0.7,
+                           system_prompt=desc_system),
+        ai_engine.generate(prompt=prompts["social_bio"],   max_tokens=120, temperature=0.5,
+                           system_prompt=bio_system),
         ai_engine.generate(prompt=prompts["faq"],          max_tokens=2500, temperature=0.5,
                            system_prompt="Return only valid JSON, no markdown."),
     )
@@ -2630,12 +2780,14 @@ async def generate_content(
     except Exception:
         faq = []
 
-    # Apply hard caps
-    social_bio = _truncate_at_word(social_bio_raw, 150)
+    # Clean LLM output (strip markdown headers, "Alternative" sections,
+    # bold-line wrappers, character-count meta) BEFORE applying char caps,
+    # so we don't end up truncating 150 chars of markdown garbage.
+    social_bio = _truncate_at_word(_clean_bio(social_bio_raw), 150)
     descriptions = {
-        "website": (website_desc or "").strip(),
-        "gbp":     _truncate_at_word(gbp_desc, 700),
-        "yelp":    (yelp_desc or "").strip(),
+        "website": _clean_description(website_desc),
+        "gbp":     _truncate_at_word(_clean_description(gbp_desc), 700),
+        "yelp":    _clean_description(yelp_desc),
     }
 
     # Server-side validation (warnings only -- still ship the content)
