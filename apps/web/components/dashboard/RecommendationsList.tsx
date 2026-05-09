@@ -37,9 +37,10 @@ const DIFFICULTY_LABELS: Record<Recommendation['difficulty'], string> = {
 
 interface Props {
   recommendations: Recommendation[]
+  currentTier?: 'starter' | 'pro'
 }
 
-export default function RecommendationsList({ recommendations }: Props) {
+export default function RecommendationsList({ recommendations, currentTier = 'starter' }: Props) {
   const [expanded, setExpanded] = useState<number | null>(null)
   const [coachOpen, setCoachOpen] = useState<number | null>(null)
 
@@ -122,6 +123,7 @@ export default function RecommendationsList({ recommendations }: Props) {
                       impact: r.impact,
                     }}
                     recommendationKey={`${i}-${r.title}`}
+                    currentTier={currentTier}
                   />
                 )}
               </div>

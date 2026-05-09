@@ -14,6 +14,22 @@ from openai import AsyncOpenAI
 from .schema_builder import build_schema, build_faq_schema, find_missing_required_fields
 _audit_openai = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+# ─── Dedicated coach LLM client ───────────────────────────────────────────
+# AI execution coach uses Gemini Flash by default — cheapest model with
+# good chat quality. Decoupled from AI_PROVIDER (which controls content
+# generation). Falls back to ai_engine if GEMINI_API_KEY isn't set so
+# the coach still works for users on other providers.
+_coach_gemini = None
+_COACH_MODEL = os.getenv("COACH_MODEL", "gemini-1.5-flash")
+_GEMINI_KEY = os.getenv("GEMINI_API_KEY")
+if _GEMINI_KEY:
+    try:
+        import google.generativeai as _coach_genai
+        _coach_genai.configure(api_key=_GEMINI_KEY)
+        _coach_gemini = _coach_genai.GenerativeModel(_COACH_MODEL)
+    except Exception as _e:
+        _coach_gemini = None
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -3304,7 +3320,7 @@ async def recommendation_help(
 ):
     """AI execution coach. Takes a recommendation context + conversation
     history + new user message, returns the next assistant reply.
-    Non-streaming. Tier gating shipped separately."""
+    Non-streaming. Pro-tier only when BILLING_ENABLED."""
     # ─── Input validation ─────────────────────────────────────────────────
     if not request.new_message or not request.new_message.strip():
         raise HTTPException(status_code=422, detail="new_message is required")
@@ -3326,14 +3342,20 @@ async def recommendation_help(
     if not business:
         raise HTTPException(status_code=404, detail="Business profile not found")
 
+    # ─── Tier gating: Pro only when billing is enabled ────────────────────
+    # The coach is the headline differentiation feature for Pro. Starter
+    # users see the upgrade CTA on the frontend instead of the chat input.
+    if BILLING_ENABLED:
+        sub = await get_active_subscription(str(business["id"]))
+        if not sub or sub.get("plan_tier") != "pro":
+            raise HTTPException(status_code=402, detail="pro_required")
+
     language = "fr" if request.language == "fr" else "en"
     system_prompt = _build_coach_system_prompt(request.recommendation, business, language)
 
-    # ─── Build the prompt for the AI engine ──────────────────────────────
-    # The ai_engine.generate() helper takes a prompt + system_prompt. We
-    # serialise the chat history as a transcript inside the prompt so it
-    # works with any provider (OpenAI/Claude/Gemini). Token budget is small
-    # because we trimmed history already.
+    # ─── Build the chat transcript ────────────────────────────────────────
+    # Serialised inside the prompt so it works with any LLM provider.
+    # Token budget is small because we trimmed history above.
     transcript = "\n".join(
         f"{'Owner' if m.role == 'user' else 'Coach'}: {m.content}"
         for m in history
@@ -3346,13 +3368,27 @@ async def recommendation_help(
         f"Coach:"
     )
 
+    # ─── Call the LLM ─────────────────────────────────────────────────────
+    # Prefer dedicated Gemini Flash coach client (cheaper, good chat quality);
+    # fall back to ai_engine for environments without GEMINI_API_KEY.
     try:
-        reply = await ai_engine.generate(
-            prompt=full_prompt,
-            system_prompt=system_prompt,
-            max_tokens=600,
-            temperature=0.5,
-        )
+        if _coach_gemini is not None:
+            combined = f"{system_prompt}\n\n{full_prompt}"
+            response = await asyncio.to_thread(
+                _coach_gemini.generate_content,
+                combined,
+                generation_config=_coach_genai.GenerationConfig(
+                    max_output_tokens=600, temperature=0.5,
+                ),
+            )
+            reply = (response.text or "").strip()
+        else:
+            reply = await ai_engine.generate(
+                prompt=full_prompt,
+                system_prompt=system_prompt,
+                max_tokens=600,
+                temperature=0.5,
+            )
     except Exception as e:
         logger.warning(f"[COACH] LLM call failed: {e}")
         raise HTTPException(status_code=502, detail="Coach is temporarily unavailable. Try again in a moment.")

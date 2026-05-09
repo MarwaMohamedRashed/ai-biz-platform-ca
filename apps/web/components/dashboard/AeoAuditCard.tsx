@@ -46,6 +46,7 @@ interface Props {
   initialRecommendations: Recommendation[]
   prevBreakdown: Breakdown | null
   locale: string
+  currentTier?: 'starter' | 'pro'
 }
 
 const PILLARS: { key: keyof Breakdown; label: string; max: number }[] = [
@@ -56,7 +57,7 @@ const PILLARS: { key: keyof Breakdown; label: string; max: number }[] = [
   { key: 'ai_citation',  label: 'AI Citations',            max: 18 },
 ]
 
-export default function AeoAuditCard({ businessId, initialAudit, initialRecommendations, prevBreakdown, locale }: Props) {
+export default function AeoAuditCard({ businessId, initialAudit, initialRecommendations, prevBreakdown, locale, currentTier = 'starter' }: Props) {
   const [audit, setAudit] = useState<Audit | null>(initialAudit)
   const [recommendations, setRecommendations] = useState<Recommendation[]>(initialRecommendations)
   // After a fresh audit, prev becomes the initial audit's breakdown
@@ -200,7 +201,7 @@ export default function AeoAuditCard({ businessId, initialAudit, initialRecommen
         </div>
       </div>
 
-      {audit && <RecommendationsList recommendations={recommendations} />}
+      {audit && <RecommendationsList recommendations={recommendations} currentTier={currentTier} />}
 
       {audit && drawerOpen && (
         <RawDataDrawer

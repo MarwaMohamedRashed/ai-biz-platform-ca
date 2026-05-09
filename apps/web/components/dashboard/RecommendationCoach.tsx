@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useLocale } from 'next-intl'
 import { chatWithCoach, type CoachMessage, type CoachRecommendationContext } from '@/lib/coach-api'
 
@@ -11,6 +12,11 @@ interface Props {
    * recommendation we want a fresh conversation, not the old one.
    */
   recommendationKey: string
+  /**
+   * Subscription tier of the current user. Coach is a Pro-only feature;
+   * Starter users see an upgrade CTA in place of the chat input.
+   */
+  currentTier?: 'starter' | 'pro'
 }
 
 /**
@@ -21,9 +27,45 @@ interface Props {
  * Non-streaming for v1 (simpler). The coach typically replies in 5-10 sec
  * for `gpt-4o-mini`. We show a "Coach is thinking…" indicator while waiting.
  */
-export default function RecommendationCoach({ recommendation, recommendationKey }: Props) {
+export default function RecommendationCoach({ recommendation, recommendationKey, currentTier = 'starter' }: Props) {
   const locale = useLocale()
   const language: 'en' | 'fr' = locale === 'fr' ? 'fr' : 'en'
+
+  // ─── Tier gate: starter users see an upgrade CTA, not the chat input ──
+  // The "Get step-by-step help" button stays visible for everyone (so
+  // Starter sees what Pro unlocks). Clicking it opens this panel which
+  // shows the upgrade pitch instead of the input. Conversion-positive UX.
+  if (currentTier !== 'pro') {
+    return (
+      <div className="mt-3 bg-white border border-indigo-100 rounded-xl overflow-hidden">
+        <div className="px-3 py-2 bg-indigo-50 border-b border-indigo-100 flex items-center gap-2">
+          <span className="text-base">🤝</span>
+          <p className="text-xs font-semibold text-[#1e293b]">
+            {language === 'fr' ? 'Coach IA — fonctionnalité Pro' : 'AI coach — a Pro feature'}
+          </p>
+        </div>
+        <div className="p-4">
+          <p className="text-xs text-slate-700 leading-relaxed mb-3">
+            {language === 'fr'
+              ? "Le coach IA vous guide pas à pas dans chaque recommandation, comme un consultant marketing. Posez n'importe quelle question — il connaît votre entreprise et la recommandation, et peut même rédiger le courriel à envoyer à votre administrateur web si la partie technique est trop complexe."
+              : "The AI coach walks you step-by-step through each recommendation, like having a marketing consultant on call. Ask any question — it knows your business and the recommendation, and can even write the email to send your web admin when the technical part feels overwhelming."}
+          </p>
+          <p className="text-[11px] text-slate-500 mb-3">
+            {language === 'fr'
+              ? "Inclus dans le plan Pro à 49 $/mois. Le coach n'est pas inclus dans Starter."
+              : 'Included with the Pro plan at $49/mo. Not included with Starter.'}
+          </p>
+          <Link
+            href={`/${locale}/dashboard/plan`}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-white
+                       bg-[#4f46e5] hover:bg-indigo-700 px-3 py-2 rounded-lg transition-colors"
+          >
+            {language === 'fr' ? 'Passer à Pro' : 'Upgrade to Pro'} →
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   const [messages, setMessages] = useState<CoachMessage[]>([])
   const [draft, setDraft] = useState('')

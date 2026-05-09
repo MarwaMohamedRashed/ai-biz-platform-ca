@@ -32,6 +32,18 @@ export default async function DashboardPage() {
   .limit(1)
   .single()
 
+  // Subscription tier — gates the AI coach (Pro-only feature)
+  const { data: subscription } = business
+    ? await supabase
+        .from('subscriptions')
+        .select('plan_tier, status')
+        .eq('business_id', business.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+    : { data: null }
+  const currentTier: 'starter' | 'pro' = subscription?.plan_tier === 'pro' ? 'pro' : 'starter'
+
   const { data: auditHistory } = business
     ? await supabase
         .from('aeo_audits')
@@ -125,6 +137,7 @@ export default async function DashboardPage() {
                 initialRecommendations={latestAudit?.raw_results?.recommendations ?? []}
                 prevBreakdown={auditHistory?.[1]?.score_breakdown ?? null}
                 locale={locale}
+                currentTier={currentTier}
               />
 
             </div>
