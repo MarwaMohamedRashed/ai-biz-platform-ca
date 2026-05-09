@@ -24,3 +24,74 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Blog post body — long-form Markdown rendered into HTML.
+   Replaces the @tailwindcss/typography `prose` plugin which we don't bundle. */
+.blog-body {
+  color: #334155;
+  line-height: 1.7;
+  font-size: 1rem;
+}
+.blog-body h1, .blog-body h2, .blog-body h3, .blog-body h4 {
+  color: #1e293b;
+  font-weight: 800;
+  line-height: 1.25;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+.blog-body h1 { font-size: 1.875rem; }
+.blog-body h2 { font-size: 1.5rem; }
+.blog-body h3 { font-size: 1.25rem; }
+.blog-body h4 { font-size: 1.125rem; }
+.blog-body p {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+.blog-body a {
+  color: #4f46e5;
+  font-weight: 600;
+}
+.blog-body a:hover {
+  text-decoration: underline;
+}
+.blog-body strong { color: #1e293b; font-weight: 700; }
+.blog-body em { font-style: italic; }
+.blog-body ul, .blog-body ol {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  padding-left: 1.5rem;
+}
+.blog-body ul { list-style: disc; }
+.blog-body ol { list-style: decimal; }
+.blog-body li { margin: 0.25rem 0; }
+.blog-body blockquote {
+  border-left: 3px solid #4f46e5;
+  padding-left: 1rem;
+  margin: 1.5rem 0;
+  color: #64748b;
+  font-style: italic;
+}
+.blog-body code {
+  background: #f1f5f9;
+  color: #db2777;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.blog-body pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 1.25rem 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+.blog-body pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+}

@@ -46,6 +46,18 @@ const DESC_TABS = [
   { key: 'yelp',    label: 'Yelp',      hint: 'Yelp / directory style, 200–250 words' },
 ] as const
 
+// Stepped layout — one step shown at a time so we don't drown
+// non-technical owners on first contact. Schema (technical) is the last
+// step so it's tucked away by default.
+const STEPS = [
+  { key: 'description', label: 'Description', sublabel: 'Per platform' },
+  { key: 'social',      label: 'Social bio',  sublabel: '≤ 150 chars' },
+  { key: 'faq',         label: 'FAQ',         sublabel: '10 Q&As + schema' },
+  { key: 'schema',      label: 'Schema markup', sublabel: 'Technical' },
+] as const
+
+type StepKey = typeof STEPS[number]['key']
+
 function wrapAsScriptTag(jsonLd: string): string {
   return `<script type="application/ld+json">\n${jsonLd}\n</script>`
 }
@@ -66,9 +78,19 @@ export default function ContentPage({ businessId, initialContent }: Props) {
   const [error, setError] = useState('')
   const [copied, setCopied] = useState<string | null>(null)
   const [activeDescTab, setActiveDescTab] = useState<'website' | 'gbp' | 'yelp'>('website')
+  const [step, setStep] = useState<StepKey>('description')
   const [language, setLanguage] = useState<'en' | 'fr'>(
     initialContent?.language === 'fr' ? 'fr' : (locale === 'fr' ? 'fr' : 'en')
   )
+
+  function goNext() {
+    const i = STEPS.findIndex(s => s.key === step)
+    if (i < STEPS.length - 1) setStep(STEPS[i + 1].key)
+  }
+  function goPrev() {
+    const i = STEPS.findIndex(s => s.key === step)
+    if (i > 0) setStep(STEPS[i - 1].key)
+  }
 
   async function generate() {
     if (!businessId) return
@@ -110,14 +132,16 @@ export default function ContentPage({ businessId, initialContent }: Props) {
   const activeDesc = content?.descriptions?.[activeDescTab] ?? ''
   const activeDescHint = DESC_TABS.find(t => t.key === activeDescTab)?.hint ?? ''
 
-  return (
-    <div className="flex-1 overflow-y-auto px-6 py-6">
-      <div className="max-w-2xl">
+  const stepIndex = STEPS.findIndex(s => s.key === step)
 
-        <div className="flex items-center justify-between mb-2 gap-3">
+  return (
+    <div className="flex-1 overflow-y-auto px-4 md:px-6 py-6">
+      <div className="max-w-4xl">
+
+        <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
           <div>
             <h1 className="text-lg font-extrabold text-[#1e293b]">AI Content Generator</h1>
-            <p className="text-xs text-slate-400 mt-0.5">Optimized content to improve your AI search visibility</p>
+            <p className="text-xs text-slate-400 mt-0.5">Walk through each section, copy what you need.</p>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
@@ -155,9 +179,42 @@ export default function ContentPage({ businessId, initialContent }: Props) {
         )}
 
         {!loading && content && (
-          <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-4">
+
+            {/* ── Step sidebar ──────────────────────────────────────────── */}
+            <nav className="bg-white rounded-2xl border border-slate-100 p-2 self-start
+                            md:sticky md:top-4">
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-2 py-1">Steps</p>
+              {STEPS.map((s, i) => {
+                const isActive = s.key === step
+                return (
+                  <button key={s.key} onClick={() => setStep(s.key)}
+                          className={`w-full text-left px-2.5 py-2 rounded-lg flex items-start gap-2 transition-colors
+                                      ${isActive ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}>
+                    <span className={`flex-shrink-0 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center
+                                      ${isActive ? 'bg-[#4f46e5] text-white' : 'bg-slate-100 text-slate-500'}`}>
+                      {i + 1}
+                    </span>
+                    <span className="min-w-0">
+                      <span className={`block text-xs font-semibold ${isActive ? 'text-[#4f46e5]' : 'text-[#1e293b]'}`}>
+                        {s.label}
+                      </span>
+                      <span className="block text-[10px] text-slate-400">{s.sublabel}</span>
+                    </span>
+                  </button>
+                )
+              })}
+            </nav>
+
+            {/* ── Active step pane ─────────────────────────────────────── */}
+            <div className="flex flex-col gap-4 min-w-0">
+
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                Step {stepIndex + 1} of {STEPS.length}
+              </p>
 
             {/* ── Descriptions (per-platform) ─────────────────────────────── */}
+            {step === 'description' && (
             <div className="bg-white rounded-2xl border border-slate-100 p-4">
               <div className="flex items-start justify-between mb-2 gap-3">
                 <div>
@@ -188,9 +245,10 @@ export default function ContentPage({ businessId, initialContent }: Props) {
                 <p className="text-[10px] text-slate-400 mt-2">{activeDesc.length} / 700 characters</p>
               )}
             </div>
+            )}
 
             {/* ── Social Bio ──────────────────────────────────────────────── */}
-            {content.social_bio && (
+            {step === 'social' && content.social_bio && (
               <ContentBlock
                 title="Social Media Bio"
                 subtitle={`For Instagram and Facebook — ${content.social_bio.length}/150 characters`}
@@ -199,9 +257,14 @@ export default function ContentPage({ businessId, initialContent }: Props) {
                 copied={copied === 'social_bio'}
               />
             )}
+            {step === 'social' && !content.social_bio && (
+              <div className="bg-white rounded-2xl border border-slate-100 p-6 text-center">
+                <p className="text-xs text-slate-400">No social bio generated yet — click Regenerate.</p>
+              </div>
+            )}
 
-            {/* ── FAQ list + FAQ schema ───────────────────────────────────── */}
-            {content.faq && content.faq.length > 0 && (
+            {/* ── FAQ list + FAQ schema (combined into one step) ─────────── */}
+            {step === 'faq' && content.faq && content.faq.length > 0 && (
               <div className="bg-white rounded-2xl border border-slate-100 p-4">
                 <div className="flex items-start justify-between mb-2">
                   <div>
@@ -232,7 +295,7 @@ export default function ContentPage({ businessId, initialContent }: Props) {
               </div>
             )}
 
-            {content.faq_schema && (
+            {step === 'faq' && content.faq_schema && (
               <div className="bg-white rounded-2xl border border-slate-100 p-4">
                 <div className="flex items-start justify-between mb-2 gap-3">
                   <div>
@@ -261,7 +324,7 @@ export default function ContentPage({ businessId, initialContent }: Props) {
             )}
 
             {/* ── Schema Markup (LocalBusiness) ───────────────────────────── */}
-            {content.schema_markup && (
+            {step === 'schema' && content.schema_markup && (
               <div className="bg-white rounded-2xl border border-slate-100 p-4">
                 <div className="flex items-start justify-between mb-2 gap-3">
                   <div>
@@ -305,7 +368,7 @@ export default function ContentPage({ businessId, initialContent }: Props) {
               </div>
             )}
 
-            {/* ── Validation warnings (debug-ish, only shown if non-empty) ── */}
+            {/* ── Validation warnings (only shown if non-empty) ─────────── */}
             {content.validation_warnings && content.validation_warnings.length > 0 && (
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3">
                 <p className="text-[11px] text-amber-900">
@@ -314,6 +377,22 @@ export default function ContentPage({ businessId, initialContent }: Props) {
                 </p>
               </div>
             )}
+
+            {/* ── Prev / Next step nav ─────────────────────────────────── */}
+            <div className="flex items-center justify-between pt-2">
+              <button onClick={goPrev} disabled={stepIndex === 0}
+                      className="text-xs font-semibold text-slate-500 hover:text-slate-700
+                                 disabled:opacity-30 disabled:cursor-not-allowed">
+                ← Previous
+              </button>
+              <button onClick={goNext} disabled={stepIndex === STEPS.length - 1}
+                      className="text-xs font-semibold text-[#4f46e5] hover:text-indigo-700
+                                 disabled:opacity-30 disabled:cursor-not-allowed">
+                {stepIndex < STEPS.length - 1 ? `Next: ${STEPS[stepIndex + 1].label} →` : 'Last step'}
+              </button>
+            </div>
+
+            </div>{/* end step pane */}
           </div>
         )}
 

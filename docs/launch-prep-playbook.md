@@ -1,8 +1,62 @@
-# LeapOne — Launch Prep Playbook (Mid-June / Early July 2026)
+# LeapOne — Launch Prep Playbook (Early-Mid July 2026 — Bold Path)
 
-**Date:** 2026-05-08
-**Time horizon:** 6–8 weeks to launch
-**Target launch window:** mid-June — early July 2026
+**Date:** 2026-05-08 (last revised 2026-05-09)
+**Time horizon:** 8–10 weeks to launch
+**Target launch window:** early-to-mid July 2026
+**Path chosen:** **Bold** — UX cleanup + verify-and-edit flow + AI execution coach all ship in v1
+
+---
+
+## Why we're slipping launch by 2-3 weeks
+
+The original mid-June target shipped with what we have today: solid AEO
+audit, content generator, recommendations. Good product, generic-enough
+positioning that it could be confused with another AEO tool.
+
+The bold path adds three things that **change the product's market
+positioning from "another AEO tool" to "the AI coach for non-technical
+Canadian SMB owners":**
+
+1. **Content page UX cleanup** — progressive disclosure so a 55-year-old
+   plumber isn't drowning in JSON-LD blocks
+2. **Verify-and-edit flow on generated content** — AI proposes, owner
+   edits or regenerates with notes, then verifies. Pattern we already
+   use successfully on the reviews module. Prevents the
+   "wrong-FAQ-pasted-on-website" failure mode that erodes trust.
+3. **AI execution coach** — a chat assistant attached to each
+   recommendation that walks the owner through actually doing it.
+   "Claim your HomeStars profile" becomes a guided 5-minute
+   conversation instead of a 200-word instruction the owner
+   abandons.
+
+Net effect on positioning: instead of "we audit your AI search
+visibility" (technical-buyer language), the pitch becomes "we coach
+Canadian small business owners through AI search optimization, even
+if they're not technical." That's a stronger story and a real moat
+that no US-built AEO tool replicates today.
+
+The AI coach also unlocks the **Pro-tier upgrade pitch**: Starter is
+"DIY AEO," Pro is "guided AEO with the coach." Today the $19→$49
+upgrade is a thin sell (more audits per month). With the coach,
+it's a clear value step.
+
+---
+
+## What ships in v1 (bold path)
+
+### Phase A — Pre-launch product work (~10 days)
+This is new. Was deferred / not in scope previously.
+
+| Item | Effort | Why it's in v1 |
+|---|---|---|
+| Content page UX cleanup (progressive disclosure) | 1 day | Prevents drowning non-technical owners on first contact |
+| Verify-and-edit flow for generated content (description, FAQ) | 2 days | Prevents wrong-content-pasted-on-website failure mode |
+| AI execution coach (Pro-only) | 5 days | The headline differentiation; built on top of verify flow |
+| Tier gating + Pro upgrade prompts | 0.5 days | Without gating, Starter customers consume the most expensive feature for free |
+| Tests + docs | 1.5 days | Lock in regressions before launch |
+
+### Phase B — Marketing foundation (was original Phase 0-7)
+Same as original playbook, but the timeline starts after Phase A.
 
 ---
 
@@ -408,19 +462,24 @@ you can target lookalikes of your first 100 users.
 
 ---
 
-## The 6-week schedule (Week 0 = today, 2026-05-08)
+## The 9-week schedule — Bold path (Week 0 = 2026-05-09)
 
 | Week | Theme | Top-3 priorities |
 |---|---|---|
-| **0** (this week) | Phase 0 sanity | Run audit on leapone.ca · paste schema on site · register all directory listings (Apple, Bing, GBP at minimum) |
-| **1** | Foundation | Finish directory claims · LinkedIn Company Page + personal · Facebook · YouTube channel created |
-| **2** | Content engine | 5 blog posts drafted · 1 YouTube video published · Reddit account + 5 helpful comments |
-| **3** | Authority | First 5 outreach emails to journalists · 2 podcast pitches · LinkedIn posting daily |
-| **4** | Compounding | First case study with a real Canadian SMB · second YouTube video · weekly LinkedIn essay rhythm steady |
-| **5** | Pre-launch buzz | Email signup form on leapone.ca · launch announcement drafted · ProductHunt page prepared · press kit live |
-| **6** | Soft launch | Friends + family launch · gather 10 testimonials · fix bugs surfaced |
-| **7** | Public launch | Tuesday/Wednesday public launch · all channels coordinate · press email goes out |
-| **8** | Post-launch | Thank everyone · write recap post · gather data for "first 30 days" piece |
+| **0** (this week) | Phase A kick-off + AEO foundation | Blog scaffold built · content-page UX cleanup shipped · Phase 0 directory claims (Apple, Bing, GBP at minimum) |
+| **1** | Phase A continuation | Verify-and-edit flow shipped · AI execution coach backend started · all directory listings claimed |
+| **2** | Phase A finish + content engine | AI coach complete + tier-gated · 5 blog posts drafted · LinkedIn Company Page + personal live |
+| **3** | Marketing foundation | LinkedIn posting daily · 1 YouTube video published · Reddit account + 5 helpful comments |
+| **4** | Authority | First 5 outreach emails to journalists · 2 podcast pitches · second YouTube video |
+| **5** | Compounding | First Canadian SMB case study · weekly LinkedIn essay rhythm steady · third YouTube video |
+| **6** | Pre-launch buzz | Email signup form on leapone.ca · launch announcement drafted · ProductHunt page prepared · press kit live |
+| **7** | Soft launch | Friends + family launch · gather 10 testimonials · fix bugs surfaced |
+| **8** | Public launch | Tuesday/Wednesday public launch · all channels coordinate · press email goes out |
+| **9** | Post-launch | Thank everyone · write recap post · gather data for "first 30 days" piece |
+
+**Launch target:** week 8, around 2026-07-07 to 2026-07-14 (early-to-mid
+July). 2-3 weeks later than the original target, in exchange for the
+AI coach moat that makes us materially harder to compete with.
 
 ---
 
