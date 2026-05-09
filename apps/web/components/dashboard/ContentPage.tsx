@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useLocale } from 'next-intl'
 import { createClient } from '@/lib/supabase'
+import { patchContent, verifyContentItem, regenerateContentItem } from '@/lib/content-api'
 
 interface FaqItem { question: string; answer: string }
 
@@ -15,6 +16,7 @@ interface Descriptions {
 
 // Tolerant of both the new shape (descriptions{}) and the legacy shape (description string)
 interface Content {
+  id?: string                       // populated for new audits; null for legacy
   language?: 'en' | 'fr'
   descriptions?: Descriptions
   description?: string             // legacy fallback
@@ -25,6 +27,7 @@ interface Content {
   social_bio?: string
   paa_questions?: string[]
   validation_warnings?: string[]
+  verified?: Record<string, boolean>
 }
 
 interface Props {
@@ -297,9 +300,23 @@ export default function ContentPage({ businessId, initialContent }: Props) {
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap min-h-[5rem]">
-                {activeDesc || <span className="text-slate-400 italic">No content for this platform yet — click Regenerate.</span>}
-              </p>
+              <EditableField
+                contentId={content.id}
+                itemKey={`description.${activeDescTab}`}
+                value={activeDesc}
+                isVerified={!!content.verified?.[`description.${activeDescTab}`]}
+                multiline={true}
+                rows={activeDescTab === 'gbp' ? 4 : 7}
+                charLimit={activeDescTab === 'gbp' ? 700 : undefined}
+                emptyPlaceholder="No content for this platform yet — click Regenerate."
+                onChange={(newValue, newVerified) => {
+                  setContent(prev => prev ? {
+                    ...prev,
+                    descriptions: { ...(prev.descriptions ?? {}), [activeDescTab]: newValue },
+                    verified: newVerified ?? prev.verified,
+                  } : prev)
+                }}
+              />
               {activeDescTab === 'gbp' && activeDesc && (
                 <p className="text-[10px] text-slate-400 mt-2">{activeDesc.length} / 700 characters</p>
               )}
@@ -307,18 +324,38 @@ export default function ContentPage({ businessId, initialContent }: Props) {
             )}
 
             {/* ── Social Bio ──────────────────────────────────────────────── */}
-            {step === 'social' && content.social_bio && (
-              <ContentBlock
-                title="Social Media Bio"
-                subtitle={`For Instagram and Facebook — ${content.social_bio.length}/150 characters`}
-                content={content.social_bio}
-                onCopy={() => copy(content.social_bio!, 'social_bio')}
-                copied={copied === 'social_bio'}
-              />
-            )}
-            {step === 'social' && !content.social_bio && (
-              <div className="bg-white rounded-2xl border border-slate-100 p-6 text-center">
-                <p className="text-xs text-slate-400">No social bio generated yet — click Regenerate.</p>
+            {step === 'social' && (
+              <div className="bg-white rounded-2xl border border-slate-100 p-4">
+                <div className="flex items-start justify-between mb-2 gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-[#1e293b]">Social Media Bio</p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {content.social_bio
+                        ? `${content.social_bio.length}/150 characters`
+                        : 'No bio yet — click Regenerate.'}
+                    </p>
+                  </div>
+                  {content.social_bio && (
+                    <CopyButton onCopy={() => copy(content.social_bio!, 'social_bio')}
+                                copied={copied === 'social_bio'} />
+                  )}
+                </div>
+                <EditableField
+                  contentId={content.id}
+                  itemKey="social_bio"
+                  value={content.social_bio ?? ''}
+                  isVerified={!!content.verified?.['social_bio']}
+                  multiline={false}
+                  charLimit={150}
+                  emptyPlaceholder="No social bio generated yet — click Regenerate."
+                  onChange={(newValue, newVerified) => {
+                    setContent(prev => prev ? {
+                      ...prev,
+                      social_bio: newValue,
+                      verified: newVerified ?? prev.verified,
+                    } : prev)
+                  }}
+                />
               </div>
             )}
 
@@ -345,10 +382,22 @@ export default function ContentPage({ businessId, initialContent }: Props) {
                 </div>
                 <div className="flex flex-col gap-3 mt-3">
                   {content.faq.map((item, i) => (
-                    <div key={i} className="border-l-2 border-indigo-100 pl-3">
-                      <p className="text-xs font-semibold text-[#1e293b]">{item.question}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">{item.answer}</p>
-                    </div>
+                    <EditableFaqItem
+                      key={i}
+                      contentId={content.id}
+                      index={i}
+                      item={item}
+                      isVerified={!!content.verified?.[`faq.${i}`]}
+                      onChange={(newItem, newVerified) => {
+                        if (newItem === null) return
+                        setContent(prev => {
+                          if (!prev) return prev
+                          const newFaq = [...(prev.faq ?? [])]
+                          newFaq[i] = newItem
+                          return { ...prev, faq: newFaq, verified: newVerified ?? prev.verified }
+                        })
+                      }}
+                    />
                   ))}
                 </div>
               </div>
@@ -466,6 +515,332 @@ export default function ContentPage({ businessId, initialContent }: Props) {
     </div>
   )
 }
+
+// ── Verify-and-edit primitives ───────────────────────────────────────────
+// EditableField handles single-string content (descriptions, social bio):
+//   view mode -> read-only text + Verify checkbox + Edit + Regenerate
+//   edit mode -> textarea + Save / Cancel
+//   regenerate mode -> notes textarea + Generate / Cancel
+// EditableFaqItem wraps the same pattern for FAQ {question, answer} pairs.
+//
+// All three operations PATCH the parent `content` state through the
+// `onChange` callback so the page stays in sync with the DB.
+
+interface VerifiedToggleProps {
+  verified: boolean
+  onChange: (next: boolean) => void
+  disabled?: boolean
+}
+function VerifiedToggle({ verified, onChange, disabled }: VerifiedToggleProps) {
+  return (
+    <label className={`flex items-center gap-1.5 text-[11px] font-semibold cursor-pointer
+                       ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+                       ${verified ? 'text-green-700' : 'text-slate-500'}`}>
+      <input type="checkbox" checked={verified} disabled={disabled}
+             onChange={e => onChange(e.target.checked)}
+             className="h-3.5 w-3.5 rounded text-green-600 focus:ring-green-500" />
+      {verified ? 'Verified' : 'Mark verified'}
+    </label>
+  )
+}
+
+interface EditableFieldProps {
+  contentId: string | null | undefined
+  itemKey: string                               // "description.website" | "social_bio" | etc
+  value: string
+  isVerified: boolean
+  multiline?: boolean
+  rows?: number
+  charLimit?: number                            // shows "n/limit chars" counter
+  onChange: (newValue: string, newVerified?: Record<string, boolean>) => void
+  emptyPlaceholder?: string
+}
+
+function EditableField({
+  contentId, itemKey, value, isVerified,
+  multiline = true, rows = 6, charLimit,
+  onChange, emptyPlaceholder = 'No content for this section yet.',
+}: EditableFieldProps) {
+  const [mode, setMode] = useState<'view' | 'edit' | 'regen'>('view')
+  const [draft, setDraft] = useState(value)
+  const [notes, setNotes] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  // Sync draft when external value changes (regenerate result, step switch, etc.)
+  useEffect(() => { setDraft(value); setError('') }, [value, itemKey])
+
+  // Legacy content rows have no id -- inline editing is unavailable.
+  if (!contentId) {
+    return (
+      <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap min-h-[4rem]">
+        {value || <span className="text-slate-400 italic">{emptyPlaceholder}</span>}
+      </p>
+    )
+  }
+
+  async function handleSave() {
+    setBusy(true); setError('')
+    try {
+      await patchContent(contentId!, { [itemKey]: draft })
+      onChange(draft)
+      setMode('view')
+    } catch {
+      setError('Save failed')
+    } finally { setBusy(false) }
+  }
+
+  async function handleVerify(next: boolean) {
+    if (!value) return
+    setBusy(true); setError('')
+    try {
+      const res = await verifyContentItem(contentId!, itemKey, next)
+      onChange(value, res.verified)
+    } catch {
+      setError('Verify failed')
+    } finally { setBusy(false) }
+  }
+
+  async function handleRegenerate() {
+    setBusy(true); setError('')
+    try {
+      const res = await regenerateContentItem(contentId!, itemKey, notes)
+      if (typeof res.value === 'string') {
+        onChange(res.value, res.verified)
+      }
+      setNotes('')
+      setMode('view')
+    } catch {
+      setError('Regenerate failed -- try again or simplify your notes.')
+    } finally { setBusy(false) }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {/* Action bar */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <VerifiedToggle verified={isVerified} onChange={handleVerify} disabled={busy || !value} />
+        <div className="flex items-center gap-1">
+          {mode === 'view' && value && (
+            <>
+              <button onClick={() => setMode('edit')} disabled={busy}
+                      className="text-[11px] font-semibold text-slate-600 hover:text-[#4f46e5]
+                                 px-2 py-1 rounded-lg hover:bg-slate-50 transition-colors">
+                Edit
+              </button>
+              <button onClick={() => setMode('regen')} disabled={busy}
+                      className="text-[11px] font-semibold text-slate-600 hover:text-[#4f46e5]
+                                 px-2 py-1 rounded-lg hover:bg-slate-50 transition-colors">
+                Regenerate
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Body */}
+      {mode === 'view' && (
+        <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap min-h-[4rem]">
+          {value || <span className="text-slate-400 italic">{emptyPlaceholder}</span>}
+        </p>
+      )}
+
+      {mode === 'edit' && (
+        <div>
+          {multiline ? (
+            <textarea value={draft} onChange={e => setDraft(e.target.value)} rows={rows}
+                      className="w-full text-xs text-slate-700 leading-relaxed border border-slate-200 rounded-xl px-3 py-2
+                                 focus:outline-none focus:border-[#4f46e5] resize-y" />
+          ) : (
+            <input type="text" value={draft} onChange={e => setDraft(e.target.value)}
+                   className="w-full text-xs text-slate-700 border border-slate-200 rounded-xl px-3 py-2
+                              focus:outline-none focus:border-[#4f46e5]" />
+          )}
+          <div className="flex items-center justify-between mt-2 gap-2">
+            <span className="text-[10px] text-slate-400">
+              {charLimit ? `${draft.length} / ${charLimit} chars` : `${draft.length} chars`}
+            </span>
+            <div className="flex gap-1">
+              <button onClick={() => { setDraft(value); setMode('view'); setError('') }}
+                      disabled={busy}
+                      className="text-[11px] font-semibold text-slate-500 hover:text-slate-700 px-2 py-1 rounded-lg hover:bg-slate-50">
+                Cancel
+              </button>
+              <button onClick={handleSave} disabled={busy || draft === value}
+                      className="text-[11px] font-semibold text-white bg-[#4f46e5] hover:bg-indigo-700 px-3 py-1 rounded-lg disabled:opacity-50">
+                {busy ? '…' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {mode === 'regen' && (
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+          <p className="text-[11px] font-semibold text-slate-700 mb-2">
+            What should change? (optional — leave blank for a fresh take)
+          </p>
+          <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
+                    placeholder="e.g. make it shorter; remove the part about parking; mention free consultations"
+                    className="w-full text-xs text-slate-700 border border-slate-200 rounded-lg px-3 py-2
+                               focus:outline-none focus:border-[#4f46e5] resize-y" />
+          <div className="flex items-center justify-end gap-1 mt-2">
+            <button onClick={() => { setNotes(''); setMode('view'); setError('') }} disabled={busy}
+                    className="text-[11px] font-semibold text-slate-500 hover:text-slate-700 px-2 py-1 rounded-lg hover:bg-slate-50">
+              Cancel
+            </button>
+            <button onClick={handleRegenerate} disabled={busy}
+                    className="text-[11px] font-semibold text-white bg-[#4f46e5] hover:bg-indigo-700 px-3 py-1 rounded-lg disabled:opacity-50">
+              {busy ? 'Regenerating…' : 'Regenerate'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {error && <p className="text-[11px] text-red-600">{error}</p>}
+    </div>
+  )
+}
+
+interface EditableFaqItemProps {
+  contentId: string | null | undefined
+  index: number
+  item: FaqItem
+  isVerified: boolean
+  onChange: (newItem: FaqItem | null, newVerified?: Record<string, boolean>) => void
+}
+
+function EditableFaqItem({ contentId, index, item, isVerified, onChange }: EditableFaqItemProps) {
+  const [mode, setMode] = useState<'view' | 'edit' | 'regen'>('view')
+  const [draftQ, setDraftQ] = useState(item.question)
+  const [draftA, setDraftA] = useState(item.answer)
+  const [notes, setNotes] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => { setDraftQ(item.question); setDraftA(item.answer); setError('') }, [item.question, item.answer])
+
+  if (!contentId) {
+    return (
+      <div className="border-l-2 border-indigo-100 pl-3">
+        <p className="text-xs font-semibold text-[#1e293b]">{item.question}</p>
+        <p className="text-xs text-slate-500 mt-0.5">{item.answer}</p>
+      </div>
+    )
+  }
+
+  async function handleSave() {
+    setBusy(true); setError('')
+    try {
+      const updates: Record<string, string> = {}
+      if (draftQ !== item.question) updates[`faq.${index}.question`] = draftQ
+      if (draftA !== item.answer)   updates[`faq.${index}.answer`]   = draftA
+      if (Object.keys(updates).length) await patchContent(contentId!, updates)
+      onChange({ question: draftQ, answer: draftA })
+      setMode('view')
+    } catch {
+      setError('Save failed')
+    } finally { setBusy(false) }
+  }
+
+  async function handleVerify(next: boolean) {
+    setBusy(true); setError('')
+    try {
+      const res = await verifyContentItem(contentId!, `faq.${index}`, next)
+      onChange(item, res.verified)
+    } catch {
+      setError('Verify failed')
+    } finally { setBusy(false) }
+  }
+
+  async function handleRegenerate() {
+    setBusy(true); setError('')
+    try {
+      const res = await regenerateContentItem(contentId!, `faq.${index}`, notes)
+      if (typeof res.value === 'object' && res.value && 'question' in res.value) {
+        onChange(res.value as FaqItem, res.verified)
+      }
+      setNotes('')
+      setMode('view')
+    } catch {
+      setError('Regenerate failed')
+    } finally { setBusy(false) }
+  }
+
+  return (
+    <div className={`border-l-2 ${isVerified ? 'border-green-300' : 'border-indigo-100'} pl-3`}>
+      <div className="flex items-start justify-between gap-2 mb-1 flex-wrap">
+        <span className="text-[10px] font-semibold text-slate-400">Q{index + 1}</span>
+        <div className="flex items-center gap-1">
+          <VerifiedToggle verified={isVerified} onChange={handleVerify} disabled={busy} />
+          {mode === 'view' && (
+            <>
+              <button onClick={() => setMode('edit')} disabled={busy}
+                      className="text-[10px] font-semibold text-slate-500 hover:text-[#4f46e5] px-1.5 py-0.5 rounded hover:bg-slate-50">
+                Edit
+              </button>
+              <button onClick={() => setMode('regen')} disabled={busy}
+                      className="text-[10px] font-semibold text-slate-500 hover:text-[#4f46e5] px-1.5 py-0.5 rounded hover:bg-slate-50">
+                Regen
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {mode === 'view' && (
+        <>
+          <p className="text-xs font-semibold text-[#1e293b]">{item.question}</p>
+          <p className="text-xs text-slate-500 mt-0.5">{item.answer}</p>
+        </>
+      )}
+
+      {mode === 'edit' && (
+        <div className="flex flex-col gap-2 mt-1">
+          <input type="text" value={draftQ} onChange={e => setDraftQ(e.target.value)}
+                 className="w-full text-xs font-semibold text-[#1e293b] border border-slate-200 rounded-lg px-2 py-1.5
+                            focus:outline-none focus:border-[#4f46e5]" />
+          <textarea value={draftA} onChange={e => setDraftA(e.target.value)} rows={3}
+                    className="w-full text-xs text-slate-700 border border-slate-200 rounded-lg px-2 py-1.5
+                               focus:outline-none focus:border-[#4f46e5] resize-y" />
+          <div className="flex justify-end gap-1">
+            <button onClick={() => { setDraftQ(item.question); setDraftA(item.answer); setMode('view') }}
+                    disabled={busy} className="text-[10px] font-semibold text-slate-500 px-2 py-0.5 rounded hover:bg-slate-50">
+              Cancel
+            </button>
+            <button onClick={handleSave} disabled={busy || (draftQ === item.question && draftA === item.answer)}
+                    className="text-[10px] font-semibold text-white bg-[#4f46e5] hover:bg-indigo-700 px-2 py-0.5 rounded disabled:opacity-50">
+              {busy ? '…' : 'Save'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {mode === 'regen' && (
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 mt-1">
+          <p className="text-[10px] text-slate-500 mb-1">What should change about this Q&amp;A?</p>
+          <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
+                    placeholder="e.g. The answer is wrong about pricing"
+                    className="w-full text-xs text-slate-700 border border-slate-200 rounded px-2 py-1
+                               focus:outline-none focus:border-[#4f46e5] resize-y" />
+          <div className="flex justify-end gap-1 mt-1">
+            <button onClick={() => { setNotes(''); setMode('view') }} disabled={busy}
+                    className="text-[10px] font-semibold text-slate-500 px-2 py-0.5 rounded hover:bg-slate-50">
+              Cancel
+            </button>
+            <button onClick={handleRegenerate} disabled={busy}
+                    className="text-[10px] font-semibold text-white bg-[#4f46e5] hover:bg-indigo-700 px-2 py-0.5 rounded disabled:opacity-50">
+              {busy ? '…' : 'Regenerate'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {error && <p className="text-[10px] text-red-600 mt-1">{error}</p>}
+    </div>
+  )
+}
+
 
 function StepGuidance({ step }: { step: StepKey }) {
   const g = STEP_GUIDANCE[step]
