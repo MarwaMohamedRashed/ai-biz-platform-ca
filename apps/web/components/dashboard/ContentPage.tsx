@@ -422,6 +422,9 @@ export default function ContentPage({ businessId, initialContent }: Props) {
                     />
                   </div>
                 </div>
+
+                <TechnicalSchemaWarning />
+
                 <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap font-mono bg-slate-50 rounded-lg p-3 max-h-64 overflow-y-auto">
                   {content.faq_schema}
                 </p>
@@ -466,6 +469,8 @@ export default function ContentPage({ businessId, initialContent }: Props) {
                     </Link>
                   </div>
                 )}
+
+                <TechnicalSchemaWarning />
 
                 <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap font-mono bg-slate-50 rounded-lg p-3 max-h-64 overflow-y-auto">
                   {content.schema_markup}
@@ -837,6 +842,69 @@ function EditableFaqItem({ contentId, index, item, isVerified, onChange }: Edita
       )}
 
       {error && <p className="text-[10px] text-red-600 mt-1">{error}</p>}
+    </div>
+  )
+}
+
+
+// Compact warning + self-serve guide rendered inside both JSON-LD schema
+// blocks (FAQ schema in step 3, LocalBusiness schema in step 4). Pasting
+// JSON into a website's <head> is genuinely developer-territory; we
+// shouldn't pretend it isn't. This panel offers two clear paths:
+// "ask your web admin" or "DIY using common platform instructions."
+function TechnicalSchemaWarning() {
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3">
+      <p className="text-xs font-semibold text-amber-900">
+        ⚠ Heads up — this part requires editing your website&apos;s HTML
+      </p>
+      <p className="text-[11px] text-amber-800 mt-1 leading-relaxed">
+        If you&apos;re not comfortable editing code, that&apos;s completely fine. Copy this
+        and forward it to your web administrator or developer with a single line:
+        <em> &ldquo;Please paste this inside the &lt;head&gt; tag of our homepage.&rdquo;</em> That&apos;s
+        all the context they need — they&apos;ll know what to do.
+      </p>
+      <details className="mt-2 group">
+        <summary className="text-[11px] font-semibold text-amber-900 cursor-pointer hover:text-amber-700 list-none flex items-center gap-1">
+          <span className="group-open:rotate-90 transition-transform inline-block">▸</span>
+          Doing it yourself? Quick guide for common website platforms
+        </summary>
+        <ul className="text-[11px] text-amber-800 mt-2 ml-4 list-disc leading-relaxed space-y-1">
+          <li>
+            <strong>WordPress:</strong> install the free <em>Insert Headers and Footers</em>
+            {' '}plugin → <em>Settings → Insert Headers and Footers → Scripts in Header</em> →
+            paste. (If Yoast SEO or Rank Math is already installed, they have schema
+            settings too.)
+          </li>
+          <li>
+            <strong>Squarespace:</strong> <em>Settings → Advanced → Code Injection → Header</em>
+            {' '}→ paste.
+          </li>
+          <li>
+            <strong>Wix:</strong> <em>Site Dashboard → Settings → Custom Code → Add Custom Code</em>
+            {' '}→ choose <em>Head</em> placement → paste.
+          </li>
+          <li>
+            <strong>Shopify:</strong> <em>Online Store → Themes → Edit Code</em> → open
+            {' '}<code>theme.liquid</code> → paste just before <code>&lt;/head&gt;</code>.
+          </li>
+          <li>
+            <strong>Webflow:</strong> <em>Project Settings → Custom Code → Head Code</em>
+            {' '}→ paste.
+          </li>
+          <li>
+            <strong>Custom-built site:</strong> open the HTML template that includes
+            the <code>&lt;head&gt;</code> tag (often <code>index.html</code> or a layout file)
+            and paste this anywhere between <code>&lt;head&gt;</code> and
+            {' '}<code>&lt;/head&gt;</code>. Order doesn&apos;t matter.
+          </li>
+        </ul>
+        <p className="text-[10px] text-amber-700 mt-2 italic">
+          When in doubt, save this as a draft and ask. Pasting the wrong code in the
+          wrong place can occasionally break a page&apos;s layout — your web admin can
+          do this in 2 minutes.
+        </p>
+      </details>
     </div>
   )
 }
