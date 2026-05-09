@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import RecommendationCoach from './RecommendationCoach'
 
 export interface Recommendation {
   pillar: 'gbp' | 'reviews' | 'website' | 'local_search' | 'ai_citation'
@@ -40,6 +41,7 @@ interface Props {
 
 export default function RecommendationsList({ recommendations }: Props) {
   const [expanded, setExpanded] = useState<number | null>(null)
+  const [coachOpen, setCoachOpen] = useState<number | null>(null)
 
   if (!recommendations || recommendations.length === 0) {
     return (
@@ -89,15 +91,38 @@ export default function RecommendationsList({ recommendations }: Props) {
                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">What to do</p>
                   <p className="text-xs text-[#1e293b] leading-relaxed">{r.action}</p>
                 </div>
-                {r.url && (
-                  <a
-                    href={r.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#4f46e5] hover:text-indigo-700"
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  {r.url ? (
+                    <a
+                      href={r.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#4f46e5] hover:text-indigo-700"
+                    >
+                      Open link →
+                    </a>
+                  ) : <span />}
+                  <button
+                    onClick={() => setCoachOpen(coachOpen === i ? null : i)}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-white
+                               bg-[#4f46e5] hover:bg-indigo-700 px-2.5 py-1 rounded-lg transition-colors"
                   >
-                    Open link →
-                  </a>
+                    🤝 {coachOpen === i ? 'Hide coach' : 'Get step-by-step help'}
+                  </button>
+                </div>
+
+                {coachOpen === i && (
+                  <RecommendationCoach
+                    recommendation={{
+                      title: r.title,
+                      description: r.description,
+                      action: r.action,
+                      pillar: r.pillar,
+                      url: r.url,
+                      impact: r.impact,
+                    }}
+                    recommendationKey={`${i}-${r.title}`}
+                  />
                 )}
               </div>
             )}
