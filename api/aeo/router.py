@@ -466,16 +466,19 @@ def _extract_location_from_address(address: str | None) -> tuple[str | None, str
       - Second-to-last: the city (possibly with a bundled region abbreviation).
       - If the last segment is a plain word with no digits or abbreviation pattern,
         treat it as the country name and look one segment further for region.
+      - If no country word, infer country from postal-code shape (UK 'MK9 1AB' is
+        unmistakable, Canadian 'L9T 0A1' is too, etc.) -- this catches cross-border
+        results where SerpApi omitted the country word (e.g. 'Milton Keynes, MK9 1AB'
+        leaking into a Canadian Milton search).
 
     Examples:
-      '3500 Dundas St W, Burlington, ON L7M 0J6' → ('Burlington', 'ON', None)
+      '3500 Dundas St W, Burlington, ON L7M 0J6' → ('Burlington', 'ON', 'Canada')
       '221B Baker St, London, England, UK'        → ('London', None, 'UK')
+      'Milton Keynes, MK9 1AB'                    → ('Milton Keynes', None, 'United Kingdom')
       '10 Rue de Rivoli, Paris, France'           → ('Paris', None, 'France')
-      '1 Main St, Milton, ON L9T 0A1'             → ('Milton', 'ON', None)
+      '1 Main St, Milton, ON L9T 0A1'             → ('Milton', 'ON', 'Canada')
       '5 High St, Melbourne VIC, Australia'       → ('Melbourne', 'VIC', 'Australia')
 
-    When country is not present in the address (most domestic SerpApi results),
-    returns None for country — callers should treat this as 'same country as search'.
     Returns (None, None, None) if city cannot be determined.
     """
     if not address:
@@ -511,6 +514,25 @@ def _extract_location_from_address(address: str | None) -> tuple[str | None, str
     # Sanity check — if city looks like a street number or is empty, bail
     if not city or re.match(r'^\d+$', city):
         return None, None, country
+
+    # Postal-code-shape country inference: SerpApi often omits the country word
+    # for international results (e.g., "Milton Keynes, MK9 1AB" leaking into a
+    # Canadian Milton search). When no country word was present, infer it from
+    # the postal-code format. Each country has a distinctive shape.
+    if country is None:
+        postal_text = parts[-1]  # last segment — usually 'REGION POSTAL' or 'POSTAL'
+        # UK: AA9 9AA, A9 9AA, A9A 9AA, AA9A 9AA (one or two letters, digit, optional letter, space, digit, two letters)
+        if re.search(r'\b[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}\b', postal_text):
+            country = "United Kingdom"
+        # Canadian: A9A 9A9 (letter-digit-letter, space, digit-letter-digit)
+        elif re.search(r'\b[A-Z]\d[A-Z]\s?\d[A-Z]\d\b', postal_text):
+            country = "Canada"
+        # US ZIP: 5 digits or 5+4 (only if region is a 2-letter US state code)
+        elif region and len(region) == 2 and re.search(r'\b\d{5}(?:-\d{4})?\b', postal_text):
+            country = "United States"
+        # Australian: 4 digits, only if region is a 2-3 letter AU state (NSW, VIC, QLD, etc.)
+        elif region in {"NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT"} and re.search(r'\b\d{4}\b', postal_text):
+            country = "Australia"
 
     return city, region, country
 

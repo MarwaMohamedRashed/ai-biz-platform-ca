@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import OwnReputationCard from '@/components/dashboard/OwnReputationCard'
 
@@ -198,12 +198,33 @@ export default function CompetitorsPage({ businessId, businessName, latestAudit,
       <PageShell>
         <div className="max-w-3xl mx-auto p-6 md:p-10">
           <Header businessName={businessName} />
-          <div className="bg-white border border-slate-100 rounded-2xl p-6">
-            <p className="text-sm text-slate-600">
-              We couldn&apos;t identify competitors in Google&apos;s local pack for your category and city.
-              This usually means there are very few similar businesses indexed nearby — which is actually
-              an opportunity. Re-run the audit after a week to check again.
+          <div className="bg-white border border-slate-100 rounded-2xl p-6 flex flex-col gap-3">
+            <p className="text-sm font-semibold text-[#1e293b]">
+              No local competitors found in Google&apos;s map results
             </p>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              We couldn&apos;t find businesses Google associates with your category in your city. Two
+              common reasons:
+            </p>
+            <div className="bg-slate-50 rounded-xl p-3">
+              <p className="text-xs font-semibold text-[#1e293b] mb-1">1. You&apos;re in a thin local market</p>
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                Few similar businesses are indexed near you. This is genuinely an opportunity —
+                rank locally now, before competitors arrive. Re-run the audit in a week to check again.
+              </p>
+            </div>
+            <div className="bg-slate-50 rounded-xl p-3">
+              <p className="text-xs font-semibold text-[#1e293b] mb-1">
+                2. Your business isn&apos;t local in nature
+              </p>
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                SaaS, software, online services, consulting — these don&apos;t compete locally.
+                Your real competitors are national or global, not the businesses next door.
+                We&apos;re building industry-wide competitor analysis for these cases (planned for
+                a future release). For now, the audit&apos;s GBP / Reviews / Website / AI Citation
+                pillars still apply — just without the comparative table.
+              </p>
+            </div>
           </div>
         </div>
       </PageShell>
@@ -228,22 +249,11 @@ export default function CompetitorsPage({ businessId, businessName, latestAudit,
       />
 
       <ComparisonTable
+        businessName={businessName}
         userScore={latestAudit.score}
         userBreakdown={latestAudit.score_breakdown}
         competitors={[...competitors].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, 3)}
       />
-
-      <div className="flex flex-col gap-3 mt-4">
-        {[...competitors]
-          .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
-          .map((c, i) => (
-          <CompetitorRow
-            key={c.place_id || c.name || i}
-            competitor={c}
-            userBreakdown={latestAudit.score_breakdown}
-          />
-        ))}
-      </div>
 
       {latestAudit.raw_results?.competitor_insights &&
         Object.keys(latestAudit.raw_results.competitor_insights).length > 0 && (
@@ -503,52 +513,142 @@ function PillarBar({ label, points, max, userPoints }: {
   )
 }
 
-function ComparisonTable({ userScore, userBreakdown, competitors }: {
+function ComparisonTable({ businessName, userScore, userBreakdown, competitors }: {
+  businessName: string | null
   userScore: number
   userBreakdown: Breakdown | null
   competitors: Competitor[]
 }) {
+  // Expanded-detail row index. Click a competitor's name → reveal address /
+  // phone / website / cross-border flag inline. Click again → collapse.
+  const [expandedIdx, setExpandedIdx] = useState<number | null>(null)
+
   if (!userBreakdown || competitors.length === 0) return null
 
+  // Columns: "You" plus up to 3 competitors. "You" column doesn't expand.
   const cols = [
-    { label: 'You', score: userScore, breakdown: userBreakdown, isUser: true },
+    {
+      label:     businessName ?? 'You',
+      shortLabel: 'You',
+      score:     userScore,
+      breakdown: userBreakdown,
+      isUser:    true,
+      rating:    null as number | null,
+      reviews:   null as number | null,
+      website:   null as string | null,
+      address:   null as string | null,
+      phone:     null as string | null,
+      crossBorder: false,
+      crossCity:  false,
+      city:       null as string | null,
+    },
     ...competitors.map((c, i) => ({
-      label: `#${c.position ?? i + 1} ${c.name ?? ''}`,
-      score: c.score ?? null,
-      breakdown: c.breakdown ?? null,
-      isUser: false,
+      label:      c.name ?? `Competitor ${i + 1}`,
+      shortLabel: `#${c.position ?? i + 1}`,
+      score:      c.score ?? null,
+      breakdown:  c.breakdown ?? null,
+      isUser:     false,
+      rating:     c.rating,
+      reviews:    c.reviews,
+      website:    c.website,
+      address:    c.address,
+      phone:      c.phone,
+      crossBorder: !!c.cross_border,
+      crossCity:   !!c.cross_city,
+      city:        c.city ?? null,
     })),
   ]
 
+  const colCount = cols.length
+
   return (
     <div className="mt-4 bg-white border border-slate-100 rounded-2xl p-4 overflow-x-auto">
-      <p className="text-sm font-semibold text-[#1e293b] mb-3">You vs. top {competitors.length}</p>
-      <table className="w-full text-xs">
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <p className="text-sm font-semibold text-[#1e293b]">
+          You vs. top {competitors.length}
+        </p>
+        <p className="text-[10px] text-slate-400">click a name to see contact details</p>
+      </div>
+
+      <table className="w-full text-xs border-collapse">
         <thead>
-          <tr className="text-left text-slate-500">
-            <th className="pb-2 font-medium w-20"></th>
+          <tr className="text-left">
+            <th className="pb-3 pr-3 font-medium text-slate-400 w-24 align-top"></th>
             {cols.map((c, i) => (
               <th key={i}
-                  className={`pb-2 font-semibold truncate max-w-[120px] ${c.isUser ? 'text-[#4f46e5]' : 'text-slate-700'}`}
-                  title={c.label}>
-                {c.label}
+                  className={`pb-3 pr-3 align-top ${c.isUser ? 'text-[#4f46e5]' : 'text-slate-700'}`}
+                  style={{ width: `${(100 - 12) / cols.length}%` }}>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    {c.shortLabel}
+                  </span>
+                  <button
+                    onClick={() => !c.isUser && setExpandedIdx(expandedIdx === i ? null : i)}
+                    disabled={c.isUser}
+                    className={`text-xs font-semibold leading-tight text-left
+                                ${c.isUser ? 'cursor-default' : 'hover:text-[#4f46e5] cursor-pointer'}
+                                ${c.isUser ? 'text-[#4f46e5]' : 'text-[#1e293b]'}
+                                whitespace-normal break-words`}>
+                    {c.label}
+                  </button>
+                  {/* Cross-border / cross-city flag right under the name */}
+                  {c.crossBorder && (
+                    <span title="Different country — Google associates this business with your category but it's outside your country."
+                          className="text-[9px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full whitespace-nowrap mt-0.5 self-start">
+                      🌍 Different country
+                    </span>
+                  )}
+                  {!c.crossBorder && c.crossCity && c.city && (
+                    <span title="Nearby city ranks for your city's searches — a real competitive threat."
+                          className="text-[9px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-full whitespace-nowrap mt-0.5 self-start">
+                      📍 {c.city}
+                    </span>
+                  )}
+                </div>
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
+          {/* Total */}
           <tr className="border-t border-slate-100">
-            <td className="py-2 text-slate-500 font-medium">Total</td>
+            <td className="py-2 pr-3 text-slate-500 font-medium">Total</td>
             {cols.map((c, i) => (
-              <td key={i}
-                  className={`py-2 font-extrabold ${scoreColorClass(c.score)}`}>
-                {c.score != null ? c.score : '—'}
+              <td key={i} className={`py-2 pr-3 font-extrabold ${scoreColorClass(c.score)}`}>
+                {c.score != null ? c.score : '—'}<span className="text-[10px] font-medium text-slate-400">/100</span>
               </td>
             ))}
           </tr>
+
+          {/* Rating + Reviews — competitor-only data, "You" column blank */}
+          <tr className="border-t border-slate-50">
+            <td className="py-1.5 pr-3 text-slate-500">Rating</td>
+            {cols.map((c, i) => (
+              <td key={i} className="py-1.5 pr-3">
+                {c.rating != null ? (
+                  <span className={`font-semibold ${
+                    c.rating >= 4.5 ? 'text-green-600' :
+                    c.rating >= 4.0 ? 'text-amber-600' : 'text-red-500'
+                  }`}>
+                    {c.rating.toFixed(1)}★
+                  </span>
+                ) : <span className="text-slate-300">—</span>}
+              </td>
+            ))}
+          </tr>
+          <tr className="border-t border-slate-50">
+            <td className="py-1.5 pr-3 text-slate-500">Reviews</td>
+            {cols.map((c, i) => (
+              <td key={i} className="py-1.5 pr-3 text-slate-600">
+                {c.reviews != null ? c.reviews.toLocaleString() : <span className="text-slate-300">—</span>}
+              </td>
+            ))}
+          </tr>
+
+          {/* Pillar rows */}
           {PILLARS.map(p => (
             <tr key={p.key} className="border-t border-slate-50">
-              <td className="py-1.5 text-slate-500">{p.label}</td>
+              <td className="py-1.5 pr-3 text-slate-500">{p.label}</td>
               {cols.map((c, i) => {
                 const v = c.breakdown?.[p.key]
                 const max = p.max
@@ -559,13 +659,36 @@ function ComparisonTable({ userScore, userBreakdown, competitors }: {
                   : pct >= 40 ? 'text-amber-600'
                   : 'text-red-500'
                 return (
-                  <td key={i} className={`py-1.5 font-semibold ${color}`}>
+                  <td key={i} className={`py-1.5 pr-3 font-semibold ${color}`}>
                     {v != null ? `${v}/${max}` : '—'}
                   </td>
                 )
               })}
             </tr>
           ))}
+
+          {/* Expanded contact details for the clicked competitor */}
+          {expandedIdx !== null && cols[expandedIdx] && !cols[expandedIdx].isUser && (
+            <tr className="border-t border-slate-200 bg-slate-50">
+              <td colSpan={colCount + 1} className="py-3 px-3">
+                <div className="flex flex-wrap gap-x-6 gap-y-2 text-[11px]">
+                  <span className="font-bold text-[#1e293b]">{cols[expandedIdx].label}</span>
+                  {cols[expandedIdx].address && (
+                    <span className="text-slate-600">📍 {cols[expandedIdx].address}</span>
+                  )}
+                  {cols[expandedIdx].phone && (
+                    <span className="text-slate-600">📞 {cols[expandedIdx].phone}</span>
+                  )}
+                  {cols[expandedIdx].website && (
+                    <a href={cols[expandedIdx].website!} target="_blank" rel="noopener noreferrer"
+                       className="text-[#4f46e5] hover:underline truncate max-w-[280px]">
+                      🔗 {cols[expandedIdx].website!.replace(/^https?:\/\/(www\.)?/, '')}
+                    </a>
+                  )}
+                </div>
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>
