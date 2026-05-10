@@ -9,12 +9,12 @@ interface Props {
   history: AuditPoint[]
 }
 
-const W = 180
-const H = 72
-const PAD_LEFT = 24
-const PAD_RIGHT = 8
-const PAD_TOP = 8
-const PAD_BOTTOM = 16
+const W = 480
+const H = 140
+const PAD_LEFT = 44
+const PAD_RIGHT = 16
+const PAD_TOP = 18
+const PAD_BOTTOM = 32
 
 export default function ScoreHistoryChart({ history }: Props) {
   if (history.length < 2) {
@@ -46,14 +46,14 @@ export default function ScoreHistoryChart({ history }: Props) {
   const deltaLabel = delta > 0 ? `+${delta}` : `${delta}`
 
   return (
-    <div className="px-5 py-3 border-b border-slate-100">
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-[10px] text-slate-400 uppercase tracking-wide">Score history</p>
-        <span className={`text-[10px] font-semibold ${deltaColor}`}>
+    <div className="px-5 py-4 border-b border-slate-100">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold">Score history</p>
+        <span className={`text-xs font-semibold ${deltaColor}`}>
           {delta !== 0 ? `${deltaLabel} vs prev` : 'No change'}
         </span>
       </div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: H }}>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto">
         {/* Y-axis gridlines at 25, 50, 75 */}
         {[25, 50, 75].map(v => {
           if (v < minScore || v > maxScore) return null
@@ -61,9 +61,9 @@ export default function ScoreHistoryChart({ history }: Props) {
           return (
             <g key={v}>
               <line x1={PAD_LEFT} y1={y} x2={W - PAD_RIGHT} y2={y}
-                stroke="#f1f5f9" strokeWidth="1"/>
-              <text x={PAD_LEFT - 2} y={y + 3} textAnchor="end"
-                fontSize="7" fill="#94a3b8">{v}</text>
+                stroke="#f1f5f9" strokeWidth="1.5"/>
+              <text x={PAD_LEFT - 6} y={y + 4} textAnchor="end"
+                fontSize="11" fill="#94a3b8">{v}</text>
             </g>
           )
         })}
@@ -80,31 +80,31 @@ export default function ScoreHistoryChart({ history }: Props) {
           fill="url(#scoreGrad)"/>
 
         {/* Line */}
-        <polyline points={polyPoints} fill="none" stroke="#4f46e5" strokeWidth="1.5"
+        <polyline points={polyPoints} fill="none" stroke="#4f46e5" strokeWidth="2.5"
           strokeLinejoin="round" strokeLinecap="round"/>
 
         {/* Dots */}
         {points.map((p, i) => (
-          <circle key={i} cx={toX(i)} cy={toY(p.score)} r="2.5"
-            fill="white" stroke="#4f46e5" strokeWidth="1.5"/>
+          <circle key={i} cx={toX(i)} cy={toY(p.score)} r="4.5"
+            fill="white" stroke="#4f46e5" strokeWidth="2.5"/>
         ))}
 
         {/* Latest score label */}
         <text
           x={toX(points.length - 1)}
-          y={toY(latestScore) - 5}
+          y={toY(latestScore) - 10}
           textAnchor="middle"
-          fontSize="8"
+          fontSize="13"
           fontWeight="bold"
           fill="#4f46e5">
           {latestScore}
         </text>
 
         {/* X-axis date labels — first and last only */}
-        <text x={toX(0)} y={H - 2} textAnchor="middle" fontSize="7" fill="#94a3b8">
+        <text x={toX(0)} y={H - 6} textAnchor="middle" fontSize="11" fill="#94a3b8">
           {formatDate(points[0].created_at)}
         </text>
-        <text x={toX(points.length - 1)} y={H - 2} textAnchor="middle" fontSize="7" fill="#94a3b8">
+        <text x={toX(points.length - 1)} y={H - 6} textAnchor="middle" fontSize="11" fill="#94a3b8">
           {formatDate(points[points.length - 1].created_at)}
         </text>
       </svg>

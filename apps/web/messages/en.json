@@ -224,6 +224,16 @@
       "competitors": "Competitors",
       "plan": "Plan & Billing"
     },
+    "support": {
+      "label": "Need help?",
+      "email": "support@leapone.ca"
+    },
+    "report": {
+      "download": "Download PDF",
+      "title": "AEO Visibility Report",
+      "generatedOn": "Generated on",
+      "preparedFor": "Prepared for"
+    },
     "planStatus": {
       "trialing": "Free Trial",
       "active": "Pro Plan"

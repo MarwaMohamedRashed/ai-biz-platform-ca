@@ -95,3 +95,66 @@ body {
   padding: 0;
   font-size: inherit;
 }
+
+/* ─────────────────────────────────────────────
+   Print stylesheet — drives the "Download PDF"
+   flow on the dashboard. When the user clicks
+   Download PDF we call window.print() with the
+   <body> tagged via .printing-report; the rules
+   below hide app chrome and reveal a clean
+   report-only view.
+   ───────────────────────────────────────────── */
+@media print {
+  body.printing-report {
+    background: white !important;
+  }
+  /* Hide everything by default */
+  body.printing-report * {
+    visibility: hidden;
+  }
+  /* Reveal only the printable region and its descendants */
+  body.printing-report .print-area,
+  body.printing-report .print-area * {
+    visibility: visible;
+  }
+  /* Show the print-only header (logo + business + date) */
+  body.printing-report .print-only {
+    display: block !important;
+  }
+  /* Hide interactive controls inside the printable region */
+  body.printing-report .print-area .print-hide,
+  body.printing-report .print-area button:not(.print-keep) {
+    display: none !important;
+  }
+  /* Position the printable region at top-left of the page */
+  body.printing-report .print-area {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    max-width: 100%;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  /* Tighter card styles in print */
+  body.printing-report .print-area .rounded-2xl {
+    border-radius: 0 !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+  /* Ensure the page-break helper works */
+  body.printing-report .page-break-before {
+    page-break-before: always;
+  }
+  @page {
+    margin: 14mm 12mm;
+  }
+}
+
+/* The print-only header is hidden on screen */
+.print-only {
+  display: none;
+}
+

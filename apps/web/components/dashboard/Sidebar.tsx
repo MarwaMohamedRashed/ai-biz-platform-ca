@@ -168,6 +168,15 @@ export default function Sidebar({ user, locale, planTier }: Props) {
         })}
       </nav>
 
+      {/* Support footer */}
+      <div className="px-5 py-3 border-t border-slate-100">
+        <p className="text-[11px] text-slate-400">{t('support.label')}</p>
+        <a href={`mailto:${t('support.email')}`}
+           className="text-xs font-semibold text-[#4f46e5] hover:underline break-all">
+          {t('support.email')}
+        </a>
+      </div>
+
     </aside>
   )
 }

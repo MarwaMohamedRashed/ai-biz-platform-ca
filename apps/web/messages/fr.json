@@ -214,6 +214,16 @@
       },
       "reviewSettings": "Paramètres de réponse aux avis"
     },
+    "support": {
+      "label": "Besoin d'aide ?",
+      "email": "support@leapone.ca"
+    },
+    "report": {
+      "download": "Télécharger PDF",
+      "title": "Rapport de visibilité AEO",
+      "generatedOn": "Généré le",
+      "preparedFor": "Préparé pour"
+    },
     "nav": {
       "chat": "Tableau de bord",
       "reviews": "Avis",
