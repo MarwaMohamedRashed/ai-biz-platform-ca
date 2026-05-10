@@ -215,7 +215,7 @@
       "reviewSettings": "Paramètres de réponse aux avis"
     },
     "nav": {
-      "chat": "Chat",
+      "chat": "Tableau de bord",
       "reviews": "Avis",
       "bookings": "Réservations",
       "guide": "Guide",
@@ -310,7 +310,7 @@
         "saved": "Enregistré"
       },
     "chat": {
-      "pageTitle": "Chat",
+      "pageTitle": "Tableau de bord",
       "inputPlaceholder": "Posez une question ou tapez une commande…",
       "greeting": {
         "morning": "Bonjour",

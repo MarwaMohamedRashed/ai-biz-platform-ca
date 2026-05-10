@@ -1,9 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getTranslations } from 'next-intl/server'
-import ChatInput from '@/components/dashboard/ChatInput'
 import UserMenu from '@/components/dashboard/UserMenu'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
-import Link from 'next/link'
 import { getLocale } from 'next-intl/server'
 import AeoAuditCard from '@/components/dashboard/AeoAuditCard'
 import ScoreHistoryChart from '@/components/dashboard/ScoreHistoryChart'
@@ -66,157 +64,74 @@ export default async function DashboardPage() {
   const locale = await getLocale()
 
   return (
-    <div className="flex h-full">
+    <div className="flex flex-col h-full">
 
-      {/* ── Chat column ── */}
-      <div className="flex flex-col flex-1 min-w-0 h-full">
+      {/* Mobile header */}
+      <header className="md:hidden flex items-center justify-between px-4 py-3
+                         bg-white border-b border-slate-100 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
+            <rect width="40" height="40" rx="12" fill="#4f46e5"/>
+            <path d="M13 10 L13 28 L27 28" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+            <circle cx="28" cy="13" r="4" fill="#f97316"/>
+          </svg>
+          <span className="text-base font-extrabold tracking-tight">
+            <span className="text-[#4f46e5]">Leap</span><span className="text-[#f97316]">One</span>
+          </span>
+        </div>
+        <UserMenu initial={initial} name={fullName} email={user!.email ?? ''} />
+      </header>
 
-        {/* Mobile header */}
-        <header className="md:hidden flex items-center justify-between px-4 py-3
-                           bg-white border-b border-slate-100 flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
-              <rect width="40" height="40" rx="12" fill="#4f46e5"/>
-              <path d="M13 10 L13 28 L27 28" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-              <circle cx="28" cy="13" r="4" fill="#f97316"/>
-            </svg>
-            <span className="text-base font-extrabold tracking-tight">
-              <span className="text-[#4f46e5]">Leap</span><span className="text-[#f97316]">One</span>
-            </span>
-          </div>
+      {/* Desktop page header */}
+      <div className="hidden md:flex items-center justify-between px-6 py-4
+                      border-b border-slate-100 flex-shrink-0">
+        <div>
+          <p className="text-xs text-slate-400">
+            {new Date().toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </p>
+          <h1 className="text-base font-extrabold text-[#1e293b]">{t('pageTitle')}</h1>
+          {business?.name && (
+            <p className="text-xs text-slate-500 mt-0.5 font-medium">{business.name}</p>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          <LanguageSwitcher />
           <UserMenu initial={initial} name={fullName} email={user!.email ?? ''} />
-        </header>
-
-        {/* Desktop page header */}
-        <div className="hidden md:flex items-center justify-between px-6 py-4
-                        border-b border-slate-100 flex-shrink-0">
-          <div>
-            <p className="text-xs text-slate-400">
-              {new Date().toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' })}
-            </p>
-            <h1 className="text-base font-extrabold text-[#1e293b]">{t('pageTitle')}</h1>
-            {business?.name && (
-              <p className="text-xs text-slate-500 mt-0.5 font-medium">{business.name}</p>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <LanguageSwitcher />
-            <UserMenu initial={initial} name={fullName} email={user!.email ?? ''} />
-          </div>
         </div>
-
-        {/* Chat messages area */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6 space-y-4">
-
-          {/* AI greeting bubble */}
-          <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-[#4f46e5] flex items-center justify-center flex-shrink-0 mt-0.5">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
-                  stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <div className="flex flex-col gap-3 max-w-lg">
-
-              {/* Greeting */}
-              <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-slate-100">
-                <p className="text-sm text-[#1e293b]">
-                  {t(`greeting.${greetingKey}`)},{' '}
-                  <span className="font-semibold">{firstName}</span>!{' '}
-                  {t('greeting.attention')}
-                </p>
-                {business?.name && (
-                  <p className="text-xs text-slate-400 mt-1">{business.name}</p>
-                )}
-              </div>
-
-              {/* AEO audit + recommendations */}
-              <AeoAuditCard
-                businessId={business?.id ?? null}
-                initialAudit={latestAudit ?? null}
-                initialRecommendations={latestAudit?.raw_results?.recommendations ?? []}
-                prevBreakdown={auditHistory?.[1]?.score_breakdown ?? null}
-                locale={locale}
-                currentTier={currentTier}
-              />
-
-            </div>
-          </div>
-        </div>
-
-        {/* Chat input */}
-        <ChatInput />
-
       </div>
 
-      {/* ── Right panel — desktop only ── */}
-      <aside className="hidden md:flex flex-col w-[220px] flex-shrink-0
-                        border-l border-slate-100 overflow-y-auto bg-white">
+      {/* Page body */}
+      <div className="flex-1 overflow-y-auto px-4 py-6 md:px-6">
+        <div className="max-w-3xl mx-auto flex flex-col gap-4">
 
-        <div className="px-5 py-4 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded bg-[#4f46e5] flex items-center justify-center">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <circle cx="12" cy="12" r="3" stroke="white" strokeWidth="2.5"/>
-                <path d="M12 2v2M12 20v2M2 12h2M20 12h2" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-            </div>
-            <h2 className="text-sm font-bold text-[#1e293b]">{t('aeoPanel.title')}</h2>
+          {/* Greeting */}
+          <div>
+            <p className="text-base text-[#1e293b]">
+              {t(`greeting.${greetingKey}`)},{' '}
+              <span className="font-semibold">{firstName}</span>.{' '}
+              {t('greeting.attention')}
+            </p>
           </div>
-        </div>
 
-        <div className="px-5 py-4 border-b border-slate-100">
-          <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">{t('aeoPanel.scoreLabel')}</p>
-          <p className={`text-3xl font-bold ${latestAudit ? (latestAudit.score >= 70 ? 'text-green-600' : latestAudit.score >= 40 ? 'text-amber-500' : 'text-red-500') : 'text-slate-300'}`}>
-            {latestAudit ? latestAudit.score : '—'}
-          </p>
-          <p className="text-[10px] text-slate-400 mt-0.5">
-            {latestAudit ? `Last checked ${new Date(latestAudit.created_at).toLocaleDateString()}` : t('aeoPanel.noAudit')}
-          </p>
-        </div>
-
-        <ScoreHistoryChart history={historyAsc} />
-
-        {latestAudit?.score_breakdown && (
-          <div className="px-5 py-4 border-b border-slate-100">
-            <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-2">Score breakdown</p>
-            <div className="flex flex-col gap-1.5">
-              {[
-                { key: 'gbp',          label: 'GBP',           max: 25 },
-                { key: 'reviews',      label: 'Reviews',       max: 22 },
-                { key: 'website',      label: 'Website',       max: 20 },
-                { key: 'local_search', label: 'Local search',  max: 15 },
-                { key: 'ai_citation',  label: 'AI citations',  max: 18 },
-              ].map(p => {
-                const pts = latestAudit.score_breakdown[p.key] ?? 0
-                const pct = (pts / p.max) * 100
-                const color = pct >= 75 ? 'bg-green-500' : pct >= 40 ? 'bg-amber-400' : 'bg-red-300'
-                return (
-                  <div key={p.key}>
-                    <div className="flex items-center justify-between mb-0.5">
-                      <span className="text-[10px] text-slate-600">{p.label}</span>
-                      <span className="text-[10px] text-slate-400">{pts}/{p.max}</span>
-                    </div>
-                    <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
-                      <div className={`h-full ${color} rounded-full`} style={{ width: `${pct}%` }} />
-                    </div>
-                  </div>
-                )
-              })}
+          {/* Score-history trend (renders when 2+ audits exist) */}
+          {historyAsc.length >= 2 && (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+              <ScoreHistoryChart history={historyAsc} />
             </div>
-          </div>
-        )}
+          )}
 
-        <div className="px-5 py-4">
-          <Link href={`/${locale}/dashboard/settings`}
-            className="flex items-center justify-center w-full px-3 py-2.5 rounded-xl
-                       bg-[#4f46e5] text-xs font-semibold text-white
-                       hover:bg-indigo-700 transition-colors">
-            {t('aeoPanel.setupCta')}
-          </Link>
+          {/* AEO audit + recommendations */}
+          <AeoAuditCard
+            businessId={business?.id ?? null}
+            initialAudit={latestAudit ?? null}
+            initialRecommendations={latestAudit?.raw_results?.recommendations ?? []}
+            prevBreakdown={auditHistory?.[1]?.score_breakdown ?? null}
+            locale={locale}
+            currentTier={currentTier}
+          />
+
         </div>
-
-      </aside>
+      </div>
 
     </div>
   )

@@ -215,7 +215,7 @@
       "reviewSettings": "Review Response Settings"
     },
     "nav": {
-      "chat": "Chat",
+      "chat": "Dashboard",
       "reviews": "Reviews",
       "bookings": "Bookings",
       "guide": "Guide",
@@ -309,7 +309,7 @@
         "saved": "Saved"
       },
     "chat": {
-      "pageTitle": "Chat",
+      "pageTitle": "Dashboard",
       "inputPlaceholder": "Ask anything or type a command…",
       "greeting": {
         "morning": "Good morning",
