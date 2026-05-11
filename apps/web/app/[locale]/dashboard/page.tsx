@@ -6,6 +6,7 @@ import { getLocale } from 'next-intl/server'
 import AeoAuditCard from '@/components/dashboard/AeoAuditCard'
 import ScoreHistoryChart from '@/components/dashboard/ScoreHistoryChart'
 import DownloadPdfButton from '@/components/dashboard/DownloadPdfButton'
+import AuditReportPrint from '@/components/dashboard/AuditReportPrint'
 
 function getGreetingKey(): 'morning' | 'afternoon' | 'evening' {
   const hour = new Date().getHours()
@@ -54,6 +55,56 @@ export default async function DashboardPage() {
 
   const latestAudit = auditHistory?.[0] ?? null
   const historyAsc = auditHistory ? [...auditHistory].reverse() : []
+  const locale = await getLocale()
+
+  // Fetch own-reputation server-side so AuditReportPrint can include it in the PDF
+  let ownReputation: {
+    strengths: string[]; weaknesses: string[]; summary: string
+    review_count: number; avg_rating: number | null
+  } | null = null
+  // Fetch translated recommendations server-side when locale != 'en' so the
+  // initial page render shows content in the right language.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let initialRecommendations: any[] = latestAudit?.raw_results?.recommendations ?? []
+  if (latestAudit && business) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) {
+        const [repRes, recsRes] = await Promise.all([
+          fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/api/v1/aeo/own-reputation`,
+            { headers: { Authorization: `Bearer ${session.access_token}` }, next: { revalidate: 3600 } },
+          ),
+          locale !== 'en'
+            ? fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/v1/aeo/recommendations/${business.id}?locale=${locale}`,
+                { headers: { Authorization: `Bearer ${session.access_token}` }, next: { revalidate: 0 } },
+              )
+            : null,
+        ])
+        if (repRes.ok) ownReputation = await repRes.json()
+        if (recsRes?.ok) {
+          const recsData = await recsRes.json()
+          if (Array.isArray(recsData.recommendations)) initialRecommendations = recsData.recommendations
+        }
+      }
+    } catch {
+      // silently fail — reputation / recommendations fall back to cached values
+    }
+  } else if (latestAudit) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) {
+        const repRes = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/aeo/own-reputation`,
+          { headers: { Authorization: `Bearer ${session.access_token}` }, next: { revalidate: 3600 } },
+        )
+        if (repRes.ok) ownReputation = await repRes.json()
+      }
+    } catch {
+      // silently fail
+    }
+  }
   
   const fullName = profile?.full_name?.trim() || ''
   const firstName = fullName.split(' ')[0]
@@ -62,7 +113,6 @@ export default async function DashboardPage() {
 
   const initial = firstName[0].toUpperCase()
   const greetingKey = getGreetingKey()
-  const locale = await getLocale()
   const reportT = await getTranslations('dashboard.report')
   const reportDate = new Date().toLocaleDateString(locale === 'fr' ? 'fr-CA' : 'en-CA', {
     year: 'numeric', month: 'long', day: 'numeric',
@@ -152,15 +202,28 @@ export default async function DashboardPage() {
             </div>
           )}
 
-          {/* AEO audit + recommendations */}
-          <AeoAuditCard
-            businessId={business?.id ?? null}
-            initialAudit={latestAudit ?? null}
-            initialRecommendations={latestAudit?.raw_results?.recommendations ?? []}
-            prevBreakdown={auditHistory?.[1]?.score_breakdown ?? null}
-            locale={locale}
-            currentTier={currentTier}
-          />
+          {/* AEO audit + recommendations (screen only — AuditReportPrint covers the PDF) */}
+          <div className="print-hide">
+            <AeoAuditCard
+              businessId={business?.id ?? null}
+              initialAudit={latestAudit ?? null}
+              initialRecommendations={initialRecommendations}
+              prevBreakdown={auditHistory?.[1]?.score_breakdown ?? null}
+              locale={locale}
+              currentTier={currentTier}
+            />
+          </div>
+
+          {/* Print-only enhanced report — hidden on screen, rendered in PDF */}
+          {latestAudit && (
+            <AuditReportPrint
+              audit={latestAudit}
+              businessName={business?.name ?? null}
+              auditDate={reportDate}
+              reputation={ownReputation}
+              locale={locale}
+            />
+          )}
 
         </div>
       </div>
