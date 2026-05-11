@@ -48,6 +48,21 @@ export default function BottomNav({ locale, pendingCount: _pendingCount }: Props
       ),
     },
     {
+      key: 'content' as const,
+      href: `/${locale}/dashboard/content`,
+      exact: false,
+      icon: (active: boolean) => (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="3" y="3" width="18" height="18" rx="2"
+            stroke={active ? '#4f46e5' : '#94a3b8'} strokeWidth="2"
+            fill={active ? '#eef2ff' : 'none'}/>
+          <line x1="7" y1="8"  x2="17" y2="8"  stroke={active ? '#4f46e5' : '#94a3b8'} strokeWidth="2" strokeLinecap="round"/>
+          <line x1="7" y1="12" x2="17" y2="12" stroke={active ? '#4f46e5' : '#94a3b8'} strokeWidth="2" strokeLinecap="round"/>
+          <line x1="7" y1="16" x2="13" y2="16" stroke={active ? '#4f46e5' : '#94a3b8'} strokeWidth="2" strokeLinecap="round"/>
+        </svg>
+      ),
+    },
+    {
       key: 'settings' as const,
       href: `/${locale}/dashboard/settings`,
       exact: false,

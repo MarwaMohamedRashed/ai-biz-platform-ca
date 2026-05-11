@@ -1,6 +1,6 @@
 # LeapOne — Built Functionality, Implementation & Competitive Notes
 
-**Date:** 2026-05-09 (updated with verify-and-edit flow, AI execution coach, knowledge-base-grounded FAQ, tier gating, competitors page redesign + cross-border filter fix)
+**Date:** 2026-05-11 (updated with full EN/FR translation pass, BottomNav Content tab, Competitors + Content page headers)
 **Audience:** Founder / sales conversations / competitive comparisons
 **Companion docs:**
 [feature-inventory-current.md](feature-inventory-current.md) (what exists, by surface) ·
@@ -950,6 +950,76 @@ hierarchy enforces.
 | **Industry-wide competitor analysis** (for SaaS / online services / consulting where local pack returns nothing) | Deferred. Empty-state messaging covers the case for v1. Real fix needs a different competitor-discovery strategy than SerpApi local pack. |
 | Provincial regulator map (RECO, CPSO, OACIQ, etc.) | Current vertical recs use national-scope directories (Realtor.ca, RateMDs) — practical citation impact is the same, but the trust signal of "claim your provincial regulator listing" is missing. ~2-hour follow-on if it matters. |
 | CAA-Approved Auto Repair, provincial law society directories | Sparse vertical-specific Canadian options for auto + accountants — not yet covered. |
+
+---
+
+## 17. Full EN/FR UI Translation (completed 2026-05-11)
+
+### What it does
+The entire dashboard is now fully bilingual. Every user-facing string in the
+React layer is served from `next-intl` translation files — no hardcoded
+English remains in the components covered below.
+
+### Scope of changes
+
+#### New translation namespaces added to `messages/{en,fr}.json`
+| Namespace | Component | Key count |
+|---|---|---|
+| `dashboard.ownReputation` | OwnReputationCard.tsx | 7 |
+| `dashboard.content` | ContentPage.tsx (all sub-components) | ~80 |
+
+#### Components fully translated
+- **`OwnReputationCard.tsx`** — title, review count meta, "via Google Maps",
+  strengths/weaknesses section headers.
+- **`ContentPage.tsx`** (main component + 5 sub-components):
+  - `ContentPage` — page title/subtitle, generate button, lang warning,
+    step labels/sublabels, all section titles, validation warning, nav
+    prev/next/last, empty states.
+  - `VerifiedToggle` — "Verified" / "Mark verified" labels.
+  - `EditableField` — edit/regenerate/cancel/save buttons, char count,
+    regen notes panel title/placeholder/buttons, error messages, empty placeholder.
+  - `EditableFaqItem` — Q{n} label → `t('faqItem.qLabel', {n})`, edit/regen
+    mode buttons, save/cancel, regen panel, all error messages.
+  - `TechnicalSchemaWarning` — full amber warning block including all 6
+    platform instructions (WordPress, Squarespace, Wix, Shopify, Webflow,
+    custom), body text, caution note.
+  - `StepGuidance` — section header, "Where to paste", "Why it matters"
+    labels, all per-step body text (sourced from `dashboard.content.guidance.*`
+    rather than the removed `STEP_GUIDANCE` constant).
+  - `CopyButton` — "Copy" / "✓ Copied" states.
+
+#### Page-level headers added
+`competitors/page.tsx` and `content/page.tsx` were missing the standard
+dashboard header pattern (mobile header + desktop header with LanguageSwitcher
++ UserMenu). Both now have the same structure as `insights/page.tsx`,
+`settings/page.tsx`, etc. This also adds the EN/FR switcher to those pages.
+
+#### Mobile bottom navigation
+`BottomNav.tsx` was missing a Content tab. A document-icon tab for
+`/[locale]/dashboard/content` was added between Competitors and Settings,
+using the existing `dashboard.nav.content` translation key ("Content" EN /
+"Contenu" FR).
+
+### Known gotchas locked in as practice
+- **next-intl UNCLOSED_TAG error**: `<word>` patterns in message strings are
+  treated as rich-text tags requiring a closing counterpart. All HTML tag
+  examples in guidance strings (`<head>`, `<script>`, `<business>`, etc.)
+  were replaced with plain-text equivalents (`head tag`, `[business]`, etc.)
+  in both `en.json` and `fr.json`.
+- **Namespace scoping**: When a sub-component needs keys from multiple
+  namespaces (e.g. `EditableFaqItem` needs both `edit.*` and `faqItem.*`),
+  use two `useTranslations()` calls with different aliases (`t` + `tFaq`)
+  rather than widening a single namespace.
+
+### Files changed (May 2026 i18n pass)
+- `apps/web/messages/en.json` — added `ownReputation`, `content` namespaces; removed `table.address` + `table.website` keys; escaped HTML tag examples
+- `apps/web/messages/fr.json` — mirrors en.json with French translations
+- `apps/web/components/dashboard/OwnReputationCard.tsx`
+- `apps/web/components/dashboard/ContentPage.tsx`
+- `apps/web/components/dashboard/BottomNav.tsx`
+- `apps/web/app/[locale]/dashboard/competitors/page.tsx`
+- `apps/web/app/[locale]/dashboard/content/page.tsx`
+- `apps/web/components/dashboard/CompetitorsPage.tsx` (address/website rows removed)
 
 ---
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase'
 
 interface OwnReputationData {
@@ -22,6 +23,7 @@ interface OwnReputationData {
  * if no audit exists or the place_id could not be resolved.
  */
 export default function OwnReputationCard() {
+  const t = useTranslations('dashboard.ownReputation')
   const [data, setData] = useState<OwnReputationData | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -61,16 +63,19 @@ export default function OwnReputationCard() {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-base">⭐</span>
-          <h2 className="text-sm font-extrabold text-slate-800">Your Reputation</h2>
+          <h2 className="text-sm font-extrabold text-slate-800">{t('title')}</h2>
         </div>
         <div className="text-right">
           <p className="text-[10px] text-slate-400">
-              {data.review_count} Google review{data.review_count !== 1 ? 's' : ''} · last 3 months
+              {t('reviewsMeta', {
+                count: data.review_count,
+                reviews: data.review_count !== 1 ? t('reviewPlural') : t('reviewSingular'),
+              })}
             {data.avg_rating != null && (
               <span className="ml-1 font-semibold text-amber-500">{data.avg_rating}★</span>
             )}
           </p>
-          <p className="text-[9px] text-slate-300">via Google Maps</p>
+          <p className="text-[9px] text-slate-300">{t('viaGoogle')}</p>
         </div>
       </div>
 
@@ -78,7 +83,7 @@ export default function OwnReputationCard() {
         {/* Strengths */}
         {data.strengths.length > 0 && (
           <div>
-            <p className="text-[10px] font-bold text-green-700 mb-1.5">✅ What customers love</p>
+            <p className="text-[10px] font-bold text-green-700 mb-1.5">{t('strengths')}</p>
             <div className="flex flex-wrap gap-1.5">
               {data.strengths.map((s, i) => (
                 <span
@@ -95,7 +100,7 @@ export default function OwnReputationCard() {
         {/* Weaknesses */}
         {data.weaknesses.length > 0 && (
           <div>
-            <p className="text-[10px] font-bold text-amber-700 mb-1.5">⚠️ What needs attention</p>
+            <p className="text-[10px] font-bold text-amber-700 mb-1.5">{t('weaknesses')}</p>
             <div className="flex flex-wrap gap-1.5">
               {data.weaknesses.map((w, i) => (
                 <span

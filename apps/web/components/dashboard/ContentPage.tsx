@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useLocale } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase'
 import { patchContent, verifyContentItem, regenerateContentItem } from '@/lib/content-api'
 
@@ -170,6 +170,7 @@ function normaliseContent(c: Content | null): Content | null {
 
 export default function ContentPage({ businessId, initialContent }: Props) {
   const locale = useLocale()
+  const t = useTranslations('dashboard.content')
   const [content, setContent] = useState<Content | null>(normaliseContent(initialContent))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -232,7 +233,7 @@ export default function ContentPage({ businessId, initialContent }: Props) {
       if (!res.ok) throw new Error('Generation failed')
       setContent(await res.json())
     } catch {
-      setError('Generation failed. Please try again.')
+      setError(t('genFailed'))
     } finally {
       setLoading(false)
     }
@@ -247,13 +248,13 @@ export default function ContentPage({ businessId, initialContent }: Props) {
   if (!businessId) {
     return (
       <div className="flex-1 flex items-center justify-center p-8">
-        <p className="text-sm text-slate-500">Complete your business profile in Settings first.</p>
+        <p className="text-sm text-slate-500">{t('noProfile')}</p>
       </div>
     )
   }
 
   const activeDesc = content?.descriptions?.[activeDescTab] ?? ''
-  const activeDescHint = DESC_TABS.find(t => t.key === activeDescTab)?.hint ?? ''
+  const activeDescHint = t(`desc.tabs.${activeDescTab}.hint`)
 
   const stepIndex = STEPS.findIndex(s => s.key === step)
 
@@ -263,8 +264,8 @@ export default function ContentPage({ businessId, initialContent }: Props) {
 
         <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
           <div>
-            <h1 className="text-lg font-extrabold text-[#1e293b]">AI Content Generator</h1>
-            <p className="text-xs text-slate-400 mt-0.5">Walk through each section, copy what you need.</p>
+            <h1 className="text-lg font-extrabold text-[#1e293b]">{t('pageTitle')}</h1>
+            <p className="text-xs text-slate-400 mt-0.5">{t('pageSubtitle')}</p>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
@@ -282,14 +283,14 @@ export default function ContentPage({ businessId, initialContent }: Props) {
               disabled={loading}
               className="px-4 py-2 rounded-xl bg-[#4f46e5] text-white text-sm font-semibold
                          hover:bg-indigo-700 transition-colors disabled:opacity-50">
-              {loading ? 'Generating…' : content ? 'Regenerate' : 'Generate Content'}
+              {loading ? t('generating') : content ? t('regenerate') : t('generateContent')}
             </button>
           </div>
         </div>
 
         {content?.language && content.language !== language && (
           <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 mb-3">
-            You&apos;re viewing content in {content.language.toUpperCase()}. Click Regenerate to switch to {language.toUpperCase()}.
+            {t('langWarning', { lang: content.language.toUpperCase(), target: language.toUpperCase() })}
           </p>
         )}
 
@@ -297,7 +298,7 @@ export default function ContentPage({ businessId, initialContent }: Props) {
 
         {loading && (
           <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
-            <p className="text-sm text-slate-500">Generating your content… this takes about 20 seconds.</p>
+            <p className="text-sm text-slate-500">{t('genInProgress')}</p>
           </div>
         )}
 
@@ -307,7 +308,7 @@ export default function ContentPage({ businessId, initialContent }: Props) {
             {/* ── Step sidebar ──────────────────────────────────────────── */}
             <nav className="bg-white rounded-2xl border border-slate-100 p-2 self-start
                             md:sticky md:top-4">
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-2 py-1">Steps</p>
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-2 py-1">{t('stepsLabel')}</p>
               {STEPS.map((s, i) => {
                 const isActive = s.key === step
                 return (
@@ -320,9 +321,9 @@ export default function ContentPage({ businessId, initialContent }: Props) {
                     </span>
                     <span className="min-w-0">
                       <span className={`block text-xs font-semibold ${isActive ? 'text-[#4f46e5]' : 'text-[#1e293b]'}`}>
-                        {s.label}
+                        {t(`steps.${s.key}.label`)}
                       </span>
-                      <span className="block text-[10px] text-slate-400">{s.sublabel}</span>
+                      <span className="block text-[10px] text-slate-400">{t(`steps.${s.key}.sublabel`)}</span>
                     </span>
                   </button>
                 )
@@ -333,7 +334,7 @@ export default function ContentPage({ businessId, initialContent }: Props) {
             <div className="flex flex-col gap-4 min-w-0">
 
               <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                Step {stepIndex + 1} of {STEPS.length}
+                {t('stepOf', { n: stepIndex + 1, total: STEPS.length })}
               </p>
 
               <StepGuidance step={step} />
@@ -343,7 +344,7 @@ export default function ContentPage({ businessId, initialContent }: Props) {
             <div className="bg-white rounded-2xl border border-slate-100 p-4">
               <div className="flex items-start justify-between mb-2 gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-[#1e293b]">Business Description</p>
+                  <p className="text-sm font-semibold text-[#1e293b]">{t('desc.title')}</p>
                   <p className="text-xs text-slate-400 mt-0.5">{activeDescHint}</p>
                 </div>
                 {activeDesc && (
@@ -359,7 +360,7 @@ export default function ContentPage({ businessId, initialContent }: Props) {
                                       ${activeDescTab === tab.key
                                         ? 'border-[#4f46e5] text-[#4f46e5]'
                                         : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
-                    {tab.label}
+                    {t(`desc.tabs.${tab.key}.label`)}
                   </button>
                 ))}
               </div>
@@ -381,7 +382,7 @@ export default function ContentPage({ businessId, initialContent }: Props) {
                 }}
               />
               {activeDescTab === 'gbp' && activeDesc && (
-                <p className="text-[10px] text-slate-400 mt-2">{activeDesc.length} / 700 characters</p>
+                <p className="text-[10px] text-slate-400 mt-2">{t('desc.charCount', { count: activeDesc.length })}</p>
               )}
             </div>
             )}
@@ -391,11 +392,11 @@ export default function ContentPage({ businessId, initialContent }: Props) {
               <div className="bg-white rounded-2xl border border-slate-100 p-4">
                 <div className="flex items-start justify-between mb-2 gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-[#1e293b]">Social Media Bio</p>
+                    <p className="text-sm font-semibold text-[#1e293b]">{t('social.title')}</p>
                     <p className="text-xs text-slate-400 mt-0.5">
                       {content.social_bio
-                        ? `${content.social_bio.length}/150 characters`
-                        : 'No bio yet — click Regenerate.'}
+                        ? t('social.charCount', { count: content.social_bio.length })
+                        : t('social.noBio')}
                     </p>
                   </div>
                   {content.social_bio && (
@@ -425,11 +426,9 @@ export default function ContentPage({ businessId, initialContent }: Props) {
             {/* ── Custom seed questions (Phase 2) ────────────────────────── */}
             {step === 'faq' && (
               <div className="bg-white rounded-2xl border border-slate-100 p-4">
-                <p className="text-sm font-semibold text-[#1e293b]">Questions you actually hear (optional)</p>
+                <p className="text-sm font-semibold text-[#1e293b]">{t('faqSeeds.title')}</p>
                 <p className="text-xs text-slate-500 mt-0.5 mb-2">
-                  Paste questions you hear from real customers, one per line.
-                  We&apos;ll use them <strong>verbatim</strong> as the first questions in your FAQ
-                  and generate the rest. Up to 10. Saved with your content; you only have to type these once.
+                  {t('faqSeeds.hint')}
                 </p>
                 <textarea
                   value={customFaqSeedsText}
@@ -444,8 +443,7 @@ export default function ContentPage({ businessId, initialContent }: Props) {
                              focus:outline-none focus:border-[#4f46e5] resize-y font-mono leading-relaxed"
                 />
                 <p className="text-[10px] text-slate-400 mt-1">
-                  {customFaqSeedsText.split('\n').filter(s => s.trim()).length} / 10 questions ·
-                  click <strong>Regenerate</strong> to apply
+                  {t('faqSeeds.counter', { count: customFaqSeedsText.split('\n').filter(s => s.trim()).length })}
                 </p>
               </div>
             )}
@@ -453,13 +451,11 @@ export default function ContentPage({ businessId, initialContent }: Props) {
             {/* ── Existing FAQs from owner's website (Phase 4) ───────────── */}
             {step === 'faq' && (
               <div className="bg-white rounded-2xl border border-slate-100 p-4">
-                <p className="text-sm font-semibold text-[#1e293b]">Existing FAQs from your website (optional)</p>
+                <p className="text-sm font-semibold text-[#1e293b]">{t('existingFaqs.title')}</p>
                 <p className="text-xs text-slate-500 mt-0.5 mb-2">
-                  Already have an FAQ page? Paste it here. We&apos;ll use your existing
-                  Q&amp;As <strong>verbatim</strong> and generate fresh AEO-optimized
-                  questions on different topics — combined into one valid FAQ schema.
+                  {t('existingFaqs.hint')}
                   <br/>
-                  Format: question on one line, answer on the next, blank line between pairs.
+                  {t('existingFaqs.format')}
                 </p>
                 <textarea
                   value={existingFaqsText}
@@ -477,8 +473,11 @@ export default function ContentPage({ businessId, initialContent }: Props) {
                              focus:outline-none focus:border-[#4f46e5] resize-y font-mono leading-relaxed"
                 />
                 <p className="text-[10px] text-slate-400 mt-1">
-                  Detected <strong>{parsedExistingFaqs.length}</strong> Q&amp;A pair{parsedExistingFaqs.length === 1 ? '' : 's'} ·
-                  total final FAQ count: <strong>{Math.max(15, parsedExistingFaqs.length + 5)}</strong>
+                  {t('existingFaqs.detected', {
+                    count: parsedExistingFaqs.length,
+                    pairWord: parsedExistingFaqs.length === 1 ? t('existingFaqs.pair') : t('existingFaqs.pairs'),
+                    total: Math.max(15, parsedExistingFaqs.length + 5),
+                  })}
                 </p>
               </div>
             )}
@@ -488,11 +487,11 @@ export default function ContentPage({ businessId, initialContent }: Props) {
               <div className="bg-white rounded-2xl border border-slate-100 p-4">
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <p className="text-sm font-semibold text-[#1e293b]">FAQ Content</p>
+                    <p className="text-sm font-semibold text-[#1e293b]">{t('faqContent.title')}</p>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      {content.faq.length} Q&amp;As — paste these on a /faq page
+                      {t('faqContent.subtitle', { count: content.faq.length })}
                       {content.paa_questions && content.paa_questions.length > 0 ? (
-                        <span className="text-slate-400"> · grounded in {content.paa_questions.length} real Google searches</span>
+                        <span className="text-slate-400"> · {t('faqContent.groundedIn', { count: content.paa_questions.length })}</span>
                       ) : null}
                     </p>
                   </div>
@@ -531,14 +530,14 @@ export default function ContentPage({ businessId, initialContent }: Props) {
               <div className="bg-white rounded-2xl border border-slate-100 p-4">
                 <div className="flex items-start justify-between mb-2 gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-[#1e293b]">FAQ Schema (JSON-LD)</p>
-                    <p className="text-xs text-slate-400 mt-0.5">Paste inside the &lt;head&gt; of your /faq page.</p>
+                    <p className="text-sm font-semibold text-[#1e293b]">{t('faqSchema.title')}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{t('faqSchema.subtitle')}</p>
                   </div>
                   <div className="flex gap-2 flex-shrink-0">
                     <a href="https://search.google.com/test/rich-results" target="_blank" rel="noopener noreferrer"
                        className="text-[10px] font-semibold px-2 py-1 rounded-lg border border-slate-200
                                   text-slate-500 hover:bg-slate-50 transition-colors whitespace-nowrap">
-                      Test in Rich Results ↗
+                      {t('faqSchema.testBtn')}
                     </a>
                     <CopyButton
                       onCopy={() => copy(wrapAsScriptTag(content.faq_schema!), 'faq_schema')}
@@ -553,17 +552,16 @@ export default function ContentPage({ businessId, initialContent }: Props) {
                   {content.faq_schema}
                 </p>
                 <p className="text-[10px] text-slate-400 mt-2">
-                  Copy includes the &lt;script type=&quot;application/ld+json&quot;&gt; wrapper.
+                  {t('faqSchema.copyNote')}
                 </p>
               </div>
             )}
 
             {step === 'faq_schema' && !content.faq_schema && (
               <div className="bg-white rounded-2xl border border-slate-100 p-6 text-center">
-                <p className="text-xs font-semibold text-[#1e293b] mb-1">No FAQ schema yet</p>
+                <p className="text-xs font-semibold text-[#1e293b] mb-1">{t('faqSchema.emptyTitle')}</p>
                 <p className="text-[11px] text-slate-500">
-                  The FAQ schema is generated automatically from your FAQ Q&amp;As. Go back to
-                  step 3 to verify your FAQs, or click Regenerate to create new ones.
+                  {t('faqSchema.emptyBody')}
                 </p>
               </div>
             )}
@@ -573,14 +571,14 @@ export default function ContentPage({ businessId, initialContent }: Props) {
               <div className="bg-white rounded-2xl border border-slate-100 p-4">
                 <div className="flex items-start justify-between mb-2 gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-[#1e293b]">Schema Markup (JSON-LD)</p>
-                    <p className="text-xs text-slate-400 mt-0.5">Paste inside the &lt;head&gt; tag of your homepage.</p>
+                    <p className="text-sm font-semibold text-[#1e293b]">{t('schema.title')}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{t('schema.subtitle')}</p>
                   </div>
                   <div className="flex gap-2 flex-shrink-0">
                     <a href="https://search.google.com/test/rich-results" target="_blank" rel="noopener noreferrer"
                        className="text-[10px] font-semibold px-2 py-1 rounded-lg border border-slate-200
                                   text-slate-500 hover:bg-slate-50 transition-colors whitespace-nowrap">
-                      Test in Rich Results ↗
+                      {t('schema.testBtn')}
                     </a>
                     <CopyButton
                       onCopy={() => copy(wrapAsScriptTag(content.schema_markup!), 'schema')}
@@ -592,14 +590,14 @@ export default function ContentPage({ businessId, initialContent }: Props) {
                 {content.schema_missing_fields && content.schema_missing_fields.length > 0 && (
                   <div className="mb-3 p-3 rounded-xl bg-amber-50 border border-amber-200">
                     <p className="text-xs font-semibold text-amber-900 mb-1">
-                      Complete your profile to qualify for Google rich results
+                      {t('schema.profileWarningTitle')}
                     </p>
                     <p className="text-[11px] text-amber-800 mb-2">
-                      Missing: {content.schema_missing_fields.map(f => MISSING_FIELD_LABELS[f] ?? f).join(', ')}.
+                      {t('schema.profileWarningMissing', { fields: content.schema_missing_fields.map(f => t(`missingFields.${f}` as Parameters<typeof t>[0])).join(', ') })}
                     </p>
                     <Link href={`/${locale}/dashboard/settings`}
                           className="text-[11px] font-semibold text-amber-900 underline underline-offset-2 hover:text-amber-700">
-                      Update profile →
+                      {t('schema.profileWarningLink')}
                     </Link>
                   </div>
                 )}
@@ -610,7 +608,7 @@ export default function ContentPage({ businessId, initialContent }: Props) {
                   {content.schema_markup}
                 </p>
                 <p className="text-[10px] text-slate-400 mt-2">
-                  Copy includes the &lt;script type=&quot;application/ld+json&quot;&gt; wrapper.
+                  {t('schema.copyNote')}
                 </p>
               </div>
             )}
@@ -619,8 +617,7 @@ export default function ContentPage({ businessId, initialContent }: Props) {
             {content.validation_warnings && content.validation_warnings.length > 0 && (
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3">
                 <p className="text-[11px] text-amber-900">
-                  Note: {content.validation_warnings.map(w => w.replace(/_/g, ' ')).join(' · ')}.
-                  Re-run if anything looks off.
+                  {t('validationWarning', { warnings: content.validation_warnings.map(w => w.replace(/_/g, ' ')).join(' · ') })}
                 </p>
               </div>
             )}
@@ -630,12 +627,12 @@ export default function ContentPage({ businessId, initialContent }: Props) {
               <button onClick={goPrev} disabled={stepIndex === 0}
                       className="text-xs font-semibold text-slate-500 hover:text-slate-700
                                  disabled:opacity-30 disabled:cursor-not-allowed">
-                ← Previous
+                {t('nav.previous')}
               </button>
               <button onClick={goNext} disabled={stepIndex === STEPS.length - 1}
                       className="text-xs font-semibold text-[#4f46e5] hover:text-indigo-700
                                  disabled:opacity-30 disabled:cursor-not-allowed">
-                {stepIndex < STEPS.length - 1 ? `Next: ${STEPS[stepIndex + 1].label} →` : 'Last step'}
+                {stepIndex < STEPS.length - 1 ? t('nav.next', { step: t(`steps.${STEPS[stepIndex + 1].key}.label`) }) : t('nav.lastStep')}
               </button>
             </div>
 
@@ -645,8 +642,8 @@ export default function ContentPage({ businessId, initialContent }: Props) {
 
         {!loading && !content && (
           <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
-            <p className="text-sm font-semibold text-[#1e293b] mb-1">No content generated yet</p>
-            <p className="text-xs text-slate-400">Click Generate Content to create optimized descriptions, FAQs, schema markup, and social bios.</p>
+            <p className="text-sm font-semibold text-[#1e293b] mb-1">{t('noContent')}</p>
+            <p className="text-xs text-slate-400">{t('noContentBody')}</p>
           </div>
         )}
 
@@ -671,6 +668,7 @@ interface VerifiedToggleProps {
   disabled?: boolean
 }
 function VerifiedToggle({ verified, onChange, disabled }: VerifiedToggleProps) {
+  const t = useTranslations('dashboard.content.edit')
   return (
     <label className={`flex items-center gap-1.5 text-[11px] font-semibold cursor-pointer
                        ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
@@ -678,7 +676,7 @@ function VerifiedToggle({ verified, onChange, disabled }: VerifiedToggleProps) {
       <input type="checkbox" checked={verified} disabled={disabled}
              onChange={e => onChange(e.target.checked)}
              className="h-3.5 w-3.5 rounded text-green-600 focus:ring-green-500" />
-      {verified ? 'Verified' : 'Mark verified'}
+      {verified ? t('verified') : t('markVerified')}
     </label>
   )
 }
@@ -698,8 +696,10 @@ interface EditableFieldProps {
 function EditableField({
   contentId, itemKey, value, isVerified,
   multiline = true, rows = 6, charLimit,
-  onChange, emptyPlaceholder = 'No content for this section yet.',
+  onChange, emptyPlaceholder,
 }: EditableFieldProps) {
+  const t = useTranslations('dashboard.content.edit')
+  const resolvedPlaceholder = emptyPlaceholder ?? t('noContent')
   const [mode, setMode] = useState<'view' | 'edit' | 'regen'>('view')
   const [draft, setDraft] = useState(value)
   const [notes, setNotes] = useState('')
@@ -713,7 +713,7 @@ function EditableField({
   if (!contentId) {
     return (
       <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap min-h-[4rem]">
-        {value || <span className="text-slate-400 italic">{emptyPlaceholder}</span>}
+        {value || <span className="text-slate-400 italic">{resolvedPlaceholder}</span>}
       </p>
     )
   }
@@ -725,7 +725,7 @@ function EditableField({
       onChange(draft)
       setMode('view')
     } catch {
-      setError('Save failed')
+      setError(t('saveFailed'))
     } finally { setBusy(false) }
   }
 
@@ -736,7 +736,7 @@ function EditableField({
       const res = await verifyContentItem(contentId!, itemKey, next)
       onChange(value, res.verified)
     } catch {
-      setError('Verify failed')
+      setError(t('verifyFailed'))
     } finally { setBusy(false) }
   }
 
@@ -750,7 +750,7 @@ function EditableField({
       setNotes('')
       setMode('view')
     } catch {
-      setError('Regenerate failed -- try again or simplify your notes.')
+      setError(t('regenFailed'))
     } finally { setBusy(false) }
   }
 
@@ -765,12 +765,12 @@ function EditableField({
               <button onClick={() => setMode('edit')} disabled={busy}
                       className="text-[11px] font-semibold text-slate-600 hover:text-[#4f46e5]
                                  px-2 py-1 rounded-lg hover:bg-slate-50 transition-colors">
-                Edit
+                {t('edit')}
               </button>
               <button onClick={() => setMode('regen')} disabled={busy}
                       className="text-[11px] font-semibold text-slate-600 hover:text-[#4f46e5]
                                  px-2 py-1 rounded-lg hover:bg-slate-50 transition-colors">
-                Regenerate
+                {t('regenerate')}
               </button>
             </>
           )}
@@ -780,11 +780,9 @@ function EditableField({
       {/* Body */}
       {mode === 'view' && (
         <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap min-h-[4rem]">
-          {value || <span className="text-slate-400 italic">{emptyPlaceholder}</span>}
+          {value || <span className="text-slate-400 italic">{resolvedPlaceholder}</span>}
         </p>
-      )}
-
-      {mode === 'edit' && (
+      )}      {mode === 'edit' && (
         <div>
           {multiline ? (
             <textarea value={draft} onChange={e => setDraft(e.target.value)} rows={rows}
@@ -797,17 +795,17 @@ function EditableField({
           )}
           <div className="flex items-center justify-between mt-2 gap-2">
             <span className="text-[10px] text-slate-400">
-              {charLimit ? `${draft.length} / ${charLimit} chars` : `${draft.length} chars`}
+              {charLimit ? t('charCountWith', { count: draft.length, limit: charLimit }) : t('charCount', { count: draft.length })}
             </span>
             <div className="flex gap-1">
               <button onClick={() => { setDraft(value); setMode('view'); setError('') }}
                       disabled={busy}
                       className="text-[11px] font-semibold text-slate-500 hover:text-slate-700 px-2 py-1 rounded-lg hover:bg-slate-50">
-                Cancel
+                {t('cancel')}
               </button>
               <button onClick={handleSave} disabled={busy || draft === value}
                       className="text-[11px] font-semibold text-white bg-[#4f46e5] hover:bg-indigo-700 px-3 py-1 rounded-lg disabled:opacity-50">
-                {busy ? '…' : 'Save'}
+                {busy ? '…' : t('save')}
               </button>
             </div>
           </div>
@@ -817,20 +815,20 @@ function EditableField({
       {mode === 'regen' && (
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
           <p className="text-[11px] font-semibold text-slate-700 mb-2">
-            What should change? (optional — leave blank for a fresh take)
+            {t('regenNotesTitle')}
           </p>
           <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
-                    placeholder="e.g. make it shorter; remove the part about parking; mention free consultations"
+                    placeholder={t('regenNotesPlaceholder')}
                     className="w-full text-xs text-slate-700 border border-slate-200 rounded-lg px-3 py-2
                                focus:outline-none focus:border-[#4f46e5] resize-y" />
           <div className="flex items-center justify-end gap-1 mt-2">
             <button onClick={() => { setNotes(''); setMode('view'); setError('') }} disabled={busy}
                     className="text-[11px] font-semibold text-slate-500 hover:text-slate-700 px-2 py-1 rounded-lg hover:bg-slate-50">
-              Cancel
+              {t('cancel')}
             </button>
             <button onClick={handleRegenerate} disabled={busy}
                     className="text-[11px] font-semibold text-white bg-[#4f46e5] hover:bg-indigo-700 px-3 py-1 rounded-lg disabled:opacity-50">
-              {busy ? 'Regenerating…' : 'Regenerate'}
+              {busy ? '…' : t('regenerate')}
             </button>
           </div>
         </div>
@@ -850,6 +848,8 @@ interface EditableFaqItemProps {
 }
 
 function EditableFaqItem({ contentId, index, item, isVerified, onChange }: EditableFaqItemProps) {
+  const t = useTranslations('dashboard.content.edit')
+  const tFaq = useTranslations('dashboard.content.faqItem')
   const [mode, setMode] = useState<'view' | 'edit' | 'regen'>('view')
   const [draftQ, setDraftQ] = useState(item.question)
   const [draftA, setDraftA] = useState(item.answer)
@@ -878,7 +878,7 @@ function EditableFaqItem({ contentId, index, item, isVerified, onChange }: Edita
       onChange({ question: draftQ, answer: draftA })
       setMode('view')
     } catch {
-      setError('Save failed')
+      setError(t('saveFailed'))
     } finally { setBusy(false) }
   }
 
@@ -888,7 +888,7 @@ function EditableFaqItem({ contentId, index, item, isVerified, onChange }: Edita
       const res = await verifyContentItem(contentId!, `faq.${index}`, next)
       onChange(item, res.verified)
     } catch {
-      setError('Verify failed')
+      setError(t('verifyFailed'))
     } finally { setBusy(false) }
   }
 
@@ -902,25 +902,25 @@ function EditableFaqItem({ contentId, index, item, isVerified, onChange }: Edita
       setNotes('')
       setMode('view')
     } catch {
-      setError('Regenerate failed')
+      setError(t('regenFailedFaq'))
     } finally { setBusy(false) }
   }
 
   return (
     <div className={`border-l-2 ${isVerified ? 'border-green-300' : 'border-indigo-100'} pl-3`}>
       <div className="flex items-start justify-between gap-2 mb-1 flex-wrap">
-        <span className="text-[10px] font-semibold text-slate-400">Q{index + 1}</span>
+        <span className="text-[10px] font-semibold text-slate-400">{tFaq('qLabel', { n: index + 1 })}</span>
         <div className="flex items-center gap-1">
           <VerifiedToggle verified={isVerified} onChange={handleVerify} disabled={busy} />
           {mode === 'view' && (
             <>
               <button onClick={() => setMode('edit')} disabled={busy}
                       className="text-[10px] font-semibold text-slate-500 hover:text-[#4f46e5] px-1.5 py-0.5 rounded hover:bg-slate-50">
-                Edit
+                {t('edit')}
               </button>
               <button onClick={() => setMode('regen')} disabled={busy}
                       className="text-[10px] font-semibold text-slate-500 hover:text-[#4f46e5] px-1.5 py-0.5 rounded hover:bg-slate-50">
-                Regen
+                {t('regen')}
               </button>
             </>
           )}
@@ -945,11 +945,11 @@ function EditableFaqItem({ contentId, index, item, isVerified, onChange }: Edita
           <div className="flex justify-end gap-1">
             <button onClick={() => { setDraftQ(item.question); setDraftA(item.answer); setMode('view') }}
                     disabled={busy} className="text-[10px] font-semibold text-slate-500 px-2 py-0.5 rounded hover:bg-slate-50">
-              Cancel
+              {t('cancel')}
             </button>
             <button onClick={handleSave} disabled={busy || (draftQ === item.question && draftA === item.answer)}
                     className="text-[10px] font-semibold text-white bg-[#4f46e5] hover:bg-indigo-700 px-2 py-0.5 rounded disabled:opacity-50">
-              {busy ? '…' : 'Save'}
+              {busy ? '…' : t('save')}
             </button>
           </div>
         </div>
@@ -957,19 +957,19 @@ function EditableFaqItem({ contentId, index, item, isVerified, onChange }: Edita
 
       {mode === 'regen' && (
         <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 mt-1">
-          <p className="text-[10px] text-slate-500 mb-1">What should change about this Q&amp;A?</p>
+          <p className="text-[10px] text-slate-500 mb-1">{t('faqRegenTitle')}</p>
           <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
-                    placeholder="e.g. The answer is wrong about pricing"
+                    placeholder={t('faqRegenPlaceholder')}
                     className="w-full text-xs text-slate-700 border border-slate-200 rounded px-2 py-1
                                focus:outline-none focus:border-[#4f46e5] resize-y" />
           <div className="flex justify-end gap-1 mt-1">
             <button onClick={() => { setNotes(''); setMode('view') }} disabled={busy}
                     className="text-[10px] font-semibold text-slate-500 px-2 py-0.5 rounded hover:bg-slate-50">
-              Cancel
+              {t('cancel')}
             </button>
             <button onClick={handleRegenerate} disabled={busy}
                     className="text-[10px] font-semibold text-white bg-[#4f46e5] hover:bg-indigo-700 px-2 py-0.5 rounded disabled:opacity-50">
-              {busy ? '…' : 'Regenerate'}
+              {busy ? '…' : t('regenerate')}
             </button>
           </div>
         </div>
@@ -987,56 +987,30 @@ function EditableFaqItem({ contentId, index, item, isVerified, onChange }: Edita
 // shouldn't pretend it isn't. This panel offers two clear paths:
 // "ask your web admin" or "DIY using common platform instructions."
 function TechnicalSchemaWarning() {
+  const t = useTranslations('dashboard.content.schemaWarning')
   return (
     <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3">
       <p className="text-xs font-semibold text-amber-900">
-        ⚠ Heads up — this part requires editing your website&apos;s HTML
+        {t('title')}
       </p>
       <p className="text-[11px] text-amber-800 mt-1 leading-relaxed">
-        If you&apos;re not comfortable editing code, that&apos;s completely fine. Copy this
-        and forward it to your web administrator or developer with a single line:
-        <em> &ldquo;Please paste this inside the &lt;head&gt; tag of our homepage.&rdquo;</em> That&apos;s
-        all the context they need — they&apos;ll know what to do.
+        {t('body')}
       </p>
       <details className="mt-2 group">
         <summary className="text-[11px] font-semibold text-amber-900 cursor-pointer hover:text-amber-700 list-none flex items-center gap-1">
           <span className="group-open:rotate-90 transition-transform inline-block">▸</span>
-          Doing it yourself? Quick guide for common website platforms
+          {t('diyTitle')}
         </summary>
         <ul className="text-[11px] text-amber-800 mt-2 ml-4 list-disc leading-relaxed space-y-1">
-          <li>
-            <strong>WordPress:</strong> install the free <em>Insert Headers and Footers</em>
-            {' '}plugin → <em>Settings → Insert Headers and Footers → Scripts in Header</em> →
-            paste. (If Yoast SEO or Rank Math is already installed, they have schema
-            settings too.)
-          </li>
-          <li>
-            <strong>Squarespace:</strong> <em>Settings → Advanced → Code Injection → Header</em>
-            {' '}→ paste.
-          </li>
-          <li>
-            <strong>Wix:</strong> <em>Site Dashboard → Settings → Custom Code → Add Custom Code</em>
-            {' '}→ choose <em>Head</em> placement → paste.
-          </li>
-          <li>
-            <strong>Shopify:</strong> <em>Online Store → Themes → Edit Code</em> → open
-            {' '}<code>theme.liquid</code> → paste just before <code>&lt;/head&gt;</code>.
-          </li>
-          <li>
-            <strong>Webflow:</strong> <em>Project Settings → Custom Code → Head Code</em>
-            {' '}→ paste.
-          </li>
-          <li>
-            <strong>Custom-built site:</strong> open the HTML template that includes
-            the <code>&lt;head&gt;</code> tag (often <code>index.html</code> or a layout file)
-            and paste this anywhere between <code>&lt;head&gt;</code> and
-            {' '}<code>&lt;/head&gt;</code>. Order doesn&apos;t matter.
-          </li>
+          <li>{t('wordpress')}</li>
+          <li>{t('squarespace')}</li>
+          <li>{t('wix')}</li>
+          <li>{t('shopify')}</li>
+          <li>{t('webflow')}</li>
+          <li>{t('custom')}</li>
         </ul>
         <p className="text-[10px] text-amber-700 mt-2 italic">
-          When in doubt, save this as a draft and ask. Pasting the wrong code in the
-          wrong place can occasionally break a page&apos;s layout — your web admin can
-          do this in 2 minutes.
+          {t('caution')}
         </p>
       </details>
     </div>
@@ -1045,29 +1019,30 @@ function TechnicalSchemaWarning() {
 
 
 function StepGuidance({ step }: { step: StepKey }) {
-  const g = STEP_GUIDANCE[step]
+  const t = useTranslations('dashboard.content.guidance')
   return (
     <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
-      <p className="text-xs font-extrabold text-indigo-900 mb-2">What this is for</p>
-      <p className="text-xs text-slate-700 leading-relaxed mb-3">{g.whatItIs}</p>
+      <p className="text-xs font-extrabold text-indigo-900 mb-2">{t('sectionTitle')}</p>
+      <p className="text-xs text-slate-700 leading-relaxed mb-3">{t(`${step}.whatItIs`)}</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-xs">
-        <span className="font-semibold text-indigo-900">📍 Where to paste</span>
-        <span className="text-slate-700 leading-relaxed">{g.whereToPaste}</span>
+        <span className="font-semibold text-indigo-900">{t('whereToPaste')}</span>
+        <span className="text-slate-700 leading-relaxed">{t(`${step}.whereToPaste`)}</span>
 
-        <span className="font-semibold text-indigo-900">💡 Why it matters</span>
-        <span className="text-slate-700 leading-relaxed">{g.whyItMatters}</span>
+        <span className="font-semibold text-indigo-900">{t('whyItMatters')}</span>
+        <span className="text-slate-700 leading-relaxed">{t(`${step}.whyItMatters`)}</span>
       </div>
     </div>
   )
 }
 
 function CopyButton({ onCopy, copied }: { onCopy: () => void; copied: boolean }) {
+  const t = useTranslations('dashboard.content.edit')
   return (
     <button onClick={onCopy}
       className="text-[10px] font-semibold px-2 py-1 rounded-lg border border-slate-200
                  text-slate-500 hover:bg-slate-50 transition-colors flex-shrink-0">
-      {copied ? '✓ Copied' : 'Copy'}
+      {copied ? t('copied') : t('copy')}
     </button>
   )
 }

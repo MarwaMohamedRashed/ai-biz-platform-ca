@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import OwnReputationCard from '@/components/dashboard/OwnReputationCard'
 
 interface Breakdown {
@@ -60,7 +61,8 @@ interface Audit {
     citation_gaps?: CitationGaps
     google?: {
       competitors?: Competitor[]
-      local_pack?: { present: boolean; position: number | null }
+      local_pack?: { present: boolean; position: number | null; rating: number | null; reviews: number | null }
+      knowledge_graph?: { rating: number | null; reviews_count: number | null; website: string | null; phone: string | null }
     }
   } | null
   created_at: string
@@ -101,10 +103,10 @@ const DIRECTORY_CLAIM_URLS: Record<string, string> = {
   'Reddit':       'https://www.reddit.com/search/?q=',
 }
 
-// Directories where the user-facing action isn't "claim a listing".
-// Currently just Reddit (community/UGC) — others may be added later.
-const DIRECTORY_ACTION_LABEL: Record<string, string> = {
-  'Reddit': 'Browse mentions',
+// Keys used to look up translated action labels per directory.
+// Only entries that differ from the default 'claimListing' key need to be listed.
+const DIRECTORY_ACTION_KEY: Record<string, string> = {
+  'Reddit': 'browseMentions',
 }
 
 interface Props {
@@ -114,12 +116,12 @@ interface Props {
   locale: string
 }
 
-const PILLARS: { key: keyof Breakdown; label: string; max: number }[] = [
-  { key: 'gbp',          label: 'GBP',     max: 25 },
-  { key: 'reviews',      label: 'Reviews', max: 22 },
-  { key: 'website',      label: 'Website', max: 20 },
-  { key: 'local_search', label: 'Local',   max: 15 },
-  { key: 'ai_citation',  label: 'AI',      max: 18 },
+const PILLAR_KEYS: { key: keyof Breakdown; tKey: string; max: number }[] = [
+  { key: 'gbp',          tKey: 'gbp',          max: 25 },
+  { key: 'reviews',      tKey: 'reviews',      max: 22 },
+  { key: 'website',      tKey: 'website',      max: 20 },
+  { key: 'local_search', tKey: 'local_search', max: 15 },
+  { key: 'ai_citation',  tKey: 'ai_citation',  max: 18 },
 ]
 
 function scoreColorClass(score: number | null | undefined): string {
@@ -157,12 +159,13 @@ function mergeCompetitors(scored: Competitor[], raw: Competitor[]): Competitor[]
 }
 
 export default function CompetitorsPage({ businessId, businessName, latestAudit, locale }: Props) {
+  const t = useTranslations('dashboard.competitors')
   if (!businessId) {
     return (
       <EmptyState
-        title="Complete your profile first"
-        body="We need your business name, type, and city before we can find competitors."
-        ctaLabel="Go to Settings"
+        title={t('empty.profileFirst')}
+        body={t('empty.profileBody')}
+        ctaLabel={t('empty.goSettings')}
         ctaHref={`/${locale}/dashboard/settings`}
       />
     )
@@ -185,9 +188,9 @@ export default function CompetitorsPage({ businessId, businessName, latestAudit,
   if (!latestAudit) {
     return (
       <EmptyState
-        title="Run an audit first"
-        body="Once you run your first AEO audit, we'll automatically identify your top 3 local competitors."
-        ctaLabel="Go to Dashboard"
+        title={t('empty.noAudit')}
+        body={t('empty.noAuditBody')}
+        ctaLabel={t('empty.goDashboard')}
         ctaHref={`/${locale}/dashboard`}
       />
     )
@@ -200,29 +203,23 @@ export default function CompetitorsPage({ businessId, businessName, latestAudit,
           <Header businessName={businessName} />
           <div className="bg-white border border-slate-100 rounded-2xl p-6 flex flex-col gap-3">
             <p className="text-sm font-semibold text-[#1e293b]">
-              No local competitors found in Google&apos;s map results
+              {t('empty.noCompetitorsTitle')}
             </p>
             <p className="text-xs text-slate-600 leading-relaxed">
-              We couldn&apos;t find businesses Google associates with your category in your city. Two
-              common reasons:
+              {t('empty.noCompetitorsBody')}
             </p>
             <div className="bg-slate-50 rounded-xl p-3">
-              <p className="text-xs font-semibold text-[#1e293b] mb-1">1. You&apos;re in a thin local market</p>
+              <p className="text-xs font-semibold text-[#1e293b] mb-1">{t('empty.thinMarketTitle')}</p>
               <p className="text-[11px] text-slate-600 leading-relaxed">
-                Few similar businesses are indexed near you. This is genuinely an opportunity —
-                rank locally now, before competitors arrive. Re-run the audit in a week to check again.
+                {t('empty.thinMarketBody')}
               </p>
             </div>
             <div className="bg-slate-50 rounded-xl p-3">
               <p className="text-xs font-semibold text-[#1e293b] mb-1">
-                2. Your business isn&apos;t local in nature
+                {t('empty.notLocalTitle')}
               </p>
               <p className="text-[11px] text-slate-600 leading-relaxed">
-                SaaS, software, online services, consulting — these don&apos;t compete locally.
-                Your real competitors are national or global, not the businesses next door.
-                We&apos;re building industry-wide competitor analysis for these cases (planned for
-                a future release). For now, the audit&apos;s GBP / Reviews / Website / AI Citation
-                pillars still apply — just without the comparative table.
+                {t('empty.notLocalBody')}
               </p>
             </div>
           </div>
@@ -237,8 +234,7 @@ export default function CompetitorsPage({ businessId, businessName, latestAudit,
         <Header businessName={businessName} />
 
       <p className="text-sm text-slate-600 mb-4">
-        Top {competitors.length}{' '}businesses Google ranks above or alongside you for your category in your city,
-        scored on the same 5-pillar formula. Per-pillar deltas show where you&apos;re ahead and where you&apos;re behind.
+        {t('intro', { count: competitors.length })}
       </p>
 
       <YourScoreCard
@@ -252,6 +248,9 @@ export default function CompetitorsPage({ businessId, businessName, latestAudit,
         businessName={businessName}
         userScore={latestAudit.score}
         userBreakdown={latestAudit.score_breakdown}
+        userRating={latestAudit.raw_results?.google?.local_pack?.rating ?? latestAudit.raw_results?.google?.knowledge_graph?.rating ?? null}
+        userReviews={latestAudit.raw_results?.google?.local_pack?.reviews ?? latestAudit.raw_results?.google?.knowledge_graph?.reviews_count ?? null}
+        userWebsite={latestAudit.raw_results?.google?.knowledge_graph?.website ?? null}
         competitors={[...competitors].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, 3)}
       />
 
@@ -273,45 +272,49 @@ export default function CompetitorsPage({ businessId, businessName, latestAudit,
 }
 
 function CompetitorInsightsSection({ insights }: { insights: CompetitorInsights }) {
+  const t = useTranslations('dashboard.competitors')
   const themes = insights.themes ?? []
   const { avg_competitor_rating, opportunity_summary, competitors_analysed, reviews_analysed } = insights
   return (
     <div className="mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-5">
       <div className="flex items-center gap-2 mb-1">
         <span className="text-base">💡</span>
-        <h2 className="text-sm font-extrabold text-amber-900">Competitor Weaknesses — Your Opportunity</h2>
+        <h2 className="text-sm font-extrabold text-amber-900">{t('insights.title')}</h2>
       </div>
       <p className="text-[11px] text-amber-700 mb-4">
-        Analysed {reviews_analysed} customer reviews across {competitors_analysed} competitor
-        {competitors_analysed !== 1 ? 's' : ''}.
+        {t('insights.analysed', {
+          reviews: reviews_analysed,
+          count: competitors_analysed,
+          competitors: competitors_analysed !== 1 ? t('insights.analysedCompetitors') : t('insights.analysedCompetitor'),
+        })}
         {avg_competitor_rating != null && (
-          <> Average competitor rating: <strong>{avg_competitor_rating}★</strong>.</>
+          <> {t('insights.avgRating', { rating: avg_competitor_rating })}</>
         )}
       </p>
 
       {themes.length > 0 ? (
         <div className="flex flex-col gap-2 mb-4">
-          {themes.map((t, i) => (
+          {themes.map((th, i) => (
             <div key={i} className="bg-white border border-amber-100 rounded-xl px-4 py-3">
               <div className="flex items-center justify-between mb-0.5">
-                <p className="text-xs font-bold text-amber-900">{t.theme}</p>
+                <p className="text-xs font-bold text-amber-900">{th.theme}</p>
                 <span className="text-[10px] font-semibold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                  {t.count}× mentioned
+                  {t('insights.mentioned', { count: th.count })}
                 </span>
               </div>
-              {t.example && (
-                <p className="text-[10px] text-slate-500 italic">&quot;{t.example}&quot;</p>
+              {th.example && (
+                <p className="text-[10px] text-slate-500 italic">&quot;{th.example}&quot;</p>
               )}
             </div>
           ))}
         </div>
       ) : (
-        <p className="text-xs text-amber-700 mb-4">No clear complaint patterns found — your competitors have strong reputations.</p>
+        <p className="text-xs text-amber-700 mb-4">{t('insights.noThemes')}</p>
       )}
 
       {opportunity_summary && (
         <div className="bg-amber-100 rounded-xl px-4 py-3">
-          <p className="text-[11px] font-semibold text-amber-900">🎯 Strategic opportunity</p>
+          <p className="text-[11px] font-semibold text-amber-900">{t('insights.opportunityLabel')}</p>
           <p className="text-xs text-amber-800 mt-0.5">{opportunity_summary}</p>
         </div>
       )}
@@ -320,9 +323,10 @@ function CompetitorInsightsSection({ insights }: { insights: CompetitorInsights 
 }
 
 function Header({ businessName }: { businessName: string | null }) {
+  const t = useTranslations('dashboard.competitors')
   return (
     <div className="mb-6">
-      <h1 className="text-xl font-extrabold text-[#1e293b]">Competitor Analysis</h1>
+      <h1 className="text-xl font-extrabold text-[#1e293b]">{t('pageTitle')}</h1>
       {businessName && (
         <p className="text-xs text-slate-500 mt-1 font-medium">{businessName}</p>
       )}
@@ -333,23 +337,24 @@ function Header({ businessName }: { businessName: string | null }) {
 function YourScoreCard({ businessName, score, breakdown, localPackPosition }: {
   businessName: string | null; score: number; breakdown: Breakdown | null; localPackPosition: number | null
 }) {
+  const t = useTranslations('dashboard.competitors')
   return (
     <div className="bg-indigo-50 border-2 border-[#4f46e5] rounded-2xl p-4">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-bold text-[#4f46e5] uppercase tracking-wider">You</span>
+            <span className="text-[10px] font-bold text-[#4f46e5] uppercase tracking-wider">{t('youLabel')}</span>
             {localPackPosition != null ? (
               <span
                 className="text-[10px] font-semibold text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded-full cursor-default"
                 title={`Your business appears at position #${localPackPosition} in Google's map results for your category and city.`}>
-                #{localPackPosition} on Google Maps results
+                {t('onMapsPack', { pos: localPackPosition })}
               </span>
             ) : (
               <span
                 className="text-[10px] font-semibold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full cursor-default"
                 title="Your business doesn't appear in Google's top map results for your category and city. This means customers searching nearby may not find you.">
-                ⚠️ Not showing on Google Maps results
+                {t('notOnMaps')}
               </span>
             )}
           </div>
@@ -363,8 +368,8 @@ function YourScoreCard({ businessName, score, breakdown, localPackPosition }: {
       </div>
       {breakdown && (
         <div className="flex flex-col gap-1.5">
-          {PILLARS.map(p => (
-            <PillarBar key={p.key} label={p.label} points={breakdown[p.key]} max={p.max} />
+          {PILLAR_KEYS.map(p => (
+            <PillarBar key={p.key} pillarKey={p.key} tKey={p.tKey} points={breakdown[p.key]} max={p.max} />
           ))}
         </div>
       )}
@@ -375,6 +380,7 @@ function YourScoreCard({ businessName, score, breakdown, localPackPosition }: {
 function CompetitorRow({ competitor, userBreakdown }: {
   competitor: Competitor; userBreakdown: Breakdown | null
 }) {
+  const t = useTranslations('dashboard.competitors')
   const ratingColor = !competitor.rating
     ? 'text-slate-400'
     : competitor.rating >= 4.5
@@ -397,7 +403,7 @@ function CompetitorRow({ competitor, userBreakdown }: {
               {competitor.cross_border && (
                 <span className="text-[9px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full whitespace-nowrap"
                   title="Google is associating this business with your category, but it's outside your country.">
-                  🌍 Different country
+                  {t('differentCountry')}
                 </span>
               )}
               {!competitor.cross_border && competitor.cross_city && (
@@ -417,7 +423,7 @@ function CompetitorRow({ competitor, userBreakdown }: {
               <span
                 className="text-[10px] font-semibold text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded-full cursor-default whitespace-nowrap"
                 title={`This business appears at position #${competitor.position} in Google's map results for your category and city.`}>
-                #{competitor.position} on Google Maps results
+                {t('onMapsPack', { pos: competitor.position })}
               </span>
             </div>
             {competitor.address && (
@@ -433,13 +439,13 @@ function CompetitorRow({ competitor, userBreakdown }: {
               {competitor.score}<span className="text-xs font-semibold text-slate-400">/100</span>
             </p>
           ) : (
-            <p className="text-xs text-slate-400">No score</p>
+            <p className="text-xs text-slate-400">{t('noScore')}</p>
           )}
           {competitor.rating != null && (
             <p className={`text-[11px] font-semibold ${ratingColor}`}>
               {competitor.rating.toFixed(1)}★
               {competitor.reviews != null && (
-                <span className="text-slate-500 font-normal"> · {competitor.reviews} reviews</span>
+                <span className="text-slate-500 font-normal"> · {t('reviews', { count: competitor.reviews })}</span>
               )}
             </p>
           )}
@@ -448,10 +454,11 @@ function CompetitorRow({ competitor, userBreakdown }: {
 
       {competitor.breakdown && (
         <div className="flex flex-col gap-1.5">
-          {PILLARS.map(p => (
+          {PILLAR_KEYS.map(p => (
             <PillarBar
               key={p.key}
-              label={p.label}
+              pillarKey={p.key}
+              tKey={p.tKey}
               points={competitor.breakdown![p.key]}
               max={p.max}
               userPoints={userBreakdown?.[p.key]}
@@ -462,7 +469,7 @@ function CompetitorRow({ competitor, userBreakdown }: {
 
       {competitor.has_full_data === false && (
         <p className="text-[10px] text-slate-400 italic mt-2">
-          Partial data — some competitor signals couldn&apos;t be verified.
+          {t('partialData')}
         </p>
       )}
 
@@ -483,9 +490,11 @@ function CompetitorRow({ competitor, userBreakdown }: {
   )
 }
 
-function PillarBar({ label, points, max, userPoints }: {
-  label: string; points: number; max: number; userPoints?: number
+function PillarBar({ pillarKey, tKey, points, max, userPoints }: {
+  pillarKey: keyof Breakdown; tKey: string; points: number; max: number; userPoints?: number
 }) {
+  const t = useTranslations('dashboard.competitors')
+  const label = t(`pillars.${tKey}`)
   const pct = max === 0 ? 0 : (points / max) * 100
   const color = pct >= 75 ? 'bg-green-500' : pct >= 40 ? 'bg-amber-400' : 'bg-red-300'
 
@@ -493,11 +502,11 @@ function PillarBar({ label, points, max, userPoints }: {
   if (userPoints != null) {
     const diff = userPoints - points
     if (diff > 0) {
-      delta = <span className="text-[9px] font-bold text-green-600 w-14 text-right">you +{diff}</span>
+      delta = <span className="text-[9px] font-bold text-green-600 w-14 text-right">{t('youAhead', { diff })}</span>
     } else if (diff < 0) {
-      delta = <span className="text-[9px] font-bold text-red-500 w-14 text-right">you {diff}</span>
+      delta = <span className="text-[9px] font-bold text-red-500 w-14 text-right">{t('youBehind', { diff })}</span>
     } else {
-      delta = <span className="text-[9px] text-slate-400 w-14 text-right">tied</span>
+      delta = <span className="text-[9px] text-slate-400 w-14 text-right">{t('tied')}</span>
     }
   }
 
@@ -513,29 +522,30 @@ function PillarBar({ label, points, max, userPoints }: {
   )
 }
 
-function ComparisonTable({ businessName, userScore, userBreakdown, competitors }: {
+function ComparisonTable({ businessName, userScore, userBreakdown, userRating, userReviews, userWebsite, competitors }: {
   businessName: string | null
   userScore: number
   userBreakdown: Breakdown | null
+  userRating: number | null
+  userReviews: number | null
+  userWebsite: string | null
   competitors: Competitor[]
 }) {
-  // Expanded-detail row index. Click a competitor's name → reveal address /
-  // phone / website / cross-border flag inline. Click again → collapse.
+  const t = useTranslations('dashboard.competitors')
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null)
 
   if (!userBreakdown || competitors.length === 0) return null
 
-  // Columns: "You" plus up to 3 competitors. "You" column doesn't expand.
   const cols = [
     {
-      label:     businessName ?? 'You',
-      shortLabel: 'You',
+      label:     businessName ?? t('youLabel'),
+      shortLabel: t('youLabel'),
       score:     userScore,
       breakdown: userBreakdown,
       isUser:    true,
-      rating:    null as number | null,
-      reviews:   null as number | null,
-      website:   null as string | null,
+      rating:    userRating,
+      reviews:   userReviews,
+      website:   userWebsite,
       address:   null as string | null,
       phone:     null as string | null,
       crossBorder: false,
@@ -565,9 +575,9 @@ function ComparisonTable({ businessName, userScore, userBreakdown, competitors }
     <div className="mt-4 bg-white border border-slate-100 rounded-2xl p-4 overflow-x-auto">
       <div className="flex items-center justify-between gap-3 mb-3">
         <p className="text-sm font-semibold text-[#1e293b]">
-          You vs. top {competitors.length}
+          {t('table.title', { count: competitors.length })}
         </p>
-        <p className="text-[10px] text-slate-400">click a name to see contact details</p>
+        <p className="text-[10px] text-slate-400">{t('table.clickHint')}</p>
       </div>
 
       <table className="w-full text-xs border-collapse">
@@ -591,11 +601,10 @@ function ComparisonTable({ businessName, userScore, userBreakdown, competitors }
                                 whitespace-normal break-words`}>
                     {c.label}
                   </button>
-                  {/* Cross-border / cross-city flag right under the name */}
                   {c.crossBorder && (
                     <span title="Different country — Google associates this business with your category but it's outside your country."
                           className="text-[9px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full whitespace-nowrap mt-0.5 self-start">
-                      🌍 Different country
+                      {t('differentCountry')}
                     </span>
                   )}
                   {!c.crossBorder && c.crossCity && c.city && (
@@ -610,9 +619,8 @@ function ComparisonTable({ businessName, userScore, userBreakdown, competitors }
           </tr>
         </thead>
         <tbody>
-          {/* Total */}
           <tr className="border-t border-slate-100">
-            <td className="py-2 pr-3 text-slate-500 font-medium">Total</td>
+            <td className="py-2 pr-3 text-slate-500 font-medium">{t('table.total')}</td>
             {cols.map((c, i) => (
               <td key={i} className={`py-2 pr-3 font-extrabold ${scoreColorClass(c.score)}`}>
                 {c.score != null ? c.score : '—'}<span className="text-[10px] font-medium text-slate-400">/100</span>
@@ -620,9 +628,8 @@ function ComparisonTable({ businessName, userScore, userBreakdown, competitors }
             ))}
           </tr>
 
-          {/* Rating + Reviews — competitor-only data, "You" column blank */}
           <tr className="border-t border-slate-50">
-            <td className="py-1.5 pr-3 text-slate-500">Rating</td>
+            <td className="py-1.5 pr-3 text-slate-500">{t('table.rating')}</td>
             {cols.map((c, i) => (
               <td key={i} className="py-1.5 pr-3">
                 {c.rating != null ? (
@@ -637,18 +644,16 @@ function ComparisonTable({ businessName, userScore, userBreakdown, competitors }
             ))}
           </tr>
           <tr className="border-t border-slate-50">
-            <td className="py-1.5 pr-3 text-slate-500">Reviews</td>
+            <td className="py-1.5 pr-3 text-slate-500">{t('table.reviews')}</td>
             {cols.map((c, i) => (
               <td key={i} className="py-1.5 pr-3 text-slate-600">
                 {c.reviews != null ? c.reviews.toLocaleString() : <span className="text-slate-300">—</span>}
               </td>
             ))}
           </tr>
-
-          {/* Pillar rows */}
-          {PILLARS.map(p => (
+          {PILLAR_KEYS.map(p => (
             <tr key={p.key} className="border-t border-slate-50">
-              <td className="py-1.5 pr-3 text-slate-500">{p.label}</td>
+              <td className="py-1.5 pr-3 text-slate-500">{t(`pillars.${p.tKey}`)}</td>
               {cols.map((c, i) => {
                 const v = c.breakdown?.[p.key]
                 const max = p.max
@@ -667,7 +672,6 @@ function ComparisonTable({ businessName, userScore, userBreakdown, competitors }
             </tr>
           ))}
 
-          {/* Expanded contact details for the clicked competitor */}
           {expandedIdx !== null && cols[expandedIdx] && !cols[expandedIdx].isUser && (
             <tr className="border-t border-slate-200 bg-slate-50">
               <td colSpan={colCount + 1} className="py-3 px-3">
@@ -696,26 +700,25 @@ function ComparisonTable({ businessName, userScore, userBreakdown, competitors }
 }
 
 function CitationGapSection({ gaps }: { gaps: CitationGaps }) {
+  const t = useTranslations('dashboard.competitors')
   const userDirs = gaps.user ?? []
   const gapList = gaps.gaps ?? []
 
-  // No data at all → don't render the card at all (would just confuse)
   if (userDirs.length === 0 && gapList.length === 0) return null
 
   return (
     <div className="mt-6 bg-white border border-slate-100 rounded-2xl p-5">
       <div className="flex items-center gap-2 mb-1">
         <span className="text-base">🔗</span>
-        <h2 className="text-sm font-extrabold text-[#1e293b]">Directory Presence</h2>
+        <h2 className="text-sm font-extrabold text-[#1e293b]">{t('citations.title')}</h2>
       </div>
       <p className="text-[11px] text-slate-500 mb-4">
-        Where you and your competitors are listed across major directories.
-        Each directory listing is a citation that AI engines weigh as a trust signal.
+        {t('citations.subtitle')}
       </p>
 
       {userDirs.length > 0 && (
         <div className="mb-4">
-          <p className="text-[11px] font-semibold text-slate-600 mb-1.5">You appear on</p>
+          <p className="text-[11px] font-semibold text-slate-600 mb-1.5">{t('citations.youAppearOn')}</p>
           <div className="flex flex-wrap gap-1.5">
             {userDirs.map(d => (
               <span key={d}
@@ -730,12 +733,13 @@ function CitationGapSection({ gaps }: { gaps: CitationGaps }) {
       {gapList.length > 0 ? (
         <div>
           <p className="text-[11px] font-semibold text-slate-600 mb-1.5">
-            Gaps — competitors are listed here, you are not
+            {t('citations.gapsTitle')}
           </p>
           <div className="flex flex-col gap-1.5">
             {gapList.map(d => {
               const url = DIRECTORY_CLAIM_URLS[d]
-              const actionLabel = DIRECTORY_ACTION_LABEL[d] ?? 'Claim listing'
+              const actionKey = DIRECTORY_ACTION_KEY[d] ?? 'claimListing'
+              const actionLabel = t(`citations.${actionKey}`)
               return (
                 <div key={d}
                      className="flex items-center justify-between gap-3 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
@@ -754,18 +758,16 @@ function CitationGapSection({ gaps }: { gaps: CitationGaps }) {
             })}
           </div>
           <p className="text-[10px] text-slate-400 mt-3 italic">
-            Each directory listing strengthens your AI search visibility — competitors cited
-            on more directories are more likely to be cited by ChatGPT and Perplexity.
+            {t('citations.footer')}
           </p>
         </div>
       ) : userDirs.length > 0 ? (
         <p className="text-[11px] text-green-700">
-          No directory gaps detected — you appear wherever your competitors do.
+          {t('citations.noGaps')}
         </p>
       ) : (
         <p className="text-[11px] text-slate-500">
-          We didn&apos;t detect any directory listings for you or your competitors in this audit&apos;s
-          search results. This is normal for very local or very new businesses.
+          {t('citations.noData')}
         </p>
       )}
     </div>

@@ -224,6 +224,306 @@
       "generatedOn": "Généré le",
       "preparedFor": "Préparé pour"
     },
+    "aeo": {
+      "label": "AUDIT DE VISIBILITÉ IA",
+      "scoreLabel": "Score de maturité AEO",
+      "noBusinessTitle": "Configurez d'abord votre profil d'entreprise",
+      "noBusinessDesc": "Nous avons besoin du nom, du type et de la ville de votre entreprise pour lancer l'audit.",
+      "completeProfile": "Compléter votre profil →",
+      "findOutVisible": "Découvrez si les moteurs de recherche IA trouvent votre entreprise",
+      "runAudit": "Lancer l'audit de maturité AEO →",
+      "rerunAudit": "Relancer l'audit",
+      "running": "Audit en cours… (30 à 60 secondes)",
+      "whyThisScore": "Pourquoi ce score ? →",
+      "howCalculated": "Comment est calculé le score ?",
+      "upgradeTitle": "Votre essai est terminé",
+      "upgradeBody": "Passez à un forfait payant pour continuer à lancer des audits.",
+      "upgradeCta": "Voir les forfaits →",
+      "auditFailed": "L'audit a échoué. Veuillez réessayer.",
+      "pillars": {
+        "gbp": "Profil Google Business",
+        "reviews": "Avis & réputation",
+        "website": "Site web & schéma",
+        "localSearch": "Présence en recherche locale",
+        "aiCitation": "Citations IA"
+      },
+      "drawer": {
+        "title": "Pourquoi ce score ?",
+        "subtitle": "Signaux bruts du dernier audit",
+        "noData": "Aucune donnée brute disponible pour cet audit.",
+        "gbpFound": "Trouvé dans le Knowledge Graph",
+        "gbpTitle": "Nom de l'entreprise",
+        "gbpCategory": "Catégorie",
+        "rating": "Note",
+        "reviewCount": "Nombre d'avis",
+        "gbpWebsite": "Site web sur la fiche",
+        "gbpPhone": "Téléphone sur la fiche",
+        "websiteReachable": "Site web accessible",
+        "localBusinessSchema": "Schéma LocalBusiness",
+        "faqSchema": "Schéma FAQ / HowTo",
+        "inLocalPack": "Dans le pack local Google",
+        "localPackPos": "Position dans le pack local",
+        "inOrganic": "Dans les résultats organiques",
+        "notInPack": "Absent du pack",
+        "mentionedChatgpt": "Mentionné par ChatGPT",
+        "chatgptNote": "Les réponses de ChatGPT proviennent de données d'entraînement — les améliorations apparaissent lors des prochaines mises à jour du modèle (6 à 12 mois).",
+        "mentionedPerplexity": "Mentionné par Perplexity",
+        "mentionedGoogleAI": "Mentionné dans Google AI Overview"
+      }
+    },
+    "scoreHistory": {
+      "runMore": "Effectuez au moins 2 audits pour voir l'évolution de votre score.",
+      "label": "Historique du score",
+      "vsPrev": "+{delta} par rapport au préc.",
+      "vsPrevNeg": "{delta} par rapport au préc.",
+      "noChange": "Aucun changement"
+    },
+    "ownReputation": {
+      "title": "Votre réputation",
+      "reviewsMeta": "{count} {reviews} Google · 3 derniers mois",
+      "reviewSingular": "avis",
+      "reviewPlural": "avis",
+      "viaGoogle": "via Google Maps",
+      "strengths": "✅ Ce que les clients apprécient",
+      "weaknesses": "⚠️ Ce qui nécessite de l'attention"
+    },
+    "content": {
+      "pageTitle": "Générateur de contenu IA",
+      "pageSubtitle": "Parcourez chaque section et copiez ce dont vous avez besoin.",
+      "generating": "Génération en cours…",
+      "regenerate": "Régénérer",
+      "generateContent": "Générer le contenu",
+      "langWarning": "Vous visualisez le contenu en {lang}. Cliquez sur Régénérer pour passer en {target}.",
+      "genFailed": "La génération a échoué. Veuillez réessayer.",
+      "genInProgress": "Génération de votre contenu… cela prend environ 20 secondes.",
+      "stepsLabel": "Étapes",
+      "stepOf": "Étape {n} sur {total}",
+      "noContent": "Aucun contenu généré",
+      "noContentBody": "Cliquez sur Générer le contenu pour créer des descriptions optimisées, des FAQ, des balises schema et des bios sociaux.",
+      "noProfile": "Complétez d'abord votre profil d'entreprise dans les Paramètres.",
+      "steps": {
+        "description": { "label": "Description",      "sublabel": "Par plateforme" },
+        "social":      { "label": "Bio sociale",      "sublabel": "≤ 150 car." },
+        "faq":         { "label": "FAQ",              "sublabel": "10 Q&R" },
+        "faq_schema":  { "label": "Schéma FAQ",       "sublabel": "JSON-LD" },
+        "schema":      { "label": "Balisage schema",  "sublabel": "JSON-LD" }
+      },
+      "guidance": {
+        "sectionTitle": "À quoi ça sert",
+        "whereToPaste": "📍 Où coller",
+        "whyItMatters": "💡 Pourquoi c'est important",
+        "description": {
+          "whatItIs": "Trois variantes de description — une adaptée à chaque plateforme sur laquelle vous publiez.",
+          "whereToPaste": "Site web : collez dans la section À propos de votre page d'accueil (et utilisez-la comme méta-description). Google : connectez-vous à business.google.com → Modifier le profil → Description de l'entreprise. Yelp : biz.yelp.com → Modifier les informations → Description.",
+          "whyItMatters": "Contenu AEO à plus fort impact. Signal direct vers ChatGPT, Perplexity et Google AI Overview. Les moteurs IA analysent votre page d'accueil + GBP + annonces Yelp et citent le texte de description mot pour mot lorsqu'ils répondent aux questions « que fait [entreprise] ? » / « meilleur(e) [type] à [ville] ? »."
+        },
+        "social": {
+          "whatItIs": "Une courte bio utilisée de manière cohérente sur toutes vos plateformes sociales.",
+          "whereToPaste": "Bio Instagram · Page Facebook À propos → Courte description · Bio X (Twitter) · Titre LinkedIn · Bio TikTok · Description de la chaîne YouTube (première ligne).",
+          "whyItMatters": "Source de citation indirecte mais réelle. Les pages Facebook + Instagram apparaissent dans les résultats Google et les moteurs IA les citent. Utiliser la MÊME bio sur toutes les plateformes crée la cohérence Nom + Adresse + Téléphone (NAP) — un signal de confiance que les moteurs IA évaluent. Des bios incohérentes suggèrent un manque de sérieux ; des bios cohérentes suggèrent la légitimité."
+        },
+        "faq": {
+          "whatItIs": "10 paires question-réponse rédigées pour les questions que les vrais clients posent aux moteurs IA.",
+          "whereToPaste": "Créez une page /faq sur votre site web (ou ajoutez une section FAQ à votre page d'accueil / À propos). Collez les Q&R comme contenu de page visible — de la même façon que vous rédigeriez n'importe quel autre article. Aucun code impliqué à cette étape.",
+          "whyItMatters": "Les FAQ sont le contenu AEO à plus fort levier par mot. Les moteurs IA — surtout ChatGPT et Perplexity — citent les réponses FAQ mot pour mot lorsqu'ils répondent à des questions correspondantes. Vérifiez chaque réponse soigneusement — une mauvaise réponse publiée est pire qu'aucune FAQ. L'étape suivante (schéma FAQ) est l'enveloppe technique qui transforme ces Q&R en extrait riche Google."
+        },
+        "faq_schema": {
+          "whatItIs": "Une enveloppe JSON-LD autour de vos Q&R FAQ qui indique précisément à Google et aux moteurs IA quelle question correspond à quelle réponse.",
+          "whereToPaste": "Dans la balise head de votre page /faq (la même page où vous avez collé les Q&R à l'étape 3). Le bouton Copier l'enveloppe dans une balise script[type=application/ld+json] complète — collez-la telle quelle. Si vous ne gérez pas votre propre code, transmettez ceci à votre administrateur web.",
+          "whyItMatters": "Cela débloque les extraits riches FAQ extensibles de Google — les encadrés qui apparaissent directement dans les résultats de recherche. Les extraits riches augmentent le taux de clic. Les moteurs IA utilisent également le schéma pour comprendre la structure Q&R. Le schéma et les Q&R visibles fonctionnent ensemble : l'un sans l'autre donne un bénéfice partiel."
+        },
+        "schema": {
+          "whatItIs": "Description lisible par machine de votre entreprise dans le format préféré des robots IA.",
+          "whereToPaste": "Dans la balise head de votre page d'accueil (et de toutes les autres pages clés — À propos, Contact, Services). Le bouton Copier l'enveloppe dans une balise script[type=application/ld+json] complète — collez-la telle quelle.",
+          "whyItMatters": "Signal le plus direct que vous puissiez donner au Knowledge Graph de Google + AI Overview. Requis pour être éligible aux résultats riches (étoiles d'avis, horaires, gamme de prix). Chaque robot IA le lit — y compris GPTBot, PerplexityBot, ClaudeBot. Un seul bloc JSON-LD correct vaut plus que 1000 mots de marketing pour l'AEO."
+        }
+      },
+      "desc": {
+        "title": "Description de l'entreprise",
+        "tabs": {
+          "website": { "label": "Site web", "hint": "300–400 mots pour votre page d'accueil / page À propos" },
+          "gbp":     { "label": "Google",   "hint": "Description du profil Google Business (≤ 700 car.)" },
+          "yelp":    { "label": "Yelp",     "hint": "Style Yelp / répertoire, 200–250 mots" }
+        },
+        "charCount": "{count} / 700 caractères"
+      },
+      "social": {
+        "title": "Bio pour les réseaux sociaux",
+        "charCount": "{count}/150 caractères",
+        "noBio": "Pas encore de bio — cliquez sur Régénérer."
+      },
+      "faqSeeds": {
+        "title": "Questions que vous entendez vraiment (optionnel)",
+        "hint": "Collez les questions que vos vrais clients vous posent, une par ligne. Nous les utiliserons mot pour mot comme premières questions de votre FAQ et générerons le reste. Jusqu'à 10. Sauvegardées avec votre contenu ; vous n'avez à les taper qu'une seule fois.",
+        "counter": "{count} / 10 questions · cliquez sur Régénérer pour appliquer"
+      },
+      "existingFaqs": {
+        "title": "FAQ existantes de votre site web (optionnel)",
+        "hint": "Vous avez déjà une page FAQ ? Collez-la ici. Nous utiliserons vos Q&R existants mot pour mot et génèrerons de nouvelles questions AEO optimisées sur d'autres sujets — combinées en un schéma FAQ valide.",
+        "format": "Format : question sur une ligne, réponse sur la suivante, ligne vide entre chaque paire.",
+        "detected": "Détecté {count} {pairWord} Q&R · nombre total de FAQ : {total}",
+        "pair": "paire",
+        "pairs": "paires"
+      },
+      "faqContent": {
+        "title": "Contenu FAQ",
+        "subtitle": "{count} Q&R — collez-les sur une page /faq",
+        "groundedIn": "basé sur {count} vraies recherches Google"
+      },
+      "faqSchema": {
+        "title": "Schéma FAQ (JSON-LD)",
+        "subtitle": "Collez dans la balise head de votre page /faq.",
+        "testBtn": "Tester dans les Résultats enrichis ↗",
+        "copyNote": "La copie inclut l'enveloppe <script type=\"application/ld+json\">.",
+        "emptyTitle": "Pas encore de schéma FAQ",
+        "emptyBody": "Le schéma FAQ est généré automatiquement à partir de vos Q&R. Revenez à l'étape 3 pour vérifier vos FAQ, ou cliquez sur Régénérer pour en créer de nouvelles."
+      },
+      "schema": {
+        "title": "Balisage Schema (JSON-LD)",
+        "subtitle": "Collez dans la balise head de votre page d'accueil.",
+        "testBtn": "Tester dans les Résultats enrichis ↗",
+        "copyNote": "La copie inclut l'enveloppe <script type=\"application/ld+json\">.",
+        "profileWarningTitle": "Complétez votre profil pour être éligible aux résultats riches Google",
+        "profileWarningMissing": "Manquant : {fields}.",
+        "profileWarningLink": "Mettre à jour le profil →"
+      },
+      "missingFields": {
+        "name":           "Nom de l'entreprise",
+        "image_url":      "URL du logo ou d'une photo",
+        "street_address": "Adresse",
+        "city":           "Ville",
+        "phone":          "Numéro de téléphone"
+      },
+      "validationWarning": "Remarque : {warnings}. Relancez si quelque chose semble incorrect.",
+      "schemaWarning": {
+        "title": "⚠ Attention — cette partie nécessite de modifier le HTML de votre site",
+        "body": "Si vous n'êtes pas à l'aise avec le code, c'est tout à fait normal. Copiez ceci et transmettez-le à votre administrateur ou développeur web avec une seule phrase : « Veuillez coller ceci dans la balise head de notre page d'accueil. » C'est tout le contexte dont il a besoin.",
+        "diyTitle": "Vous le faites vous-même ? Guide rapide pour les plateformes courantes",
+        "wordpress": "WordPress : installez le plugin gratuit Insert Headers and Footers → Réglages → Scripts in Header → coller. (Si Yoast SEO ou Rank Math est déjà installé, ils ont aussi des paramètres de schéma.)",
+        "squarespace": "Squarespace : Paramètres → Avancé → Injection de code → En-tête → coller.",
+        "wix": "Wix : Tableau de bord → Paramètres → Code personnalisé → Ajouter → choisir placement Tête → coller.",
+        "shopify": "Shopify : Boutique en ligne → Thèmes → Modifier le code → ouvrir theme.liquid → coller juste avant </head>.",
+        "webflow": "Webflow : Paramètres du projet → Code personnalisé → Code Head → coller.",
+        "custom": "Site sur mesure : ouvrez le gabarit HTML qui contient la balise head (souvent index.html ou un fichier de mise en page) et collez n'importe où entre les balises head ouvrante et fermante. L'ordre n'a pas d'importance.",
+        "caution": "En cas de doute, sauvegardez en brouillon et demandez. Coller le mauvais code au mauvais endroit peut parfois casser la mise en page — votre administrateur web peut le faire en 2 minutes."
+      },
+      "nav": {
+        "previous": "← Précédent",
+        "next": "Suivant : {step} →",
+        "lastStep": "Dernière étape"
+      },
+      "edit": {
+        "verified":             "Vérifié",
+        "markVerified":         "Marquer comme vérifié",
+        "edit":                 "Modifier",
+        "regenerate":           "Régénérer",
+        "regen":                "Régén.",
+        "cancel":               "Annuler",
+        "save":                 "Enregistrer",
+        "copy":                 "Copier",
+        "copied":               "✓ Copié",
+        "charCountWith":        "{count} / {limit} car.",
+        "charCount":            "{count} car.",
+        "saveFailed":           "Échec de l'enregistrement",
+        "verifyFailed":         "Échec de la vérification",
+        "regenFailed":          "La régénération a échoué — réessayez ou simplifiez vos notes.",
+        "regenFailedFaq":       "La régénération a échoué",
+        "regenNotesTitle":      "Qu'est-ce qui doit changer ? (optionnel — laissez vide pour une nouvelle version)",
+        "regenNotesPlaceholder":"ex. rendre plus court ; supprimer la partie sur le parking ; mentionner les consultations gratuites",
+        "faqRegenTitle":        "Qu'est-ce qui doit changer dans ce Q&R ?",
+        "faqRegenPlaceholder":  "ex. La réponse est incorrecte concernant les tarifs",
+        "noContent":            "Aucun contenu pour cette section."
+      },
+      "faqItem": {
+        "qLabel": "Q{n}"
+      }
+    },
+    "competitors": {
+      "pageTitle": "Analyse des concurrents",
+      "intro": "Les {count} entreprises que Google classe devant ou à côté de vous pour votre catégorie dans votre ville, scorées selon la même formule à 5 piliers. Les deltas par pilier montrent où vous êtes en avance et en retard.",
+      "youLabel": "VOUS",
+      "onMapsPack": "#{pos} sur Google Maps",
+      "notOnMaps": "⚠️ Absent des résultats Google Maps",
+      "noScore": "Aucun score",
+      "partialData": "Données partielles — certains signaux n'ont pu être vérifiés.",
+      "differentCountry": "🌍 Pays différent",
+      "reviews": "{count} avis",
+      "youAhead": "vous +{diff}",
+      "youBehind": "vous {diff}",
+      "tied": "égalité",
+      "table": {
+        "title": "Vous vs. top {count}",
+        "clickHint": "cliquez sur un nom pour les coordonnées",
+        "total": "Total",
+        "rating": "Note",
+        "reviews": "Avis"
+      },
+      "pillars": {
+        "gbp": "GBP",
+        "reviews": "Avis",
+        "website": "Site web",
+        "local_search": "Local",
+        "ai_citation": "IA"
+      },
+      "insights": {
+        "title": "Faiblesses des concurrents — Votre opportunité",
+        "analysed": "Analyse de {reviews} avis clients sur {count} {competitors}.",
+        "analysedCompetitor": "concurrent",
+        "analysedCompetitors": "concurrents",
+        "avgRating": "Note moyenne des concurrents : {rating}★.",
+        "mentioned": "{count}× mentionné",
+        "noThemes": "Aucun schéma de plaintes clair — vos concurrents ont une bonne réputation.",
+        "opportunityLabel": "🎯 Opportunité stratégique"
+      },
+      "citations": {
+        "title": "Présence dans les annuaires",
+        "subtitle": "Où vous et vos concurrents êtes répertoriés dans les principaux annuaires. Chaque inscription est une citation que les moteurs IA pèsent comme signal de confiance.",
+        "youAppearOn": "Vous apparaissez sur",
+        "gapsTitle": "Écarts — vos concurrents sont listés ici, pas vous",
+        "claimListing": "Réclamer la fiche",
+        "browseMentions": "Parcourir les mentions",
+        "noGaps": "Aucun écart détecté — vous apparaissez partout où vos concurrents apparaissent.",
+        "noData": "Nous n'avons détecté aucune fiche pour vous ou vos concurrents dans cet audit. C'est normal pour les entreprises très locales ou très récentes.",
+        "footer": "Chaque fiche renforce votre visibilité IA — les concurrents cités sur plus d'annuaires sont plus souvent cités par ChatGPT et Perplexity."
+      },
+      "empty": {
+        "profileFirst": "Complétez votre profil d'abord",
+        "profileBody": "Nous avons besoin du nom, du type et de la ville de votre entreprise avant de pouvoir trouver des concurrents.",
+        "goSettings": "Aller aux paramètres",
+        "noAudit": "Lancez d'abord un audit",
+        "noAuditBody": "Une fois votre premier audit AEO effectué, nous identifierons automatiquement vos 3 principaux concurrents locaux.",
+        "goDashboard": "Aller au tableau de bord",
+        "noCompetitorsTitle": "Aucun concurrent local trouvé dans Google Maps",
+        "noCompetitorsBody": "Nous n'avons pas trouvé d'entreprises que Google associe à votre catégorie dans votre ville. Deux raisons courantes :",
+        "thinMarketTitle": "1. Vous êtes sur un marché local peu dense",
+        "thinMarketBody": "Peu d'entreprises similaires sont indexées près de chez vous. C'est une vraie opportunité — positionnez-vous localement avant l'arrivée des concurrents. Relancez l'audit dans une semaine.",
+        "notLocalTitle": "2. Votre activité n'est pas locale par nature",
+        "notLocalBody": "SaaS, logiciels, services en ligne, conseil — ces activités ne se font pas concurrence localement. Vos vrais concurrents sont nationaux ou mondiaux. Nous développons une analyse de concurrents à l'échelle sectorielle pour ces cas (prévu dans une prochaine version). Pour l'instant, les piliers GBP / Avis / Site web / Citations IA s'appliquent toujours — sans le tableau comparatif."
+      }
+    },
+    "recommendations": {
+      "label": "RECOMMANDATIONS",
+      "actionsCount": "{count, plural, one {# action} other {# actions}}",
+      "subtitle": "Chaque élément améliore votre score. Trié par impact.",
+      "whatToDo": "À faire",
+      "openLink": "Ouvrir le lien →",
+      "getHelp": "Obtenir de l'aide étape par étape",
+      "hideHelp": "Masquer l'assistant",
+      "optimizedTitle": "🎉 Vous êtes pleinement optimisé",
+      "optimizedBody": "Aucune recommandation pour l'instant. Relancez l'audit chaque mois pour détecter de nouvelles opportunités.",
+      "difficulty": {
+        "easy": "5–10 min",
+        "medium": "30–60 min",
+        "hard": "Engagement de plusieurs semaines"
+      },
+      "pillars": {
+        "gbp": "GBP",
+        "reviews": "Avis",
+        "website": "Site web",
+        "local_search": "Recherche locale",
+        "ai_citation": "Citations IA"
+      }
+    },
     "nav": {
       "chat": "Tableau de bord",
       "reviews": "Avis",
