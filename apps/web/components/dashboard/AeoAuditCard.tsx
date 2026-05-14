@@ -133,7 +133,6 @@ export default function AeoAuditCard({ businessId, initialAudit, initialRecommen
   const [prevBreakdownState] = useState<Breakdown | null>(prevBreakdown)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [drawerOpen, setDrawerOpen] = useState(false)
 
   async function runAudit() {
     if (!businessId) return
@@ -253,21 +252,20 @@ export default function AeoAuditCard({ businessId, initialAudit, initialRecommen
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="bg-white rounded-2xl border-l-[3px] border-l-[#4f46e5] shadow-sm border border-slate-100 p-4">
-        <div className="flex items-start justify-between mb-2">
-          <span className="text-[10px] font-bold text-[#4f46e5] uppercase tracking-wider">{t('label')}</span>
-          {audit && (
-            <span className="text-[10px] text-slate-400">{new Date(audit.created_at).toLocaleDateString('en-CA')}</span>
-          )}
-        </div>
-
+      <div className="bg-white rounded-2xl border-l-[3px] border-l-[#4f46e5] shadow-sm border border-slate-100 p-5">
         {audit && (
-          <div className="mb-3">
+          <div className="mb-4">
             <p className={`text-4xl font-extrabold ${scoreColor}`}>
               {audit.score}<span className="text-base font-semibold text-slate-400">/100</span>
             </p>
-            <p className={`text-xs font-semibold mt-0.5 ${scoreColor}`}>
+            <p className={`text-sm font-semibold mt-1 ${scoreColor}`}>
               {t(`scoreTier.${scoreTierKey(audit.score)}`)}
+            </p>
+            <p className="text-[11px] text-slate-400 mt-1">
+              {new Date(audit.created_at).toLocaleDateString(
+                locale === 'fr' ? 'fr-CA' : 'en-CA',
+                { month: 'long', day: 'numeric', year: 'numeric' },
+              )}
             </p>
           </div>
         )}
@@ -279,7 +277,7 @@ export default function AeoAuditCard({ businessId, initialAudit, initialRecommen
         )}
 
         {audit && audit.score_breakdown && (
-          <div className="flex flex-col gap-2 mb-3">
+          <div className="flex flex-col gap-3 mb-4">
             {PILLARS.map(p => {
               const delta = prevBreakdownState
                 ? audit.score_breakdown![p.key] - prevBreakdownState[p.key]
@@ -319,19 +317,12 @@ export default function AeoAuditCard({ businessId, initialAudit, initialRecommen
             className="text-xs font-semibold bg-[#4f46e5] text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50">
             {loading ? t('running') : audit ? t('rerunAudit') : t('runAudit')}
           </button>
-          {audit && (
-            <button
-              onClick={() => setDrawerOpen(true)}
-              className="text-xs font-semibold text-[#4f46e5] hover:underline">
-              {t('whyThisScore')}
-            </button>
-          )}
         </div>
 
         <div className="flex items-center gap-3 mt-3 border-t border-slate-50 pt-2">
           <Link
             href={`/${locale}/methodology`}
-            className="text-[10px] text-slate-400 hover:text-[#4f46e5] hover:underline transition-colors">
+            className="text-[11px] text-slate-400 hover:text-[#4f46e5] hover:underline transition-colors">
             {t('howCalculated')}
           </Link>
         </div>
@@ -340,14 +331,6 @@ export default function AeoAuditCard({ businessId, initialAudit, initialRecommen
       {audit && <AISnapshotSection rawResults={audit.raw_results} />}
 
       {audit && <OwnReputationCard />}
-
-      {audit && drawerOpen && (
-        <RawDataDrawer
-          rawResults={audit.raw_results}
-          breakdown={audit.score_breakdown}
-          onClose={() => setDrawerOpen(false)}
-        />
-      )}
     </div>
   )
 }
@@ -521,7 +504,6 @@ function PillarRow({
   const [expanded, setExpanded] = useState(false)
   const pct = max === 0 ? 0 : (points / max) * 100
   const color = pct >= 75 ? 'bg-green-500' : pct >= 40 ? 'bg-amber-400' : 'bg-red-300'
-  const hintColor = pct >= 75 ? 'text-green-600' : pct >= 40 ? 'text-amber-600' : 'text-red-500'
   const deltaLabel = delta === null || delta === 0 ? null : delta > 0 ? `+${delta}` : `${delta}`
   const deltaColor = delta && delta > 0 ? 'text-green-600' : 'text-red-500'
   const hasSignals = (signals?.length ?? 0) > 0
@@ -529,27 +511,27 @@ function PillarRow({
     <div className="flex flex-col">
       <div className="flex items-center gap-2">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-0.5">
-            <p className="text-[11px] font-semibold text-[#1e293b] truncate">{label}</p>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[13px] font-semibold text-[#1e293b] truncate">{label}</p>
             <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
               {deltaLabel && (
-                <span className={`text-[9px] font-bold ${deltaColor}`}>{deltaLabel}</span>
+                <span className={`text-[10px] font-bold ${deltaColor}`}>{deltaLabel}</span>
               )}
-              <p className="text-[10px] text-slate-500">{points}/{max}</p>
+              <p className="text-xs text-slate-500">{points}/{max}</p>
             </div>
           </div>
-          <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
             <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${pct}%` }} />
           </div>
           {hint && (
-            <p className={`text-[10px] mt-1 leading-snug ${hintColor}`}>{hint}</p>
+            <p className="text-xs mt-1.5 leading-snug text-slate-600">{hint}</p>
           )}
           {hasSignals && (
             <button
               type="button"
               onClick={() => setExpanded(e => !e)}
               aria-expanded={expanded}
-              className="text-[10px] text-slate-400 hover:text-[#4f46e5] mt-1 inline-flex items-center gap-1 transition-colors">
+              className="text-[11px] text-slate-400 hover:text-[#4f46e5] mt-1.5 inline-flex items-center gap-1 transition-colors">
               <span aria-hidden="true">{expanded ? '▴' : '▾'}</span>
               {expanded ? t('hideDetails') : t('whatWeChecked')}
             </button>
@@ -576,133 +558,11 @@ function Signal({ label, value }: { label: string; value: string | boolean | num
   const isNegative = value === false
   return (
     <div className="flex items-start justify-between gap-2 py-1.5 border-b border-slate-50 last:border-0">
-      <p className="text-[11px] text-slate-600">{label}</p>
-      <p className={`text-[11px] font-semibold flex-shrink-0 ${isPositive ? 'text-green-600' : isNegative ? 'text-red-500' : 'text-slate-700'}`}>
+      <p className="text-xs text-slate-600">{label}</p>
+      <p className={`text-xs font-semibold flex-shrink-0 ${isPositive ? 'text-green-600' : isNegative ? 'text-red-500' : 'text-slate-700'}`}>
         {displayValue}
       </p>
     </div>
   )
 }
 
-function DrawerSection({ title, pts, max, children }: { title: string; pts: number; max: number; children: React.ReactNode }) {
-  const pct = max === 0 ? 0 : (pts / max) * 100
-  const color = pct >= 75 ? 'text-green-600' : pct >= 40 ? 'text-amber-500' : 'text-red-500'
-  return (
-    <div className="mb-5">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-xs font-extrabold text-[#1e293b]">{title}</h3>
-        <span className={`text-xs font-bold ${color}`}>{pts}/{max}</span>
-      </div>
-      <div className="bg-slate-50 rounded-xl px-3 py-1">
-        {children}
-      </div>
-    </div>
-  )
-}
-
-function RawDataDrawer({
-  rawResults,
-  breakdown,
-  onClose,
-}: {
-  rawResults: RawResults | null
-  breakdown: Breakdown | null
-  onClose: () => void
-}) {
-  const t = useTranslations('dashboard.aeo')
-  const kg = rawResults?.google?.knowledge_graph
-  const lp = rawResults?.google?.local_pack
-  const ws = rawResults?.website
-  const perplexity = rawResults?.perplexity
-  const chatgpt    = rawResults?.chatgpt
-  const aiOverview = rawResults?.google?.ai_overview?.snippet
-
-  return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/30 z-40"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-      {/* Drawer */}
-      <div className="fixed inset-y-0 right-0 w-full max-w-sm bg-white z-50 shadow-2xl flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-          <div>
-            <h2 className="text-sm font-extrabold text-[#1e293b]">{t('drawer.title')}</h2>
-            <p className="text-[10px] text-slate-500">{t('drawer.subtitle')}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-lg leading-none"
-            aria-label="Close">
-            ✕
-          </button>
-        </div>
-
-        {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto px-5 py-4">
-          {!rawResults ? (
-            <p className="text-xs text-slate-500">{t('drawer.noData')}</p>
-          ) : (
-            <>
-              <DrawerSection title={t('pillars.gbp')} pts={breakdown?.gbp ?? 0} max={25}>
-                <Signal label={t('drawer.gbpFound')}    value={kg?.found} />
-                <Signal label={t('drawer.gbpTitle')}    value={kg?.title} />
-                <Signal label={t('drawer.gbpCategory')} value={kg?.type} />
-                <Signal label={t('drawer.rating')}      value={kg?.rating != null ? `${kg.rating}★` : null} />
-                <Signal label={t('drawer.reviewCount')} value={kg?.reviews_count} />
-                <Signal label={t('drawer.gbpWebsite')}  value={kg?.website != null ? kg.website : null} />
-                <Signal label={t('drawer.gbpPhone')}    value={kg?.phone != null ? kg.phone : null} />
-              </DrawerSection>
-
-              <DrawerSection title={t('pillars.reviews')} pts={breakdown?.reviews ?? 0} max={22}>
-                <Signal label={t('drawer.rating')}       value={kg?.rating != null ? `${kg.rating}★` : null} />
-                <Signal label={t('drawer.reviewCount')}  value={kg?.reviews_count} />
-              </DrawerSection>
-
-              <DrawerSection title={t('pillars.website')} pts={breakdown?.website ?? 0} max={20}>
-                <Signal label={t('drawer.websiteReachable')}      value={ws?.reachable} />
-                <Signal label={t('drawer.localBusinessSchema')}   value={ws?.has_local_business_schema} />
-                <Signal label={t('drawer.faqSchema')}             value={ws?.has_faq_schema} />
-              </DrawerSection>
-
-              <DrawerSection title={t('pillars.localSearch')} pts={breakdown?.local_search ?? 0} max={15}>
-                <Signal label={t('drawer.inLocalPack')}  value={lp?.present} />
-                <Signal label={t('drawer.localPackPos')} value={lp?.position != null ? `#${lp.position}` : t('drawer.notInPack')} />
-                <Signal label={t('drawer.inOrganic')}    value={rawResults?.google?.organic?.present} />
-              </DrawerSection>
-
-              <DrawerSection title={t('pillars.aiCitation')} pts={breakdown?.ai_citation ?? 0} max={18}>
-                <Signal label={t('drawer.mentionedChatgpt')} value={chatgpt?.mentioned} />
-                {chatgpt?.snippet && (
-                  <p className="text-[10px] text-slate-500 italic mt-1 mb-2 leading-relaxed">
-                    &quot;{chatgpt.snippet.slice(0, 200)}{chatgpt.snippet.length > 200 ? '…' : ''}&quot;
-                  </p>
-                )}
-                {chatgpt !== undefined && !chatgpt?.mentioned && (
-                  <p className="text-[10px] text-slate-400 mb-2">
-                    {t('drawer.chatgptNote')}
-                  </p>
-                )}
-                <Signal label={t('drawer.mentionedPerplexity')} value={perplexity?.mentioned} />
-                {perplexity?.snippet && (
-                  <p className="text-[10px] text-slate-500 italic mt-1 mb-2 leading-relaxed">
-                    &quot;{perplexity.snippet.slice(0, 200)}{perplexity.snippet.length > 200 ? '…' : ''}&quot;
-                  </p>
-                )}
-                <Signal label={t('drawer.mentionedGoogleAI')} value={rawResults?.google?.ai_overview?.mentioned} />
-                {aiOverview && (
-                  <p className="text-[10px] text-slate-500 italic mt-1 leading-relaxed">
-                    &quot;{aiOverview.slice(0, 200)}{aiOverview.length > 200 ? '…' : ''}&quot;
-                  </p>
-                )}
-              </DrawerSection>
-            </>
-          )}
-        </div>
-      </div>
-    </>
-  )
-}
