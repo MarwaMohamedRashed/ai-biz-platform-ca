@@ -14,6 +14,9 @@ const CA_PROVINCES = [
 
 const TYPES = ['restaurant', 'salon', 'retail', 'plumber', 'cafe', 'other'] as const
 
+const COMPETITOR_SCOPES = ['local', 'country', 'global'] as const
+type CompetitorScope = typeof COMPETITOR_SCOPES[number]
+
 interface Props {
   userId: string
   onComplete: (businessName: string) => void
@@ -38,6 +41,7 @@ export default function StepBusinessInfo({ userId, onComplete }: Props) {
   const [phone, setPhone] = useState('')
   const [imageUrl, setImageUrl] = useState('')
   const [priceRange, setPriceRange] = useState('')
+  const [competitorScope, setCompetitorScope] = useState<CompetitorScope>('local')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -60,6 +64,7 @@ export default function StepBusinessInfo({ userId, onComplete }: Props) {
     phone: phone || null,
     image_url: imageUrl || null,
     price_range: priceRange || null,
+    competitor_scope: competitorScope,
   })
 
   setLoading(false)
@@ -259,6 +264,40 @@ export default function StepBusinessInfo({ userId, onComplete }: Props) {
       </div>
 
       <p className="text-xs text-slate-400 -mt-2">{t('schemaTip')}</p>
+
+      {/* Competitor scope picker — which businesses should we compare you to? */}
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-[#1e293b]">{t('competitorScopeLabel')}</label>
+        <div className="flex flex-col gap-2">
+          {COMPETITOR_SCOPES.map(scope => {
+            const active = competitorScope === scope
+            return (
+              <button
+                key={scope}
+                type="button"
+                onClick={() => setCompetitorScope(scope)}
+                className={`flex items-start gap-3 text-left px-4 py-3 rounded-xl border transition-colors
+                  ${active
+                    ? 'border-[#4f46e5] bg-indigo-50/50'
+                    : 'border-slate-200 bg-white hover:border-[#4f46e5]/60'}`}>
+                <span className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center
+                  ${active ? 'border-[#4f46e5]' : 'border-slate-300'}`}>
+                  {active && <span className="w-2 h-2 rounded-full bg-[#4f46e5]" />}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-semibold ${active ? 'text-[#4f46e5]' : 'text-[#1e293b]'}`}>
+                    {t(`competitorScopes.${scope}.title`)}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {t(`competitorScopes.${scope}.subtitle`)}
+                  </p>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+        <p className="text-xs text-slate-400">{t('competitorScopeHint')}</p>
+      </div>
 
       <button
         type="submit"

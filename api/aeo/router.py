@@ -2430,6 +2430,7 @@ class BusinessProfileRequest(BaseModel):
     image_url: str | None = None
     price_range: str | None = None
     hours: dict | None = None  # {"monday": "09:00-17:00", "tuesday": "closed", ...}
+    competitor_scope: str | None = None  # 'local' | 'country' | 'global'; see migration 020
 
 
 @router.get("/business")
@@ -2453,6 +2454,7 @@ async def get_business_profile(current_user: dict = Depends(get_current_user)):
         "image_url": business.get("image_url"),
         "price_range": business.get("price_range"),
         "hours": business.get("hours"),
+        "competitor_scope": business.get("competitor_scope") or "local",
     }
 
 
@@ -2473,6 +2475,13 @@ async def update_business_profile(
 
     country = request.country or "Canada"
 
+    # Reject unknown competitor_scope values; fall back to existing or 'local'.
+    requested_scope = (request.competitor_scope or "").strip().lower()
+    competitor_scope = (
+        requested_scope if requested_scope in ("local", "country", "global")
+        else (business.get("competitor_scope") or "local")
+    )
+
     supabase_admin.table("businesses").update({
         "name":           name,
         "type":           request.type.strip() if request.type else business.get("type"),
@@ -2487,6 +2496,7 @@ async def update_business_profile(
         "image_url":      _clean_image_url(request.image_url),
         "price_range":    _clean_price_range(request.price_range),
         "hours":          _clean_hours(request.hours),
+        "competitor_scope": competitor_scope,
     }).eq("id", business["id"]).execute()
 
     return {"message": "Business profile updated"}

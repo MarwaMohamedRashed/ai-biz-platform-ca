@@ -210,7 +210,23 @@
         "save": "Save Business Profile",
         "saving": "Saving…",
         "saved": "Profile saved",
-        "errorSave": "Failed to save profile"
+        "errorSave": "Failed to save profile",
+        "competitorScopeLabel": "Who should we compare you to?",
+        "competitorScopeHint": "You can change this anytime in Settings.",
+        "competitorScopes": {
+          "local": {
+            "title": "Local businesses",
+            "subtitle": "Same city only"
+          },
+          "country": {
+            "title": "Across Canada",
+            "subtitle": "Anywhere in your country"
+          },
+          "global": {
+            "title": "Industry-wide",
+            "subtitle": "Worldwide — for SaaS, online services, consulting"
+          }
+        }
       },
       "reviewSettings": "Review Response Settings"
     },
@@ -820,6 +836,22 @@
         "QC": "Quebec",
         "SK": "Saskatchewan",
         "YT": "Yukon"
+      },
+      "competitorScopeLabel": "Who should we compare you to?",
+      "competitorScopeHint": "You can change this anytime in Settings.",
+      "competitorScopes": {
+        "local": {
+          "title": "Local businesses",
+          "subtitle": "Same city only"
+        },
+        "country": {
+          "title": "Across Canada",
+          "subtitle": "Anywhere in your country"
+        },
+        "global": {
+          "title": "Industry-wide",
+          "subtitle": "Worldwide — for SaaS, online services, consulting"
+        }
       }
     },
     "step2": {

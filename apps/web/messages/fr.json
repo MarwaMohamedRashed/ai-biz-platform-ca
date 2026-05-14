@@ -210,7 +210,23 @@
         "save": "Enregistrer le profil",
         "saving": "Enregistrement…",
         "saved": "Profil enregistré",
-        "errorSave": "Échec de l'enregistrement du profil"
+        "errorSave": "Échec de l'enregistrement du profil",
+        "competitorScopeLabel": "À qui devons-nous vous comparer ?",
+        "competitorScopeHint": "Vous pouvez modifier ce choix à tout moment dans les paramètres.",
+        "competitorScopes": {
+          "local": {
+            "title": "Entreprises locales",
+            "subtitle": "Même ville uniquement"
+          },
+          "country": {
+            "title": "À travers le Canada",
+            "subtitle": "Partout dans votre pays"
+          },
+          "global": {
+            "title": "Toute l'industrie",
+            "subtitle": "Mondial — pour SaaS, services en ligne, conseil"
+          }
+        }
       },
       "reviewSettings": "Paramètres de réponse aux avis"
     },
@@ -820,6 +836,22 @@
         "QC": "Québec",
         "SK": "Saskatchewan",
         "YT": "Yukon"
+      },
+      "competitorScopeLabel": "À qui devons-nous vous comparer ?",
+      "competitorScopeHint": "Vous pouvez modifier ce choix à tout moment dans les paramètres.",
+      "competitorScopes": {
+        "local": {
+          "title": "Entreprises locales",
+          "subtitle": "Même ville uniquement"
+        },
+        "country": {
+          "title": "À travers le Canada",
+          "subtitle": "Partout dans votre pays"
+        },
+        "global": {
+          "title": "Toute l'industrie",
+          "subtitle": "Mondial — pour SaaS, services en ligne, conseil"
+        }
       }
     },
     "step2": {

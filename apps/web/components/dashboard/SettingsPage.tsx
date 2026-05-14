@@ -45,6 +45,7 @@ export default function SettingsPage() {
   const [bizImage, setBizImage] = useState('')
   const [bizPriceRange, setBizPriceRange] = useState('')
   const [bizHours, setBizHours] = useState<HoursValue>({})
+  const [bizCompetitorScope, setBizCompetitorScope] = useState<'local' | 'country' | 'global'>('local')
   const [bizSaving, setBizSaving] = useState(false)
   const [bizSaved, setBizSaved] = useState(false)
   const [bizError, setBizError] = useState('')
@@ -85,6 +86,10 @@ export default function SettingsPage() {
         setBizImage(data.image_url ?? '')
         setBizPriceRange(data.price_range ?? '')
         setBizHours(data.hours ?? {})
+        const scope = data.competitor_scope
+        if (scope === 'local' || scope === 'country' || scope === 'global') {
+          setBizCompetitorScope(scope)
+        }
       })
       .catch(() => {/* silently ignore — fields stay blank */})
 
@@ -124,6 +129,7 @@ export default function SettingsPage() {
           image_url: bizImage || null,
           price_range: bizPriceRange || null,
           hours: Object.keys(bizHours).length ? bizHours : null,
+          competitor_scope: bizCompetitorScope,
         }),
       })
       setBizSaved(true)
@@ -280,6 +286,40 @@ export default function SettingsPage() {
             <label className={labelClass}>{t('businessProfile.hoursLabel')}</label>
             <p className="text-[10px] text-slate-400 mb-2">{t('businessProfile.hoursHint')}</p>
             <HoursEditor value={bizHours} onChange={setBizHours} />
+          </div>
+
+          {/* Competitor scope -- who should the audit compare you to? */}
+          <div className="mb-4">
+            <label className={labelClass}>{t('businessProfile.competitorScopeLabel')}</label>
+            <div className="flex flex-col gap-2 mt-1">
+              {(['local', 'country', 'global'] as const).map(scope => {
+                const active = bizCompetitorScope === scope
+                return (
+                  <button
+                    key={scope}
+                    type="button"
+                    onClick={() => setBizCompetitorScope(scope)}
+                    className={`flex items-start gap-3 text-left px-3 py-2.5 rounded-xl border transition-colors
+                      ${active
+                        ? 'border-[#4f46e5] bg-indigo-50/50'
+                        : 'border-slate-200 bg-white hover:border-[#4f46e5]/60'}`}>
+                    <span className={`mt-0.5 w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center
+                      ${active ? 'border-[#4f46e5]' : 'border-slate-300'}`}>
+                      {active && <span className="w-1.5 h-1.5 rounded-full bg-[#4f46e5]" />}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs font-semibold ${active ? 'text-[#4f46e5]' : 'text-[#1e293b]'}`}>
+                        {t(`businessProfile.competitorScopes.${scope}.title`)}
+                      </p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        {t(`businessProfile.competitorScopes.${scope}.subtitle`)}
+                      </p>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-[10px] text-slate-400 mt-1">{t('businessProfile.competitorScopeHint')}</p>
           </div>
         </div>
 
