@@ -155,13 +155,16 @@ export default function AeoAuditCard({ businessId, initialAudit, initialRecommen
       }
       if (!res.ok) throw new Error('Audit failed')
       const data = await res.json()
-      setAudit({
+      const newAudit = {
         score: data.score,
         score_breakdown: data.breakdown,
         raw_results: data.raw_results ?? null,
         created_at: new Date().toISOString(),
-      })
+      }
+      setAudit(newAudit)
       setRecommendations(data.recommendations || [])
+      // Notify AuditReportPrint (print-only sibling) so the PDF always reflects the latest audit
+      window.dispatchEvent(new CustomEvent('leapone:audit-updated', { detail: { audit: newAudit } }))
     } catch {
       setError(t('auditFailed'))
     } finally {

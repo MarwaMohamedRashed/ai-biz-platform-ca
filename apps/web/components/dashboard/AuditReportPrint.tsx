@@ -1,4 +1,6 @@
-import React from 'react'
+'use client'
+
+import React, { useState, useEffect } from 'react'
 
 /**
  * AuditReportPrint — print-only section rendered inside .print-area on the dashboard.
@@ -525,7 +527,18 @@ function Card({ children, accent }: { children: React.ReactNode; accent?: string
 
 // ─── main component ───────────────────────────────────────────────────────────
 
-export default function AuditReportPrint({ audit, businessName, auditDate, reputation, locale }: Props) {
+export default function AuditReportPrint({ audit: initialAudit, businessName, auditDate, reputation, locale }: Props) {
+  const [audit, setCurrentAudit] = useState<Audit>(initialAudit)
+
+  useEffect(() => {
+    function handleAuditUpdated(e: Event) {
+      const detail = (e as CustomEvent<{ audit: Audit }>).detail
+      if (detail?.audit) setCurrentAudit(detail.audit)
+    }
+    window.addEventListener('leapone:audit-updated', handleAuditUpdated)
+    return () => window.removeEventListener('leapone:audit-updated', handleAuditUpdated)
+  }, [])
+
   const T = REPORT_STRINGS[locale === 'fr' ? 'fr' : 'en'] as typeof REPORT_STRINGS['en']
   const bd = audit.score_breakdown
   const rr = audit.raw_results
