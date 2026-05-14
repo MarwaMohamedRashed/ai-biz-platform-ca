@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations, useLocale } from 'next-intl'
+
 interface AuditPoint {
   score: number
   created_at: string
@@ -17,10 +19,13 @@ const PAD_TOP = 18
 const PAD_BOTTOM = 32
 
 export default function ScoreHistoryChart({ history }: Props) {
+  const t = useTranslations('dashboard.scoreHistory')
+  const locale = useLocale()
+
   if (history.length < 2) {
     return (
       <p className="text-[10px] text-slate-400 italic px-5 py-3">
-        Run at least 2 audits to see your score trend.
+        {t('runMore')}
       </p>
     )
   }
@@ -43,14 +48,14 @@ export default function ScoreHistoryChart({ history }: Props) {
   const prevScore = points[points.length - 2].score
   const delta = latestScore - prevScore
   const deltaColor = delta > 0 ? 'text-green-600' : delta < 0 ? 'text-red-500' : 'text-slate-400'
-  const deltaLabel = delta > 0 ? `+${delta}` : `${delta}`
+  const deltaLabel = delta > 0 ? t('vsPrev', { delta: `+${delta}` }) : delta < 0 ? t('vsPrevNeg', { delta }) : t('noChange')
 
   return (
     <div className="px-5 py-4 border-b border-slate-100">
       <div className="flex items-center justify-between mb-3">
-        <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold">Score history</p>
+        <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold">{t('label')}</p>
         <span className={`text-xs font-semibold ${deltaColor}`}>
-          {delta !== 0 ? `${deltaLabel} vs prev` : 'No change'}
+          {deltaLabel}
         </span>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto">
@@ -102,16 +107,16 @@ export default function ScoreHistoryChart({ history }: Props) {
 
         {/* X-axis date labels — first and last only */}
         <text x={toX(0)} y={H - 6} textAnchor="middle" fontSize="11" fill="#94a3b8">
-          {formatDate(points[0].created_at)}
+          {formatDate(points[0].created_at, locale)}
         </text>
         <text x={toX(points.length - 1)} y={H - 6} textAnchor="middle" fontSize="11" fill="#94a3b8">
-          {formatDate(points[points.length - 1].created_at)}
+          {formatDate(points[points.length - 1].created_at, locale)}
         </text>
       </svg>
     </div>
   )
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })
+function formatDate(iso: string, locale: string) {
+  return new Date(iso).toLocaleDateString(locale, { month: 'short', day: 'numeric' })
 }

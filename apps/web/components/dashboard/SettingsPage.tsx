@@ -314,7 +314,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ── Review response settings ─────────────────────────────────────── */}
-      <form onSubmit={handleRevSave} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 mb-6">
+      <form onSubmit={handleRevSave} className="hidden bg-white rounded-2xl border border-slate-100 shadow-sm p-5 mb-6">
         <div className="mb-4">
           <h2 className="text-sm font-extrabold text-[#1e293b]">{t('reviewSettings')}</h2>
         </div>

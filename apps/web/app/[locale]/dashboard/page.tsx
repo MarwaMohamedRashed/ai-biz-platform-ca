@@ -59,7 +59,7 @@ export default async function DashboardPage() {
 
   // Fetch own-reputation server-side so AuditReportPrint can include it in the PDF
   let ownReputation: {
-    strengths: string[]; weaknesses: string[]; summary: string
+    strengths: unknown[]; weaknesses: unknown[]; summary: string
     review_count: number; avg_rating: number | null
   } | null = null
   // Fetch translated recommendations server-side when locale != 'en' so the

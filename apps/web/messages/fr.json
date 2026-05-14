@@ -247,6 +247,24 @@
         "localSearch": "Présence en recherche locale",
         "aiCitation": "Citations IA"
       },
+      "pillarHints": {
+        "gbpNotFound": "R\u00e9clamez votre fiche Google pour gagner en visibilit\u00e9 locale.",
+        "gbpIncomplete": "Il manque le t\u00e9l\u00e9phone ou le site web — compl\u00e9tez votre fiche.",
+        "gbpGood": "Votre fiche Google Business est compl\u00e8te.",
+        "reviewsLow": "Seulement {count} avis Google — plus d\u2019avis am\u00e9liorent votre classement IA.",
+        "reviewsRating": "Note\u00a0: {rating}\u2605 — visez 4,5+ pour appara\u00eetre dans plus de r\u00e9ponses IA.",
+        "reviewsGood": "Bon nombre d\u2019avis et bonne note.",
+        "websiteUnreachable": "Votre site \u00e9tait inaccessible pendant l\u2019audit — v\u00e9rifiez l\u2019h\u00e9bergement.",
+        "websiteNoSchema": "Ajoutez un sch\u00e9ma LocalBusiness pour que les outils IA vous identifient.",
+        "websiteNoFaq": "Aucun sch\u00e9ma FAQ — ajoutez-en un pour \u00eatre cit\u00e9 par les IA.",
+        "websiteGood": "Les signaux de site web sont solides.",
+        "localNotInPack": "Absent du top\u00a03 local Google — obtenez plus d\u2019avis et optimisez votre fiche.",
+        "localNotOrganic": "Pas de classement organique pour vos principales requ\u00eates.",
+        "localGood": "Vous apparaissez dans les r\u00e9sultats de recherche locale.",
+        "aiNone": "Aucun des grands outils IA ne vous mentionne encore.",
+        "aiSome": "{count} moteur(s) IA sur 3 vous mentionnent.",
+        "aiAll": "Tous les grands outils IA mentionnent votre entreprise."
+      },
       "drawer": {
         "title": "Pourquoi ce score ?",
         "subtitle": "Signaux bruts du dernier audit",
@@ -269,6 +287,16 @@
         "chatgptNote": "Les réponses de ChatGPT proviennent de données d'entraînement — les améliorations apparaissent lors des prochaines mises à jour du modèle (6 à 12 mois).",
         "mentionedPerplexity": "Mentionné par Perplexity",
         "mentionedGoogleAI": "Mentionné dans Google AI Overview"
+      },
+      "aiSnapshot": {
+        "label": "Ce que les clients voient dans la recherche IA",
+        "subtitle": "Réponses IA en direct lorsqu'un client cherche votre type d'entreprise dans votre ville.",
+        "youAppear": "✓ Vous apparaissez",
+        "notMentioned": "Non mentionné",
+        "noAnswer": "Aucune réponse trouvée pour ce moteur.",
+        "queryLabel": "Question posée",
+        "competitorSingular": "1 concurrent nommé ci-dessus — pas vous.",
+        "competitorPlural": "{count} concurrents nommés ci-dessus — vous n\u2019en faites pas partie."
       }
     },
     "scoreHistory": {
@@ -278,6 +306,13 @@
       "vsPrevNeg": "{delta} par rapport au préc.",
       "noChange": "Aucun changement"
     },
+    "actionPlan": {
+      "pageTitle": "Plan d'action",
+      "subtitle": "Corrections priorisées pour améliorer votre score AEO et rendre votre entreprise visible dans la recherche IA.",
+      "noAuditTitle": "Aucun résultat d'audit",
+      "noAuditBody": "Lancez un audit AEO depuis le Tableau de bord et votre plan d'action s'affichera ici.",
+      "goRunAudit": "Aller au Tableau de bord →"
+    },
     "ownReputation": {
       "title": "Votre réputation",
       "reviewsMeta": "{count} {reviews} Google · 3 derniers mois",
@@ -285,7 +320,9 @@
       "reviewPlural": "avis",
       "viaGoogle": "via Google Maps",
       "strengths": "✅ Ce que les clients apprécient",
-      "weaknesses": "⚠️ Ce qui nécessite de l'attention"
+      "weaknesses": "⚠️ Ce qui nécessite de l'attention",
+      "nameMismatchTitle": "Données de réputation non disponibles",
+      "nameMismatchBody": "Nous n'avons pas pu associer votre entreprise sur Google Maps. Cela signifie généralement que le nom dans votre profil ne correspond pas exactement à votre fiche Google. Vérifiez vos Paramètres et assurez-vous que le nom correspond précisément à votre Profil d'entreprise Google."
     },
     "content": {
       "pageTitle": "Générateur de contenu IA",
@@ -465,8 +502,8 @@
         "local_search": "Local",
         "ai_citation": "IA"
       },
-      "insights": {
-        "title": "Faiblesses des concurrents — Votre opportunité",
+      "insights": {        "strengthsTitle": "Ce que font bien les concurrents",
+        "strengthsSubtitle": "Ce que les clients louent régulièrement chez vos concurrents — la barre que vous devez atteindre ou dépasser.",        "title": "Faiblesses des concurrents — Votre opportunité",
         "analysed": "Analyse de {reviews} avis clients sur {count} {competitors}.",
         "analysedCompetitor": "concurrent",
         "analysedCompetitors": "concurrents",
@@ -532,6 +569,7 @@
       "settings": "Paramètres",
       "content": "Contenu",
       "competitors": "Concurrents",
+      "actionPlan": "Plan d'action",
       "plan": "Forfait & facturation"
     },
     "planStatus": {

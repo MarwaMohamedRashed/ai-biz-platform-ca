@@ -222,6 +222,7 @@
       "settings": "Settings",
       "content": "Content",
       "competitors": "Competitors",
+      "actionPlan": "Action Plan",
       "plan": "Plan & Billing"
     },
     "support": {
@@ -257,6 +258,24 @@
         "localSearch": "Local Search Presence",
         "aiCitation": "AI Citations"
       },
+      "pillarHints": {
+        "gbpNotFound": "Claim your Google Business Profile to unlock local visibility.",
+        "gbpIncomplete": "Profile is missing phone or website — complete it in Google Business.",
+        "gbpGood": "Your Google Business Profile looks complete.",
+        "reviewsLow": "Only {count} Google reviews — more reviews improve AI rankings.",
+        "reviewsRating": "Rating: {rating}\u2605 — aim for 4.5+ to appear in more AI answers.",
+        "reviewsGood": "Strong review count and rating.",
+        "websiteUnreachable": "Your website wasn\u2019t reachable during the audit — check hosting.",
+        "websiteNoSchema": "Add LocalBusiness schema markup to help AI tools identify you.",
+        "websiteNoFaq": "No FAQ schema found — add one to boost AI citation chances.",
+        "websiteGood": "Website signals look solid.",
+        "localNotInPack": "Not in Google\u2019s local 3-pack — get more reviews and optimize your profile.",
+        "localNotOrganic": "Not ranking organically for your main search queries.",
+        "localGood": "Appearing in local search results.",
+        "aiNone": "None of the major AI tools mention you yet.",
+        "aiSome": "{count} of 3 AI engines mention you.",
+        "aiAll": "All major AI engines mention your business."
+      },
       "drawer": {
         "title": "Why this score?",
         "subtitle": "Raw signals from the last audit",
@@ -279,6 +298,16 @@
         "chatgptNote": "ChatGPT answers from training data — improvements appear in future model updates (6–12 months).",
         "mentionedPerplexity": "Mentioned by Perplexity",
         "mentionedGoogleAI": "Mentioned in Google AI Overview"
+      },
+      "aiSnapshot": {
+        "label": "What Customers See in AI Search",
+        "subtitle": "Live AI answers when someone searches for your business category in your city.",
+        "youAppear": "✓ You appear",
+        "notMentioned": "Not mentioned",
+        "noAnswer": "No answer found for this engine.",
+        "queryLabel": "Query asked",
+        "competitorSingular": "1 competitor named above — you weren\u2019t.",
+        "competitorPlural": "{count} competitors named above — you weren\u2019t one of them."
       }
     },
     "scoreHistory": {
@@ -288,6 +317,13 @@
       "vsPrevNeg": "{delta} vs prev",
       "noChange": "No change"
     },
+    "actionPlan": {
+      "pageTitle": "Action Plan",
+      "subtitle": "Prioritized fixes that will raise your AEO score and get your business found in AI search.",
+      "noAuditTitle": "No audit results yet",
+      "noAuditBody": "Run an AEO audit from the Dashboard and your action plan will appear here.",
+      "goRunAudit": "Go to Dashboard →"
+    },
     "ownReputation": {
       "title": "Your Reputation",
       "reviewsMeta": "{count} Google {reviews} · last 3 months",
@@ -295,7 +331,9 @@
       "reviewPlural": "reviews",
       "viaGoogle": "via Google Maps",
       "strengths": "✅ What customers love",
-      "weaknesses": "⚠️ What needs attention"
+      "weaknesses": "\u26a0\ufe0f What needs attention",
+      "nameMismatchTitle": "Reputation data unavailable",
+      "nameMismatchBody": "We couldn\u2019t match your business on Google Maps. This usually means the business name in your profile doesn\u2019t match your Google listing exactly. Check your Settings and make sure the name matches your Google Business Profile precisely."
     },
     "content": {
       "pageTitle": "AI Content Generator",

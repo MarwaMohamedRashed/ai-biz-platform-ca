@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Header, Query
 from pydantic import BaseModel
 from core.ai_engine import ai_engine
 from core.auth import get_current_user
@@ -87,21 +87,50 @@ COUNTRY_TO_GL: dict[str, str] = {
 }
 
 
+# ISO 2-letter country codes → gl (handles databases that store "CA" instead of "Canada")
+_COUNTRY_ISO_TO_GL: dict[str, str] = {
+    "CA": "ca", "US": "us", "GB": "gb", "UK": "gb", "AU": "au",
+    "FR": "fr", "DE": "de", "ES": "es", "IT": "it", "NL": "nl",
+    "BE": "be", "CH": "ch", "NZ": "nz", "IE": "ie", "PT": "pt",
+    "MX": "mx", "BR": "br", "IN": "in", "JP": "jp", "KR": "kr",
+    "SG": "sg", "ZA": "za",
+}
+
+# Canadian province/territory codes — any of these implies gl="ca"
+_CA_PROVINCE_CODES: frozenset[str] = frozenset(
+    {"AB", "BC", "MB", "NB", "NL", "NS", "NT", "NU", "ON", "PE", "QC", "SK", "YT"}
+)
+
+
 def country_to_gl(country: str | None) -> str | None:
-    """Maps a country name to a SerpApi `gl` code. Returns None if unknown — caller
-    should omit the gl param so Google can fall back to its own location signals."""
+    """Maps a country name or ISO-2 code to a SerpApi `gl` code.
+    Returns None if unknown — caller should omit the gl param."""
     if not country:
         return None
-    return COUNTRY_TO_GL.get(country.strip())
+    c = country.strip()
+    return COUNTRY_TO_GL.get(c) or _COUNTRY_ISO_TO_GL.get(c.upper())
+
+
+def province_to_gl(province: str | None) -> str | None:
+    """Infer gl from province abbreviation when country field is absent or unrecognised.
+    Currently handles Canadian provinces (→ 'ca'). Returns None if unclear."""
+    if not province:
+        return None
+    if province.strip().upper() in _CA_PROVINCE_CODES:
+        return "ca"
+    return None
 
 
 # Maps a gl code to regex patterns that strongly indicate that country in a SerpApi
 # address string. Word-boundaries (\b) prevent false positives like "uk" matching
 # inside "Lukas Avenue". Every gl code in COUNTRY_TO_GL must have an entry here.
 COUNTRY_ADDRESS_MARKERS: dict[str, list[str]] = {
-    "ca": [r"\bcanada\b"],
-    "us": [r"\bunited states\b", r"\busa\b", r"\bu\.s\.a?\.?\b"],
-    "gb": [r"\bunited kingdom\b", r"\bu\.?k\.?\b", r"\bengland\b", r"\bscotland\b", r"\bwales\b"],
+    "ca": [r"\bcanada\b", r"\b[A-Z]\d[A-Z][\s\-]?\d[A-Z]\d\b"],  # Canadian postal: A1A 1A1
+    "us": [r"\bunited states\b", r"\busa\b", r"\bu\.s\.a?\.?\b",
+           r"\b[A-Z]{2}\s+\d{5}(?:-\d{4})?\b"],  # US state + ZIP: "NJ 08060", "WA 98101-1234"
+    "gb": [r"\bunited kingdom\b", r"\bu\.?k\.?\b", r"\bengland\b", r"\bscotland\b", r"\bwales\b",
+           r"\bmilton keynes\b", r"\bbirmingham\b uk", r"\bsouth london\b", r"\bnorth london\b",
+           r"\b[A-Z]{1,2}\d{1,2}[A-Z]?\s\d[A-Z]{2}\b"],  # UK postal: MK2 2EE, SW1A 1AA
     "au": [r"\baustralia\b"],
     "fr": [r"\bfrance\b"],
     "de": [r"\bgermany\b", r"\bdeutschland\b"],
@@ -135,8 +164,11 @@ def address_country_gl(address: str | None) -> str | None:
         return None
     a = address.lower()
     for gl, patterns in COUNTRY_ADDRESS_MARKERS.items():
-        if any(re.search(p, a) for p in patterns):
-            return gl
+        for p in patterns:
+            # Postal code patterns use uppercase [A-Z] — match against original address.
+            # All other text patterns match against lowercased address.
+            if re.search(p, address if "[A-Z]" in p else a):
+                return gl
     return None
 
 # Maps common province/state abbreviations to full names recognised by SerpApi's geocoder.
@@ -313,10 +345,13 @@ async def _perplexity_one(business_name: str, query: str, city: str) -> dict:
         data = response.json()
 
     answer = data["choices"][0]["message"]["content"]
+    # Perplexity returns a citations list alongside the answer — capture it so callers
+    # can resolve [1][2][3] references to actual platform names (Yellow Pages, Yelp, etc.)
+    citations: list[str] = data.get("citations") or []
     mentioned = extract_search_name(business_name, city).lower() in answer.lower()
     snippet = answer[:500] if mentioned else None
     print(f"[AEO] Perplexity '{query}' → mentioned={mentioned}")
-    return {"mentioned": mentioned, "snippet": snippet, "answer": answer[:2000], "query": query}
+    return {"mentioned": mentioned, "snippet": snippet, "answer": answer[:2000], "query": query, "citations": citations}
 
 
 async def run_perplexity_multi(
@@ -619,7 +654,7 @@ async def _google_one(
         "location": city,
         "hl": "en",
     }
-    gl = country_to_gl(country)
+    gl = country_to_gl(country) or province_to_gl(province)
     if gl:
         params["gl"] = gl
     async with httpx.AsyncClient() as client:
@@ -747,22 +782,28 @@ async def run_google_multi(
     #  address matches that country (or whose country cannot be determined, which
     #  is common for domestic SerpApi results that omit the country name).
     #  If we have no `gl` for the user (unsupported country), no filtering — all kept.
-    user_gl = country_to_gl(country)
+    user_gl = country_to_gl(country) or province_to_gl(province)
     if user_gl:
         same_country: list[dict] = []
         cross_border: list[dict] = []
         for c in deduped:
-            cgl = address_country_gl(c.get("address"))
+            # Check address first; if that's unrecognisable (e.g. hours shown as address),
+            # fall back to checking the business name, which often includes the city
+            # (e.g. "Blackberry Clinic Milton Keynes").
+            candidate = (c.get("address") or "") + " " + (c.get("name") or "")
+            cgl = address_country_gl(candidate)
             if cgl is None or cgl == user_gl:
                 same_country.append(c)
             else:
                 cross_border.append(c)
-        if len(same_country) >= 3:
+        if same_country:
+            # Prefer same-country competitors. Only fall back to cross-border if
+            # there are zero same-country results (truly thin local market).
             competitors_data = same_country[:3]
         else:
-            # Not enough same-country competitors — pad with cross-border rather
-            # than showing a shorter list. Cross-border is still better than nothing.
-            competitors_data = (same_country + cross_border)[:3]
+            # No same-country competitors at all — use cross-border so the section
+            # isn't empty. This is a genuinely thin market, not a geo-leak.
+            competitors_data = cross_border[:3]
         logger.info(f"[AEO][COMP] {len(same_country)} same-country, {len(cross_border)} cross-border → showing {len(competitors_data)} (user_gl={user_gl})")
     else:
         competitors_data = deduped[:3]
@@ -1551,6 +1592,110 @@ async def _resolve_maps_place_id(name: str, city: str | None, country: str | Non
         return None
 
 
+async def _fetch_competitor_perplexity(name: str, city: str) -> str:
+    """Ask Perplexity for multi-source complaint signals about a competitor.
+    Returns the answer text (up to 2000 chars) or '' on failure."""
+    if not PERPLEXITY_API_KEY:
+        return ""
+    query = (
+        f"What complaints, negative reviews, or recurring problems do customers report about "
+        f"{name} in {city}? Search across Google, Yelp, BBB, RateMDs, TrustedPros, HomeStars, "
+        f"and any local review directories. Focus on: service quality issues, billing disputes, "
+        f"wait times, staff complaints, or unresolved problems. Be specific and cite your sources."
+    )
+    try:
+        result = await _perplexity_one(name, query, city)
+        return result.get("answer", "")
+    except Exception as e:
+        logger.warning(f"[AEO][W2] Perplexity weakness fetch failed for '{name}': {e}")
+        return ""
+
+
+async def _fetch_own_perplexity_reputation(business_name: str, city: str, province: str | None = None, country: str | None = None) -> str:
+    """Ask Perplexity what customers say about this business across all platforms.
+    Used to supplement Google Maps reviews with Yelp, BBB, RateMDs, etc. signals.
+    Returns the answer text (up to 2000 chars) or '' on failure."""
+    if not PERPLEXITY_API_KEY:
+        return ""
+
+    # Expand Canadian province abbreviations so Perplexity doesn't mistake
+    # "Burlington, ON" for Burlington, NC or "Milton, ON" for a US city.
+    CA_PROVINCES = {
+        "AB": "Alberta", "BC": "British Columbia", "MB": "Manitoba",
+        "NB": "New Brunswick", "NL": "Newfoundland and Labrador",
+        "NS": "Nova Scotia", "NT": "Northwest Territories", "NU": "Nunavut",
+        "ON": "Ontario", "PE": "Prince Edward Island", "QC": "Quebec",
+        "SK": "Saskatchewan", "YT": "Yukon",
+    }
+    province_full = CA_PROVINCES.get((province or "").upper(), province) if province else None
+    is_canada = (
+        country in ("CA", "Canada", "ca")
+        or (province or "").upper() in CA_PROVINCES
+        or (province_full or "").lower() in {v.lower() for v in CA_PROVINCES.values()}
+    )
+    if province_full:
+        location = f"{city}, {province_full}, Canada" if is_canada else f"{city}, {province_full}"
+    else:
+        location = f"{city}, Canada" if is_canada else city
+
+    query = (
+        f"What do customers say about {business_name} in {location}? "
+        f"Search across Google, Yelp, BBB, RateMDs, TrustedPros, HomeStars, and any local directories. "
+        f"What are they consistently praised for? What complaints or problems appear repeatedly? "
+        f"Be specific and cite your sources."
+    )
+    for attempt in range(2):
+        try:
+            result = await _perplexity_one(business_name, query, city)
+            answer = result.get("answer", "")
+            citations = result.get("citations") or []
+            # Append a numbered source map so the LLM can resolve [1][2][3] references
+            # to actual platform names (e.g. "[3] yellowpages.ca → Yellow Pages").
+            if citations:
+                source_lines = []
+                for i, url in enumerate(citations, 1):
+                    # Map domain to a friendly platform name where possible
+                    domain = re.sub(r"^https?://", "", url).split("/")[0].lstrip("www.")
+                    friendly = next(
+                        (name for d, name in {
+                            "yellowpages.ca": "Yellow Pages", "yellowpages.com": "Yellow Pages",
+                            "yelp.ca": "Yelp", "yelp.com": "Yelp",
+                            "bbb.org": "BBB",
+                            "homestars.com": "HomeStars",
+                            "trustedpros.ca": "TrustedPros",
+                            "ratemds.com": "RateMDs",
+                            "tripadvisor.com": "TripAdvisor", "tripadvisor.ca": "TripAdvisor",
+                            "facebook.com": "Facebook",
+                            "reddit.com": "Reddit",
+                            "birdeye.com": "Birdeye", "reviews.birdeye.com": "Birdeye",
+                            "fresha.com": "Fresha",
+                            "zocdoc.com": "Zocdoc",
+                            "opencare.com": "Opencare",
+                            "healthgrades.com": "Healthgrades",
+                        }.items() if d in domain),
+                        domain,
+                    )
+                    source_lines.append(f"[{i}] {friendly}")
+                # Put the citation map at the START so it is never lost by truncation
+                citation_header = "Citation sources:\n" + "\n".join(source_lines) + "\n\n"
+                answer = citation_header + answer
+            return answer
+        except httpx.HTTPStatusError as e:
+            body = e.response.text[:300] if e.response else "(no body)"
+            logger.warning(
+                f"[AEO][OWN] Perplexity HTTP {e.response.status_code} for '{business_name}' "
+                f"(attempt {attempt+1}): {body}"
+            )
+            if e.response.status_code == 429 and attempt == 0:
+                await asyncio.sleep(3)  # back off and retry once on rate-limit
+                continue
+            return ""
+        except Exception as e:
+            logger.warning(f"[AEO][OWN] Perplexity reputation fetch failed for '{business_name}' (attempt {attempt+1}): {e}")
+            return ""
+    return ""
+
+
 async def _fetch_competitor_reviews(name: str, city: str | None, country: str | None = None) -> list[dict]:
     """Resolve the ChIJ-format place_id for a competitor then fetch their recent reviews
     via SerpApi google_maps_reviews. Returns [] on any error."""
@@ -1602,11 +1747,16 @@ async def _analyze_competitor_weaknesses(scored_competitors: list[dict], country
         logger.debug("[AEO][W2] No competitors — skipping weak-point analysis")
         return {}
 
-    # Fetch reviews for all competitors in parallel
-    # _fetch_competitor_reviews does a google_maps lookup first to resolve the ChIJ place_id
-    review_results = await asyncio.gather(
-        *[_fetch_competitor_reviews(c["name"], c.get("city"), country) for c in competitors_with_ids],
-        return_exceptions=True,
+    # Fetch Google Maps reviews AND Perplexity multi-source insights in parallel
+    review_results, perplexity_raw = await asyncio.gather(
+        asyncio.gather(
+            *[_fetch_competitor_reviews(c["name"], c.get("city"), country) for c in competitors_with_ids],
+            return_exceptions=True,
+        ),
+        asyncio.gather(
+            *[_fetch_competitor_perplexity(c["name"], c.get("city") or "") for c in competitors_with_ids],
+            return_exceptions=True,
+        ),
     )
 
     all_reviews: list[dict] = []
@@ -1621,35 +1771,52 @@ async def _analyze_competitor_weaknesses(scored_competitors: list[dict], country
         if comp_rating:
             ratings.append(float(comp_rating))
 
-    if not all_reviews:
-        logger.debug("[AEO][W2] No competitor reviews fetched — skipping analysis")
-        return {}
+    # Collect valid Perplexity insights (non-empty, non-exception strings)
+    perplexity_insights: list[tuple[str, str]] = []
+    for comp, insight in zip(competitors_with_ids, perplexity_raw):
+        if isinstance(insight, str) and insight.strip():
+            perplexity_insights.append((comp["name"], insight.strip()))
 
     avg_rating = round(sum(ratings) / len(ratings), 1) if ratings else None
 
-    # Build a concise prompt — send snippets only, cap at 40 reviews to control tokens
-    snippets_for_prompt = all_reviews[:40]
-    review_text = "\n".join(
-        f"- ({r['rating']}★) {r['snippet']}" for r in snippets_for_prompt if r.get("snippet")
-    )
+    if not all_reviews and not perplexity_insights:
+        logger.debug("[AEO][W2] No competitor reviews or Perplexity insights — skipping analysis")
+        return {}
 
-    prompt = f"""You are analyzing customer reviews of competitor businesses in the same local category.
-Identify the top complaint themes (things customers are unhappy about).
-For each theme, estimate how many reviews mention it.
+    # Build prompt sections
+    review_section = ""
+    if all_reviews:
+        snippets_for_prompt = all_reviews[:40]
+        review_text = "\n".join(
+            f"- ({r['rating']}★) {r['snippet']}" for r in snippets_for_prompt if r.get("snippet")
+        )
+        review_section = f"\nGoogle Reviews:\n{review_text}"
 
-Reviews:
-{review_text}
+    perplexity_section = ""
+    if perplexity_insights:
+        insight_blocks = "\n\n".join(
+            f"About {name}:\n{insight[:800]}" for name, insight in perplexity_insights
+        )
+        perplexity_section = f"\n\nMulti-source web insights (Yelp, BBB, RateMDs, etc.):\n{insight_blocks}"
+
+    prompt = f"""You are analyzing competitor businesses in the same local service category.
+Identify what customers consistently praise (strengths) and what they complain about (weaknesses).
+For each theme, estimate how many sources or reviews mention it.
+{review_section}{perplexity_section}
 
 Respond ONLY with a JSON object in this exact format (no markdown, no explanation):
 {{
-  "themes": [
+  "strengths": [
+    {{"theme": "Friendly and knowledgeable staff", "count": 12, "example": "staff took time to explain everything"}}
+  ],
+  "weaknesses": [
     {{"theme": "Long wait times", "count": 8, "example": "had to wait 45 minutes past my appointment"}},
     {{"theme": "Parking difficulties", "count": 5, "example": "no parking available on site"}}
   ],
   "opportunity_summary": "Most competitors struggle with [X] — you can stand out by [Y]."
 }}
 
-Return at most 5 themes. Only include genuine complaints with 2+ mentions. If there are no clear complaints, return empty themes array."""
+Return at most 3 strengths and at most 4 weaknesses. Only include genuine patterns with 2+ mentions."""
 
     try:
         raw = await content_llm.generate(
@@ -1660,15 +1827,22 @@ Return at most 5 themes. Only include genuine complaints with 2+ mentions. If th
         # Strip markdown code fences if present
         cleaned = re.sub(r'^```(?:json)?\s*|\s*```$', '', raw.strip(), flags=re.MULTILINE).strip()
         parsed = json.loads(cleaned)
-        themes = parsed.get("themes", [])
+        strengths = parsed.get("strengths", [])
+        themes = parsed.get("weaknesses", parsed.get("themes", []))  # compat: old prompt used "themes"
         opportunity_summary = parsed.get("opportunity_summary", "")
-        logger.info(f"[AEO][W2] Analysed {competitors_analysed} competitors, {len(all_reviews)} reviews → {len(themes)} themes")
+        logger.info(
+            f"[AEO][W2] Analysed {competitors_analysed} competitors, "
+            f"{len(all_reviews)} reviews, {len(perplexity_insights)} Perplexity insights "
+            f"→ {len(strengths)} strengths, {len(themes)} weaknesses"
+        )
         return {
+            "strengths": strengths,
             "themes": themes,
             "avg_competitor_rating": avg_rating,
             "opportunity_summary": opportunity_summary,
             "competitors_analysed": competitors_analysed,
             "reviews_analysed": len(all_reviews),
+            "perplexity_supplemented": len(perplexity_insights) > 0,
         }
     except Exception as e:
         logger.warning(f"[AEO][W2] AI analysis failed: {e}")
@@ -1746,36 +1920,68 @@ async def _fetch_own_reviews(
     return collected
 
 
-async def _analyze_own_reputation(reviews: list[dict], business_name: str) -> dict:
-    """AI analysis of own business reviews — extracts strengths and weaknesses as short phrases."""
+async def _analyze_own_reputation(reviews: list[dict], business_name: str, perplexity_insight: str = "") -> dict:
+    """AI analysis of own business reviews — extracts strengths and weaknesses with examples and sources."""
     review_text = "\n".join(
         f"- ({r['rating']}★) {r['snippet']}" for r in reviews[:60] if r.get("snippet")
     )
-    prompt = f"""You are analyzing customer reviews from the last 3 months for {business_name}.
+    has_perplexity = bool(perplexity_insight.strip())
+    review_section = f"\nGoogle Reviews:\n{review_text}" if review_text else ""
+    perplexity_section = f"\n\nMulti-source web signals (Yelp, Yellow Pages, BBB, and other directories):\n{perplexity_insight[:2500]}" if has_perplexity else ""
+    source_note = (
+        'For signals from Google Reviews use "source": "Google". '
+        'For signals from the multi-source section, use the ACTUAL platform name mentioned in that text '
+        '(e.g. "Yellow Pages", "Yelp", "BBB", "RateMDs", "HomeStars") — not just "Web". '
+        'If the platform is unclear, use "Web".'
+    ) if has_perplexity else 'Use "source": "Google" for all items.'
+    prompt = f"""You are analyzing customer feedback for {business_name}.
 Identify the main strengths (things customers consistently praise) and weaknesses (recurring complaints).
+{review_section}{perplexity_section}
 
-Reviews:
-{review_text}
+For each theme, include:
+- "theme": a short label (4-7 words)
+- "detail": a plain-English sentence explaining WHAT customers actually experienced (be specific — avoid vague words like "atmosphere")
+- "example": a short verbatim-style quote or paraphrase from an actual review (max 15 words)
+- "source": where this signal was found. {source_note}
 
 Respond ONLY with a JSON object in this exact format (no markdown, no explanation):
 {{
-  "strengths": ["Fast and friendly service", "Clean facility"],
-  "weaknesses": ["Long wait times", "Difficult parking"],
-  "summary": "Customers love the friendly staff, but many mention wait times as a pain point."
+  "strengths": [
+    {{"theme": "Fast and friendly service", "detail": "Staff greeted patients immediately and completed appointments ahead of schedule.", "example": "In and out in 30 minutes — incredibly efficient", "source": "Google"}},
+    {{"theme": "Personal attention to each patient", "detail": "The physiotherapist spent enough time to understand and diagnose each patient's problem.", "example": "Gave personal attention and understood my issue", "source": "Yellow Pages"}}
+  ],
+  "weaknesses": [
+    {{"theme": "Long wait times", "detail": "Patients report waiting 20-40 minutes past their scheduled appointment time.", "example": "Waited 40 min past my appointment", "source": "Google"}}
+  ],
+  "summary": "Customers love the friendly staff and personal care, but some mention wait times as a pain point."
 }}
 
-Return 2-5 strengths and 0-3 weaknesses as short phrases. Only include patterns mentioned by multiple reviewers."""
+Return 2-5 strengths and 0-3 weaknesses. For strengths, only include patterns with 2+ mentions. For weaknesses, include any specific complaint that appears even once — a single negative experience is worth flagging to the business owner. Do not fabricate weaknesses if none appear in the data."""
+    # Log a sample of the reviews being fed to the LLM so we can diagnose gaps
+    low_star = [r for r in reviews if r.get("rating") and r["rating"] <= 3]
+    logger.info(
+        f"[AEO][OWN] Sending {len(reviews)} reviews to LLM ({len(low_star)} ≤3★), "
+        f"perplexity={'yes' if has_perplexity else 'no'} for '{business_name}'"
+    )
+    if low_star:
+        for r in low_star[:5]:
+            logger.info(f"[AEO][OWN]  ≤3★ review: ({r.get('rating')}★) {r.get('snippet','')[:120]}")
     try:
         raw = await content_llm.generate(
             prompt=prompt,
-            max_tokens=300,
+            max_tokens=900,
             temperature=0.2,
         )
         cleaned = re.sub(r'^```(?:json)?\s*|\s*```$', '', raw.strip(), flags=re.MULTILINE).strip()
         parsed = json.loads(cleaned)
+        weaknesses = parsed.get("weaknesses", [])
+        logger.info(f"[AEO][OWN] LLM returned {len(parsed.get('strengths',[]))} strengths, {len(weaknesses)} weaknesses for '{business_name}'")
+        if weaknesses:
+            for w in weaknesses:
+                logger.info(f"[AEO][OWN]  weakness: {w.get('theme')} — {w.get('detail','')[:80]}")
         return {
             "strengths": parsed.get("strengths", []),
-            "weaknesses": parsed.get("weaknesses", []),
+            "weaknesses": weaknesses,
             "summary": parsed.get("summary", ""),
         }
     except Exception as e:
@@ -2366,6 +2572,7 @@ async def get_recommendations(
 
 @router.get("/own-reputation")
 async def get_own_reputation(
+    refresh: bool = Query(default=False, description="Force re-fetch even if a cached result exists"),
     current_user: dict = Depends(get_current_user),
 ):
     """GET /api/v1/aeo/own-reputation
@@ -2393,9 +2600,10 @@ async def get_own_reputation(
     audit = audits.data[0]
     raw = audit.get("raw_results") or {}
 
-    # Return cached result if already present for this audit
+    # Return cached result if already computed for this audit run (skip if refresh=True)
     cached = raw.get("own_reputation")
-    if cached and isinstance(cached, dict) and cached.get("strengths") is not None:
+    if cached and not refresh:
+        logger.info(f"[AEO][OWN] Returning cached own_reputation for audit {audit['id']}")
         return {**cached, "cached": True}
 
     # Resolve place_id from the audit's knowledge_graph
@@ -2404,6 +2612,12 @@ async def get_own_reputation(
     place_id = kg.get("place_id")
     country = business.get("country")
 
+    # KG sometimes doesn't match (title mismatch) so place_id is absent.
+    # Also reject CID-format IDs (numeric) — google_maps_reviews only accepts ChIJ format.
+    # Fall back to a direct Google Maps lookup — same approach used for competitor reviews.
+    if not place_id or not place_id.startswith("ChIJ"):
+        place_id = await _resolve_maps_place_id(business["name"], business.get("city"), country)
+
     if not place_id:
         return {
             "strengths": [], "weaknesses": [], "summary": "",
@@ -2411,8 +2625,20 @@ async def get_own_reputation(
             "error": "no_place_id",
         }
 
-    reviews = await _fetch_own_reviews(place_id, country)
-    if not reviews:
+    # Fetch Google Maps reviews AND a Perplexity reputation query in parallel —
+    # same pattern as competitor analysis so we get multi-source signals (Yelp, BBB, etc.).
+    # Use 180 days to capture enough reviews to surface both strengths and rare weaknesses.
+    reviews, perplexity_text = await asyncio.gather(
+        _fetch_own_reviews(place_id, country, max_days=365, max_pages=5),
+        _fetch_own_perplexity_reputation(business["name"], business.get("city") or "", business.get("province"), business.get("country")),
+    )
+    logger.info(f"[AEO][OWN] Reputation fetch: {len(reviews)} reviews, perplexity={'yes' if perplexity_text else 'no'} for '{business['name']}'")
+    if perplexity_text:
+        logger.info(f"[AEO][OWN] Perplexity snippet: {perplexity_text[:400]}")
+    else:
+        logger.warning(f"[AEO][OWN] Perplexity returned EMPTY for '{business['name']}' — check PERPLEXITY_API_KEY")
+
+    if not reviews and not perplexity_text:
         return {
             "strengths": [], "weaknesses": [], "summary": "",
             "review_count": 0, "avg_rating": None, "cached": False,
@@ -2421,15 +2647,17 @@ async def get_own_reputation(
     ratings = [r["rating"] for r in reviews if r.get("rating")]
     avg_rating = round(sum(ratings) / len(ratings), 1) if ratings else None
 
-    result = await _analyze_own_reputation(reviews, business["name"])
+    result = await _analyze_own_reputation(reviews, business["name"], perplexity_text)
     result["review_count"] = len(reviews)
     result["avg_rating"] = avg_rating
 
-    # Cache into this audit's raw_results so we don't re-call SerpApi + AI unnecessarily
-    updated_raw = {**raw, "own_reputation": result}
-    supabase_admin.table("aeo_audits").update(
-        {"raw_results": updated_raw}
-    ).eq("id", audit["id"]).execute()
+    # Persist to DB so repeat loads are instant (invalidated automatically by next audit run)
+    try:
+        updated_raw = {**raw, "own_reputation": result}
+        supabase_admin.table("aeo_audits").update({"raw_results": updated_raw}).eq("id", audit["id"]).execute()
+        logger.info(f"[AEO][OWN] Saved own_reputation to audit {audit['id']}")
+    except Exception as e:
+        logger.warning(f"[AEO][OWN] Failed to save own_reputation: {e}")
 
     return {**result, "cached": False}
 

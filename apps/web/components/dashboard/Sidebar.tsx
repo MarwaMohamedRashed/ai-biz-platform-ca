@@ -30,6 +30,21 @@ export default function Sidebar({ user, locale, planTier }: Props) {
       ),
     },
     {
+      key: 'actionPlan' as const,
+      href: `/${locale}/dashboard/actionplan`,
+      exact: false,
+      icon: (active: boolean) => (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M9 11l3 3L22 4" stroke={active ? '#4f46e5' : '#64748b'} strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"
+            stroke={active ? '#4f46e5' : '#64748b'} strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round"
+            fill={active ? '#eef2ff' : 'none'}/>
+        </svg>
+      ),
+    },
+    {
       key: 'content' as const,
       href: `/${locale}/dashboard/content`,
       exact: false,

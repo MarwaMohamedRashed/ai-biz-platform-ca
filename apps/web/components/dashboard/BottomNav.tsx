@@ -28,21 +28,16 @@ export default function BottomNav({ locale, pendingCount: _pendingCount }: Props
       ),
     },
     {
-      key: 'competitors' as const,
-      href: `/${locale}/dashboard/competitors`,
+      key: 'actionPlan' as const,
+      href: `/${locale}/dashboard/actionplan`,
       exact: false,
       icon: (active: boolean) => (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M3 3v18h18" stroke={active ? '#4f46e5' : '#94a3b8'} strokeWidth="2"
+          <path d="M9 11l3 3L22 4" stroke={active ? '#4f46e5' : '#94a3b8'} strokeWidth="2"
             strokeLinecap="round" strokeLinejoin="round"/>
-          <rect x="7"  y="13" width="3" height="5" rx="0.5"
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"
             stroke={active ? '#4f46e5' : '#94a3b8'} strokeWidth="2"
-            fill={active ? '#eef2ff' : 'none'}/>
-          <rect x="12" y="9"  width="3" height="9" rx="0.5"
-            stroke={active ? '#4f46e5' : '#94a3b8'} strokeWidth="2"
-            fill={active ? '#eef2ff' : 'none'}/>
-          <rect x="17" y="6"  width="3" height="12" rx="0.5"
-            stroke={active ? '#4f46e5' : '#94a3b8'} strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round"
             fill={active ? '#eef2ff' : 'none'}/>
         </svg>
       ),
@@ -59,6 +54,26 @@ export default function BottomNav({ locale, pendingCount: _pendingCount }: Props
           <line x1="7" y1="8"  x2="17" y2="8"  stroke={active ? '#4f46e5' : '#94a3b8'} strokeWidth="2" strokeLinecap="round"/>
           <line x1="7" y1="12" x2="17" y2="12" stroke={active ? '#4f46e5' : '#94a3b8'} strokeWidth="2" strokeLinecap="round"/>
           <line x1="7" y1="16" x2="13" y2="16" stroke={active ? '#4f46e5' : '#94a3b8'} strokeWidth="2" strokeLinecap="round"/>
+        </svg>
+      ),
+    },
+    {
+      key: 'competitors' as const,
+      href: `/${locale}/dashboard/competitors`,
+      exact: false,
+      icon: (active: boolean) => (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M3 3v18h18" stroke={active ? '#4f46e5' : '#94a3b8'} strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round"/>
+          <rect x="7"  y="13" width="3" height="5" rx="0.5"
+            stroke={active ? '#4f46e5' : '#94a3b8'} strokeWidth="2"
+            fill={active ? '#eef2ff' : 'none'}/>
+          <rect x="12" y="9"  width="3" height="9" rx="0.5"
+            stroke={active ? '#4f46e5' : '#94a3b8'} strokeWidth="2"
+            fill={active ? '#eef2ff' : 'none'}/>
+          <rect x="17" y="6"  width="3" height="12" rx="0.5"
+            stroke={active ? '#4f46e5' : '#94a3b8'} strokeWidth="2"
+            fill={active ? '#eef2ff' : 'none'}/>
         </svg>
       ),
     },

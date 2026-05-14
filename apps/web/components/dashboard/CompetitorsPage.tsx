@@ -38,7 +38,14 @@ interface CompetitorTheme {
   example: string
 }
 
+interface CompetitorStrength {
+  theme: string
+  count: number
+  example?: string
+}
+
 interface CompetitorInsights {
+  strengths?: CompetitorStrength[]
   themes: CompetitorTheme[]
   avg_competitor_rating: number | null
   opportunity_summary: string
@@ -274,50 +281,80 @@ export default function CompetitorsPage({ businessId, businessName, latestAudit,
 function CompetitorInsightsSection({ insights }: { insights: CompetitorInsights }) {
   const t = useTranslations('dashboard.competitors')
   const themes = insights.themes ?? []
+  const strengths = insights.strengths ?? []
   const { avg_competitor_rating, opportunity_summary, competitors_analysed, reviews_analysed } = insights
   return (
-    <div className="mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-5">
-      <div className="flex items-center gap-2 mb-1">
-        <span className="text-base">💡</span>
-        <h2 className="text-sm font-extrabold text-amber-900">{t('insights.title')}</h2>
-      </div>
-      <p className="text-[11px] text-amber-700 mb-4">
-        {t('insights.analysed', {
-          reviews: reviews_analysed,
-          count: competitors_analysed,
-          competitors: competitors_analysed !== 1 ? t('insights.analysedCompetitors') : t('insights.analysedCompetitor'),
-        })}
-        {avg_competitor_rating != null && (
-          <> {t('insights.avgRating', { rating: avg_competitor_rating })}</>
-        )}
-      </p>
-
-      {themes.length > 0 ? (
-        <div className="flex flex-col gap-2 mb-4">
-          {themes.map((th, i) => (
-            <div key={i} className="bg-white border border-amber-100 rounded-xl px-4 py-3">
-              <div className="flex items-center justify-between mb-0.5">
-                <p className="text-xs font-bold text-amber-900">{th.theme}</p>
-                <span className="text-[10px] font-semibold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                  {t('insights.mentioned', { count: th.count })}
-                </span>
+    <div className="mt-6 flex flex-col gap-4">
+      {/* Competitor Strengths — green */}
+      {strengths.length > 0 && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-base">🏆</span>
+            <h2 className="text-sm font-extrabold text-emerald-900">{t('insights.strengthsTitle')}</h2>
+          </div>
+          <p className="text-[11px] text-emerald-700 mb-3">{t('insights.strengthsSubtitle')}</p>
+          <div className="flex flex-col gap-2">
+            {strengths.map((s, i) => (
+              <div key={i} className="bg-white border border-emerald-100 rounded-xl px-4 py-3">
+                <div className="flex items-center justify-between mb-0.5">
+                  <p className="text-xs font-bold text-emerald-900">{s.theme}</p>
+                  <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                    {t('insights.mentioned', { count: s.count })}
+                  </span>
+                </div>
+                {s.example && (
+                  <p className="text-[10px] text-slate-500 italic">&quot;{s.example}&quot;</p>
+                )}
               </div>
-              {th.example && (
-                <p className="text-[10px] text-slate-500 italic">&quot;{th.example}&quot;</p>
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      ) : (
-        <p className="text-xs text-amber-700 mb-4">{t('insights.noThemes')}</p>
       )}
 
-      {opportunity_summary && (
-        <div className="bg-amber-100 rounded-xl px-4 py-3">
-          <p className="text-[11px] font-semibold text-amber-900">{t('insights.opportunityLabel')}</p>
-          <p className="text-xs text-amber-800 mt-0.5">{opportunity_summary}</p>
+      {/* Competitor Weaknesses — amber */}
+      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-base">💡</span>
+          <h2 className="text-sm font-extrabold text-amber-900">{t('insights.title')}</h2>
         </div>
-      )}
+        <p className="text-[11px] text-amber-700 mb-4">
+          {t('insights.analysed', {
+            reviews: reviews_analysed,
+            count: competitors_analysed,
+            competitors: competitors_analysed !== 1 ? t('insights.analysedCompetitors') : t('insights.analysedCompetitor'),
+          })}
+          {avg_competitor_rating != null && (
+            <> {t('insights.avgRating', { rating: avg_competitor_rating })}</>
+          )}
+        </p>
+
+        {themes.length > 0 ? (
+          <div className="flex flex-col gap-2 mb-4">
+            {themes.map((th, i) => (
+              <div key={i} className="bg-white border border-amber-100 rounded-xl px-4 py-3">
+                <div className="flex items-center justify-between mb-0.5">
+                  <p className="text-xs font-bold text-amber-900">{th.theme}</p>
+                  <span className="text-[10px] font-semibold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                    {t('insights.mentioned', { count: th.count })}
+                  </span>
+                </div>
+                {th.example && (
+                  <p className="text-[10px] text-slate-500 italic">&quot;{th.example}&quot;</p>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-amber-700 mb-4">{t('insights.noThemes')}</p>
+        )}
+
+        {opportunity_summary && (
+          <div className="bg-amber-100 rounded-xl px-4 py-3">
+            <p className="text-[11px] font-semibold text-amber-900">{t('insights.opportunityLabel')}</p>
+            <p className="text-xs text-amber-800 mt-0.5">{opportunity_summary}</p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

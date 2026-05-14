@@ -65,9 +65,21 @@ interface CompetitorInsights {
   reviews_analysed: number
 }
 
+interface ReputationItem {
+  theme?: string
+  detail?: string
+  source?: string
+  example?: string
+}
+
+function reputationLabel(item: string | ReputationItem): string {
+  if (typeof item === 'string') return item
+  return item.theme ?? ''
+}
+
 interface OwnReputation {
-  strengths: string[]
-  weaknesses: string[]
+  strengths: (string | ReputationItem)[]
+  weaknesses: (string | ReputationItem)[]
   summary: string
   review_count: number
   avg_rating: number | null
@@ -854,7 +866,7 @@ export default function AuditReportPrint({ audit, businessName, auditDate, reput
                     border: '1px solid #bbf7d0',
                     padding: '3px 10px',
                     borderRadius: '12px',
-                  }}>{s}</span>
+                  }}>{reputationLabel(s)}</span>
                 ))}
               </div>
             </div>
@@ -876,7 +888,7 @@ export default function AuditReportPrint({ audit, businessName, auditDate, reput
                     border: '1px solid #fde68a',
                     padding: '3px 10px',
                     borderRadius: '12px',
-                  }}>{w}</span>
+                  }}>{reputationLabel(w)}</span>
                 ))}
               </div>
             </div>
@@ -1003,8 +1015,8 @@ export default function AuditReportPrint({ audit, businessName, auditDate, reput
                 </p>
               </div>
 
-              {insights.themes.length > 0 ? (
-                insights.themes.map((t, i) => (
+              {(insights.themes ?? []).length > 0 ? (
+                (insights.themes ?? []).map((t, i) => (
                   <Card key={i} accent="#f59e0b">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: t.example ? '6px' : 0 }}>
                       <p style={{ fontSize: '11px', fontWeight: 700, color: '#92400e', margin: 0 }}>{t.theme}</p>

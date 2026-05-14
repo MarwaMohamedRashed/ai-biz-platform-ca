@@ -1073,3 +1073,402 @@ Writesonic GEO) literally cannot match without hiring Canadian
 researchers. We hand the answer to a plumber in Mississauga, a dentist
 in Ottawa, an accountant in Calgary, or a Toronto realtor; competitors
 hand them generic "claim your Yelp listing" copy.
+
+---
+
+## 18. "What Customers See in AI Search" — Dashboard section (completed 2026-05-14)
+
+**Added:** 2026-05-12
+**Status:** Built — shipped 2026-05-14
+
+### Problem it solves
+
+SMBs do not understand AEO terminology or scores. They understand business
+outcomes. A score of 47/100 means nothing. Showing the exact sentence
+ChatGPT said about their competitors — while the owner's business is absent
+— is emotionally real and immediately motivating. This section converts
+abstract audit data into a concrete ROI story.
+
+### Dashboard structure
+
+| Position | Section | Purpose |
+|---|---|---|
+| 1 | Score chart + pillar bars | Current health at a glance |
+| 2 | AI Snapshot | Emotional proof of the problem |
+| 3 | Recommendations | What to do about it |
+
+### What was built
+
+**`AISnapshotSection`** — inline function inside `AeoAuditCard.tsx` (not a
+separate file). Rendered immediately after the audit score card.
+
+One card per AI engine (ChatGPT, Perplexity, Google AI Overview), each showing:
+- Engine name + "✓ You appear" / "Not mentioned" pill badge
+- The query that was asked (gives context — e.g. "best physiotherapy clinic in Milton, ON")
+- The actual AI answer snippet, truncated to ~400 chars at a word boundary
+- Competitor names highlighted in orange `<mark>` elements
+- When not mentioned: plain-language verdict — "N competitors named above — you weren't one of them."
+- When no AI answer exists for that engine: "No answer found for this engine."
+
+**Competitor highlighting logic:** The `rawResults.competitors` array (already
+stored in the audit JSONB) supplies names. Matching uses the first two words of
+each name to handle shortening (e.g. "ACT Physiotherapy" matches "ACT Physiotherapy
+and Health Service"). Competitor count is also shown as a verdict line.
+
+**Zero new API calls.** All data was already stored in `aeo_audits.raw_results`:
+- `chatgpt.snippet` / `chatgpt.per_query[].answer` + `chatgpt.mentioned`
+- `perplexity.snippet` / `perplexity.per_query[].answer` + `perplexity.mentioned`
+- `google.ai_overview.snippet` / `google.per_query[].ai_overview.text` + `google.ai_overview.mentioned`
+- `competitors[].name`
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `apps/web/components/dashboard/AeoAuditCard.tsx` | Added `AISnapshotSection` function; extended `RawResults` interface with `competitors` field |
+| `apps/web/messages/en.json` | Added `dashboard.aeo.aiSnapshot` keys: `label`, `subtitle`, `youAppear`, `notMentioned`, `noAnswer`, `queryLabel`, `competitorSingular`, `competitorPlural` |
+| `apps/web/messages/fr.json` | Same keys in French |
+
+---
+
+## 19. Multi-source competitor weakness via Perplexity prompt rewrite (TO BUILD)
+
+**Added:** 2026-05-12
+**Status:** Planned — zero new API calls, prompt change only
+
+### Problem it solves
+
+Competitor weakness/strength analysis currently relies on Google Reviews alone.
+This creates a data blind spot: well-managed businesses accumulate high star
+ratings with no complaint text, making the weakness section shallow or empty.
+AI engines (Perplexity, ChatGPT, Apple Intelligence) index the entire web —
+Yelp, BBB, RateMDs, TrustedPros, Facebook, directories — and surface patterns
+that Google Reviews alone misses. The audit should leverage that breadth.
+
+### Why not direct API integrations?
+
+| Source | Status |
+|---|---|
+| Yelp Canada | Review *text* requires special partner access Yelp rarely grants |
+| Facebook Reviews | Graph API shut down review access post-2018; scraping is ToS violation |
+| RateMDs / Lumino | No public API; scraping is ToS risk and fragile |
+| TrustedPros / Houzz | No public API for review data |
+| BBB | No API — but BBB complaint pages reliably rank in Google organic results (already captured in `organic_results_raw`) |
+
+Direct integration is either impossible (Facebook), unreliable (scraping), or
+would add ~6 SerpApi searches per audit (+50% quota burn) for marginal gain
+over what Perplexity already synthesizes.
+
+### The fix: rewrite the Perplexity competitor weakness prompt
+
+Perplexity already reads Yelp, BBB, RateMDs, TrustedPros, and local
+directories as part of its normal web crawl. The issue is the current prompt
+asks a narrow question and gets a narrow answer.
+
+**Current prompt (narrow — Google-biased):**
+> "What are the weaknesses of [competitor] based on customer reviews?"
+
+**New prompt (multi-source):**
+> "What complaints, negative patterns, or recurring problems appear about
+> [competitor name] in [city] across any review platform — including Google,
+> Yelp, BBB, RateMDs, TrustedPros, or any local directory?
+> Focus on: service quality issues, billing disputes, wait times, staff
+> complaints, or unresolved customer problems. Cite your sources."
+
+The `cite your sources` instruction causes Perplexity to surface which
+platforms it actually found data on — making the weakness section richer
+and more credible to the SMB owner.
+
+### Also: use organic_results_raw for BBB signals
+
+The audit already captures `organic_results_raw` (top 10 organic results per
+query, stored in `raw_results` JSONB). BBB complaint pages rank organically
+for "[business name] complaints" or "[competitor] BBB" queries. This data is
+currently unused in the weakness analysis.
+
+Enhancement: after Perplexity returns competitor weaknesses, scan
+`organic_results_raw` for BBB-domain links (`bbb.org`) and, if found, note
+the BBB presence in the weakness output as a credibility signal.
+
+### Cost impact
+
+**Zero additional API calls.** The Perplexity competitor weakness call already
+happens during the audit. This is a prompt text change only.
+
+### Files to touch
+
+- `api/aeo/router.py` — find the Perplexity competitor weakness prompt
+  (search for the function that calls `_perplexity_one` with competitor name)
+  and replace the prompt text
+- Optionally: post-process weakness text to flag BBB links found in
+  `organic_results_raw` for that competitor's query
+
+### Expected outcome
+
+Weakness cards that surface patterns like:
+- "Multiple BBB complaints about billing" (from BBB organic ranking)
+- "Yelp reviewers mention long wait times" (Perplexity citing Yelp)
+- "RateMDs shows 2 unresolved patient complaints" (Perplexity citing RateMDs)
+
+Instead of: "Limited negative feedback found in Google Reviews."
+
+---
+
+## 20. AEO Verification Loop — "Quick Re-check" (TO BUILD)
+
+**Added:** 2026-05-13
+**Status:** Planned — low effort, high user value
+**Priority:** Build before or shortly after go-live
+
+### Problem it solves
+
+Users will generate content, paste it onto their site, and then have no way to
+answer: "Did this actually fix my AI visibility?" Without a feedback loop, the
+product feels like a black box — users take action on faith. A re-check button
+closes that loop and dramatically increases retention ("I fixed it and my score
+went up").
+
+### Design
+
+A **"Quick Re-check"** button on the dashboard (below the score), distinct from
+the full **"Run Audit"** button. Label it something like: *"Re-check AI
+mentions"* or *"Check if AI found you yet"*.
+
+Two states:
+- **Available** — shown when last audit is >24h old (rate limit to protect quota)
+- **Cooldown** — "Next re-check available in X hours" when run too recently
+
+### What it runs (partial audit — ~4 API calls, not ~12)
+
+Only the AI mention pillar — skip competitors, weakness mining, schema scoring,
+and website check:
+
+1. Perplexity: `"best {type} in {city}"` → check `mentioned`
+2. ChatGPT: `"top {type} near {city}"` → check `mentioned`
+3. Google AI Overview (SerpApi): same query → check `mentioned`
+4. Google local pack position (SerpApi): same query → check local pack position
+
+Returns updated `mentioned` booleans and local pack position. Does NOT update
+the full score or overwrite the full audit — shows a lightweight result card:
+"ChatGPT now mentions you ✅ / Perplexity does not yet ❌".
+
+### Cost impact
+
+~4 SerpApi searches + 2 LLM calls per re-check (vs ~12 searches for a full
+audit). Rate-limited to once per 24h per business — prevents quota abuse.
+
+### Files to touch
+
+- `api/aeo/router.py` — new endpoint `POST /aeo/recheck` that runs only the
+  mention-check subset of `run_google_multi` + `run_perplexity_multi` +
+  `run_chatgpt_multi`
+- `apps/web/components/dashboard/DashboardPage.tsx` — add Quick Re-check
+  button with cooldown state
+- `supabase/migrations/` — add `last_recheck_at` timestamp column to
+  `aeo_audits` or a separate `aeo_rechecks` table for history
+
+### Rate-limit logic
+
+Store `last_recheck_at` per business in Supabase. On button click, API checks:
+- If `now - last_recheck_at < 24h` → return 429 with time-remaining
+- Otherwise → run partial audit, update `last_recheck_at`
+
+---
+
+## 21. `areaServed` + GeoNames in Schema Generator (TO BUILD)
+
+**Added:** 2026-05-13
+**Status:** Planned — moderate effort, real signal for Canadian geo-disambiguation
+**Priority:** Pre-launch if schema is a selling point; otherwise first sprint post-launch
+
+### Problem it solves
+
+The Schema.org JSON-LD generator currently outputs `areaServed` as a plain
+text city name (e.g., `"Milton"`). This is ambiguous — AI crawlers reading the
+schema cannot distinguish Milton ON from Milton NS from Milton Keynes UK. An
+explicit GeoNames URL removes that ambiguity completely, giving AI engines a
+machine-readable geographic anchor for the business.
+
+`knowsAbout` for services is also valid schema.org but less impactful than
+`hasOfferCatalog` — see note below.
+
+### Implementation
+
+**Step 1: Build a Canadian city → GeoNames URL lookup table** in
+`api/aeo/schema_builder.py`. GeoNames IDs are stable permanent identifiers.
+
+Example entries:
+```python
+GEONAMES_CA = {
+    "Milton, ON":       "https://www.geonames.org/6093943/milton.html",
+    "Mississauga, ON":  "https://www.geonames.org/6071383/mississauga.html",
+    "Ottawa, ON":       "https://www.geonames.org/6094817/ottawa.html",
+    "Calgary, AB":      "https://www.geonames.org/5913490/calgary.html",
+    "Vancouver, BC":    "https://www.geonames.org/6173331/vancouver.html",
+    # ... top ~50 Canadian cities where users are likely to be
+}
+```
+
+Key: `"{city}, {province}"` — province disambiguates cities that exist in
+multiple provinces (e.g., Richmond ON vs Richmond BC).
+
+**Step 2: Update `areaServed` output in schema builder**
+
+Current output:
+```json
+"areaServed": "Milton"
+```
+
+New output:
+```json
+"areaServed": {
+  "@type": "City",
+  "name": "Milton",
+  "sameAs": "https://www.geonames.org/6093943/milton.html"
+}
+```
+
+If no GeoNames entry exists for the city+province, fall back to plain text
+(never break the schema for an unmapped city).
+
+**Step 3: Replace `knowsAbout` with `hasOfferCatalog`** (higher signal)
+
+`knowsAbout` is schema.org-valid but Google's LocalBusiness docs don't surface
+it for rich results. `hasOfferCatalog` + `Offer` per service is more widely
+parsed:
+
+```json
+"hasOfferCatalog": {
+  "@type": "OfferCatalog",
+  "name": "Services",
+  "itemListElement": [
+    { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Sports Rehabilitation" } },
+    { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Manual Therapy" } }
+  ]
+}
+```
+
+Services list comes from the business type + any services the user has entered.
+
+### Files to touch
+
+- `api/aeo/schema_builder.py` — add `GEONAMES_CA` dict, update `areaServed`
+  output, add `hasOfferCatalog` builder
+- `api/tests/test_schema_builder.py` — add test cases for GeoNames lookup and
+  fallback behaviour
+
+### Cost impact
+
+Zero — all static data, no new API calls.
+
+---
+
+## 22. Competitor cross-border geo-filtering fix (completed 2026-05-14)
+
+**Added:** 2026-05-14
+**Status:** Built
+
+### Problem it solves
+
+A Canadian business (e.g. Burlington Family Dentists, Burlington ON) was seeing
+US competitors (e.g. Westampton Dental, Westampton NJ) appear in its competitor
+table. Three root causes in `api/aeo/router.py` combined to let cross-border
+results slip through the filter.
+
+### Root causes and fixes
+
+**Root cause 1: `country_to_gl` didn't recognize ISO-2 codes.**
+When the database stores `country = "CA"` (ISO code) instead of `"Canada"`,
+the existing `COUNTRY_TO_GL` dict returned `None` → no `gl` param was sent
+to SerpApi → searches weren't geo-targeted.
+
+Fix: Added `_COUNTRY_ISO_TO_GL` dict mapping ISO-2 codes to SerpApi `gl` values,
+and updated `country_to_gl` to fall back to it:
+```python
+def country_to_gl(country: str | None) -> str | None:
+    if not country: return None
+    c = country.strip()
+    return COUNTRY_TO_GL.get(c) or _COUNTRY_ISO_TO_GL.get(c.upper())
+```
+
+**Root cause 2: No province-based fallback.**
+When `country` is null but `province = "ON"`, there was no way to infer `gl`.
+
+Fix: Added `province_to_gl(province)` that maps any Canadian province/territory
+code (AB, BC, MB, NB, NL, NS, NT, NU, ON, PE, QC, SK, YT) to `"ca"`.
+Both `_google_one` and `run_google_multi` now call:
+```python
+gl = country_to_gl(country) or province_to_gl(province)
+```
+
+**Root cause 3: US ZIP+state pattern missing from `address_country_gl`.**
+The cross-border filter uses `address_country_gl(address)` to detect a
+competitor's country from its formatted address. "Westampton, NJ 08060" was
+returning `None` because the US marker patterns didn't match the `ST NNNNN`
+format.
+
+Fix: Added a regex to `COUNTRY_ADDRESS_MARKERS["us"]`:
+```python
+r"\b[A-Z]{2}\s+\d{5}(?:-\d{4})?\b"  # matches "NJ 08060", "WA 98101-1234"
+```
+
+### Verified results (inline Python test)
+
+| Call | Before | After |
+|---|---|---|
+| `country_to_gl("CA")` | `None` | `"ca"` |
+| `province_to_gl("ON")` | — (didn't exist) | `"ca"` |
+| `address_country_gl("Westampton, NJ 08060")` | `None` | `"us"` |
+| `address_country_gl("Burlington, ON L7R 3N7")` | `"ca"` | `"ca"` |
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `api/aeo/router.py` | Added `_COUNTRY_ISO_TO_GL` dict, `_CA_PROVINCE_CODES` frozenset, `province_to_gl()` function; updated `country_to_gl()`; updated `_google_one` and `run_google_multi` to use province fallback; added US ZIP+state regex to `COUNTRY_ADDRESS_MARKERS` |
+
+### Cost impact
+
+Zero — pure logic change, no new API calls.
+
+---
+
+## 23. Score breakdown inline pillar hints (completed 2026-05-14)
+
+**Added:** 2026-05-14
+**Status:** Built
+
+### Problem it solves
+
+The score breakdown shows five pillar bars (e.g. "Local Search Presence: 0/15")
+but gives no context a local business owner can act on. SMB owners don't know
+what "local 3-pack" means or why a schema tag matters. The numbers alone don't
+create urgency or direct action.
+
+### What was built
+
+A `getPillarHint` function inside `AeoAuditCard` derives a one-liner from the
+actual audit data for each pillar and passes it to `PillarRow` as a `hint` prop.
+The hint renders below the bar in a color that matches the bar (green/amber/red)
+so there's no mixed signal.
+
+**Logic per pillar:**
+
+| Pillar | Hint triggers |
+|---|---|
+| **GBP** | No knowledge graph → "Claim your Google Business Profile"; missing phone/website → "Profile is missing phone or website"; otherwise → "Looks complete" |
+| **Reviews** | < 30 reviews → "Only N reviews — more improve AI rankings"; rating < 4.0 → "Rating X★ — aim for 4.5+"; otherwise → "Strong review count and rating" |
+| **Website** | Not reachable → "Wasn't reachable — check hosting"; no LocalBusiness schema → "Add LocalBusiness schema markup"; no FAQ schema → "No FAQ schema found"; otherwise → "Signals look solid" |
+| **Local Search** | Not in local pack → "Not in Google's local 3-pack — get more reviews and optimize your profile"; not in organic → "Not ranking organically"; otherwise → "Appearing in local search results" |
+| **AI Citations** | 0 of 3 → "None of the major AI tools mention you yet"; 1–2 of 3 → "N of 3 AI engines mention you"; 3 of 3 → "All major AI engines mention your business" |
+
+All hints are fully bilingual (EN/FR via `next-intl`). Dynamic values (review
+count, rating, AI engine count) are interpolated using `t('key', { count })`.
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `apps/web/components/dashboard/AeoAuditCard.tsx` | Added `getPillarHint()` inside component; added `hint` prop to `PillarRow`; hint rendered below bar with color-matched text |
+| `apps/web/messages/en.json` | Added `dashboard.aeo.pillarHints` object (15 keys) |
+| `apps/web/messages/fr.json` | Same keys in French |

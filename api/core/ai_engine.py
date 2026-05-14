@@ -7,11 +7,6 @@ Always use this module. This lets you swap providers with one config change.
 Usage:
     from core.ai_engine import ai_engine
     response = await ai_engine.generate(prompt="...", context={...})
-
-C#/.NET equivalent thinking:
-    This is like an IEmailService interface with concrete implementations
-    (SmtpEmailService, SendGridEmailService). Your product code depends on
-    the interface, not the concrete class. Switch providers = swap one line.
 """
 
 import os
@@ -35,9 +30,7 @@ CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
 class AIEngine:
     """
     Single interface for all AI calls across all three products.
-
-    C#/.NET equivalent: a generic service registered in DI container
-        services.AddSingleton<IAIEngine, AIEngine>();
+    This class abstracts away provider-specific details. Product code should
     """
 
     def __init__(self, provider: Optional[str] = None, model: Optional[str] = None):

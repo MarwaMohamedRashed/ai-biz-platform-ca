@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s http://localhost:3000/en/blog/welcome-to-leapone)",
+      "Bash(curl -s http://localhost:3000/sitemap.xml)",
+      "Bash(curl -s -o /dev/null -w 'auth-gate %{http_code} \\(expect 401/403\\)\\\\n' -X PATCH -H 'Content-Type: application/json' -d '{\"updates\":{\"social_bio\":\"x\"}}' http://localhost:8000/api/v1/aeo/content/00000000-0000-0000-0000-000000000000)",
+      "Bash(curl -s -o /dev/null -w 'verify   %{http_code} \\(expect 401/403\\)\\\\n' -X POST -H 'Content-Type: application/json' -d '{\"key\":\"social_bio\",\"verified\":true}' http://localhost:8000/api/v1/aeo/content/00000000-0000-0000-0000-000000000000/verify)",
+      "Bash(curl -s -o /dev/null -w 'regen    %{http_code} \\(expect 401/403\\)\\\\n' -X POST -H 'Content-Type: application/json' -d '{\"key\":\"social_bio\",\"notes\":\"\"}' http://localhost:8000/api/v1/aeo/content/00000000-0000-0000-0000-000000000000/regenerate-item)",
+      "Bash(curl -s -o /dev/null -w 'patch  %{http_code}\\\\n' -X PATCH -H 'Content-Type: application/json' -d '{\"updates\":{\"social_bio\":\"x\"}}' http://localhost:8000/api/v1/aeo/content/00000000-0000-0000-0000-000000000000)",
+      "Bash(curl -s -o /dev/null -w 'verify %{http_code}\\\\n' -X POST -H 'Content-Type: application/json' -d '{\"key\":\"social_bio\",\"verified\":true}' http://localhost:8000/api/v1/aeo/content/00000000-0000-0000-0000-000000000000/verify)",
+      "Bash(curl -s -o /dev/null -w 'regen  %{http_code}\\\\n' -X POST -H 'Content-Type: application/json' -d '{\"key\":\"social_bio\",\"notes\":\"\"}' http://localhost:8000/api/v1/aeo/content/00000000-0000-0000-0000-000000000000/regenerate-item)",
+      "Bash(curl -s -o /dev/null -w 'coach %{http_code}\\\\n' -X POST -H 'Content-Type: application/json' -d '{\"recommendation\":{\"title\":\"x\"},\"messages\":[],\"new_message\":\"hi\"}' http://localhost:8000/api/v1/aeo/recommendation-help)",
+      "Bash(curl -s -o /dev/null -w \"compile: %{http_code}\\\\n\" http://localhost:3000/en/methodology)",
+      "Bash(curl -s -o /dev/null -w \"blog:    %{http_code}\\\\n\" http://localhost:3000/en/blog)",
+      "Bash(./venv/Scripts/python.exe -m pytest tests/ -q)"
+    ]
+  }
+}
