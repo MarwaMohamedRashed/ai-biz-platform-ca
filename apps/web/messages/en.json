@@ -612,7 +612,16 @@
       "totalPoints": "+{points} pts available",
       "pillarPoints": "+{points} pts",
       "itemsCount": "{count, plural, one {# item} other {# items}}",
-      "whyThisMatters": "Why this matters"
+      "whyThisMatters": "Why this matters",
+      "markDone": "Mark done",
+      "markedDone": "✓ Done",
+      "unmark": "Undo",
+      "progressLine": "{done} of {total} completed",
+      "progressPoints": "+{points} pts earned",
+      "completedSection": {
+        "title": "Completed",
+        "subtitle": "Items you've marked done. They're saved on this device."
+      }
     },
     "planStatus": {
       "trialing": "Free Trial",

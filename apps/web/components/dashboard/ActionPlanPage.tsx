@@ -33,7 +33,11 @@ export default function RecommendationsPage({ businessName, recommendations, cur
             </a>
           </div>
         ) : (
-          <RecommendationsList recommendations={recommendations} currentTier={currentTier} />
+          <RecommendationsList
+            recommendations={recommendations}
+            currentTier={currentTier}
+            businessKey={businessName ?? undefined}
+          />
         )}
       </div>
     </div>

@@ -601,7 +601,16 @@
       "totalPoints": "+{points} pts disponibles",
       "pillarPoints": "+{points} pts",
       "itemsCount": "{count, plural, one {# élément} other {# éléments}}",
-      "whyThisMatters": "Pourquoi c'est important"
+      "whyThisMatters": "Pourquoi c'est important",
+      "markDone": "Marquer comme fait",
+      "markedDone": "✓ Terminé",
+      "unmark": "Annuler",
+      "progressLine": "{done} sur {total} terminés",
+      "progressPoints": "+{points} pts gagnés",
+      "completedSection": {
+        "title": "Terminés",
+        "subtitle": "Éléments marqués comme faits. Enregistrés sur cet appareil."
+      }
     },
     "nav": {
       "chat": "Tableau de bord",
