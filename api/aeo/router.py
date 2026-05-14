@@ -641,21 +641,29 @@ async def _google_one(
     website: str | None,
     province: str | None = None,
     country: str | None = None,
+    competitor_scope: str = "local",
 ) -> dict:
-    # NOTE: location must be just `city` — SerpApi feeds it to Google Places which
-    # only reliably matches bare city names. Adding province (e.g. "Milton, Ontario")
-    # returns a different local pack that breaks KG and competitor detection.
-    # Cross-country leakage (e.g. "Milton" matching Milton Keynes, UK) is handled
-    # downstream by the address_country_gl cross-border filter in run_google_multi.
-    params = {
+    # `competitor_scope` controls how broadly we search:
+    #   local   -> location=city, gl=country  (default; matches existing behaviour)
+    #   country -> no location, gl=country    (broader; thin local market)
+    #   global  -> no location, no gl         (truly worldwide; SaaS-style)
+    #
+    # NOTE for `local` scope: location must be just `city`. SerpApi feeds it to
+    # Google Places which only reliably matches bare city names. Adding province
+    # ("Milton, Ontario") returns a different local pack that breaks KG and
+    # competitor detection. Cross-country leakage (e.g. "Milton" matching Milton
+    # Keynes, UK) is handled downstream by the address_country_gl cross-border
+    # filter in run_google_multi.
+    params: dict = {
         "api_key": SERPAPI_KEY,
         "engine": "google",
         "q": query,
-        "location": city,
         "hl": "en",
     }
+    if competitor_scope == "local":
+        params["location"] = city
     gl = country_to_gl(country) or province_to_gl(province)
-    if gl:
+    if gl and competitor_scope != "global":
         params["gl"] = gl
     async with httpx.AsyncClient() as client:
         response = await client.get(
@@ -738,11 +746,15 @@ async def run_google_multi(
     postal_code: str | None = None,
     is_trades: bool = False,
     is_healthcare: bool = False,
+    competitor_scope: str = "local",
 ) -> dict:
     results = []
     for query in build_queries(business_type_en, city, province, postal_code, is_trades, is_healthcare):
         try:
-            results.append(await _google_one(business_name, query, city, website, province, country))
+            results.append(await _google_one(
+                business_name, query, city, website, province, country,
+                competitor_scope=competitor_scope,
+            ))
         except Exception as e:
             print(f"[AEO] Google failed for '{query}': {e}")
             results.append({
@@ -782,8 +794,11 @@ async def run_google_multi(
     #  address matches that country (or whose country cannot be determined, which
     #  is common for domestic SerpApi results that omit the country name).
     #  If we have no `gl` for the user (unsupported country), no filtering — all kept.
+    #
+    #  `competitor_scope='global'` bypasses this filter entirely — the owner has
+    #  explicitly asked for worldwide results (typical for SaaS / online services).
     user_gl = country_to_gl(country) or province_to_gl(province)
-    if user_gl:
+    if user_gl and competitor_scope != "global":
         same_country: list[dict] = []
         cross_border: list[dict] = []
         for c in deduped:
@@ -1461,6 +1476,9 @@ async def _run_audit_core(business: dict) -> dict:
     country = business.get("country") or "Canada"  # legacy default for pre-migration rows
     website = business.get("website")
     postal_code = business.get("postal_code")
+    # local / country / global -- drives both SerpApi `location` param and the
+    # cross-border filter inside run_google_multi. See migration 020.
+    competitor_scope = business.get("competitor_scope") or "local"
     business_type_en = await normalize_business_type(business["type"], business_name)
 
     # Vertical flags drive the conditional query templates (FSA / emergency / weekend).
@@ -1475,7 +1493,8 @@ async def _run_audit_core(business: dict) -> dict:
         run_perplexity_multi(business_name, business_type_en, city, province,
                              postal_code=postal_code, is_trades=is_trades_v, is_healthcare=is_healthcare_v),
         run_google_multi(business_name, business_type_en, city, province, website, country,
-                         postal_code=postal_code, is_trades=is_trades_v, is_healthcare=is_healthcare_v),
+                         postal_code=postal_code, is_trades=is_trades_v, is_healthcare=is_healthcare_v,
+                         competitor_scope=competitor_scope),
         run_chatgpt_multi(business_name, business_type_en, city, province,
                           postal_code=postal_code, is_trades=is_trades_v, is_healthcare=is_healthcare_v),
     )
