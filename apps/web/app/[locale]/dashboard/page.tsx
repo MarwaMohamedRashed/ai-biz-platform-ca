@@ -58,8 +58,9 @@ export default async function DashboardPage() {
   const locale = await getLocale()
 
   // Fetch own-reputation server-side so AuditReportPrint can include it in the PDF
+  type RepItem = { theme?: string; detail?: string; source?: string; example?: string }
   let ownReputation: {
-    strengths: unknown[]; weaknesses: unknown[]; summary: string
+    strengths: (string | RepItem)[]; weaknesses: (string | RepItem)[]; summary: string
     review_count: number; avg_rating: number | null
   } | null = null
   // Fetch translated recommendations server-side when locale != 'en' so the

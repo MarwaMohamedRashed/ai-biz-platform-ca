@@ -177,6 +177,15 @@ export default function AeoAuditCard({ businessId, initialAudit, initialRecommen
     : audit.score >= 40 ? 'text-amber-500'
     : 'text-red-500'
 
+  // Tier label rendered under the big score. Plain-language interpretation
+  // so the owner knows whether "55/100" is good or bad without clicking.
+  function scoreTierKey(score: number): 'excellent' | 'good' | 'fair' | 'needsWork' {
+    if (score >= 80) return 'excellent'
+    if (score >= 60) return 'good'
+    if (score >= 40) return 'fair'
+    return 'needsWork'
+  }
+
   if (!businessId) {
     return (
       <div className="bg-white rounded-2xl border-l-[3px] border-l-[#4f46e5] shadow-sm border border-slate-100 p-4">
@@ -206,7 +215,9 @@ export default function AeoAuditCard({ businessId, initialAudit, initialRecommen
             <p className={`text-4xl font-extrabold ${scoreColor}`}>
               {audit.score}<span className="text-base font-semibold text-slate-400">/100</span>
             </p>
-            <p className="text-xs text-slate-500 mt-0.5">{t('scoreLabel')}</p>
+            <p className={`text-xs font-semibold mt-0.5 ${scoreColor}`}>
+              {t(`scoreTier.${scoreTierKey(audit.score)}`)}
+            </p>
           </div>
         )}
 

@@ -24,7 +24,7 @@
       "feature4": "Monthly monitoring and progress tracking",
       "footer": "© 2026 LeapOne · leapone.ca · Made for Canadian businesses"
     },
-      "signup": {
+    "signup": {
       "trialBadge": "14-day free trial · No credit card needed",
       "createAccount": "Create your account",
       "subtitle": "Get started in under 5 minutes",
@@ -59,14 +59,14 @@
       "backToLogin": "Back to sign in"
     },
     "forgotPassword": {
-    "heading": "Forgot your password?",
-    "subtitle": "Enter your email and we'll send you a reset link.",
-    "emailLabel": "Email address",
-    "submit": "Send reset link",
-    "sending": "Sending…",
-    "sentTitle": "Check your email",
-    "sentBody": "We sent a password reset link to your inbox. It expires in 1 hour.",
-    "backToLogin": "Back to sign in"
+      "heading": "Forgot your password?",
+      "subtitle": "Enter your email and we'll send you a reset link.",
+      "emailLabel": "Email address",
+      "submit": "Send reset link",
+      "sending": "Sending…",
+      "sentTitle": "Check your email",
+      "sentBody": "We sent a password reset link to your inbox. It expires in 1 hour.",
+      "backToLogin": "Back to sign in"
     },
     "resetPassword": {
       "heading": "Set a new password",
@@ -102,8 +102,8 @@
       "emptySummary": "AI summary will appear once reviews are synced."
     },
     "planTier": {
-      "starter":  "Starter",
-      "pro":      "Pro",
+      "starter": "Starter",
+      "pro": "Pro",
       "business": "Business"
     },
     "reviews": {
@@ -179,7 +179,7 @@
       "errorSave": "Failed to save settings",
       "businessProfile": {
         "title": "Business Profile",
-        "subtitle": "Used for your AEO audit — update here whenever anything changes.",
+        "subtitle": "Used for your AI visibility audit — update here whenever anything changes.",
         "nameLabel": "Business Name",
         "typeLabel": "Business Type",
         "typeHint": "e.g. physiotherapy clinic, italian restaurant",
@@ -231,18 +231,24 @@
     },
     "report": {
       "download": "Download PDF",
-      "title": "AEO Visibility Report",
+      "title": "AI Visibility Report",
       "generatedOn": "Generated on",
       "preparedFor": "Prepared for"
     },
     "aeo": {
-      "label": "AI VISIBILITY AUDIT",
-      "scoreLabel": "AEO Readiness Score",
+      "label": "AI VISIBILITY",
+      "scoreLabel": "AI Visibility Score",
+      "scoreTier": {
+        "excellent": "Excellent — strong AI visibility",
+        "good": "Good — solid foundation",
+        "fair": "Fair — room to improve",
+        "needsWork": "Needs work — let's start improving"
+      },
       "noBusinessTitle": "Set up your business profile first",
       "noBusinessDesc": "We need your business name, type, and city to run the audit.",
       "completeProfile": "Complete your profile →",
       "findOutVisible": "Find out how visible your business is to AI search engines",
-      "runAudit": "Run AEO Readiness Audit →",
+      "runAudit": "Run AI Visibility Audit →",
       "rerunAudit": "Re-run audit",
       "running": "Running audit… (30–60 seconds)",
       "whyThisScore": "Why this score? →",
@@ -254,22 +260,22 @@
       "pillars": {
         "gbp": "Google Business Profile",
         "reviews": "Reviews & Reputation",
-        "website": "Website & Schema",
-        "localSearch": "Local Search Presence",
-        "aiCitation": "AI Citations"
+        "website": "Website Setup",
+        "localSearch": "Where You Appear on Google",
+        "aiCitation": "AI Mentions"
       },
       "pillarHints": {
         "gbpNotFound": "Claim your Google Business Profile to unlock local visibility.",
         "gbpIncomplete": "Profile is missing phone or website — complete it in Google Business.",
         "gbpGood": "Your Google Business Profile looks complete.",
         "reviewsLow": "Only {count} Google reviews — more reviews improve AI rankings.",
-        "reviewsRating": "Rating: {rating}\u2605 — aim for 4.5+ to appear in more AI answers.",
+        "reviewsRating": "Rating: {rating}★ — aim for 4.5+ to appear in more AI answers.",
         "reviewsGood": "Strong review count and rating.",
-        "websiteUnreachable": "Your website wasn\u2019t reachable during the audit — check hosting.",
-        "websiteNoSchema": "Add LocalBusiness schema markup to help AI tools identify you.",
+        "websiteUnreachable": "Your website wasn’t reachable during the audit — check hosting.",
+        "websiteNoSchema": "Add the small tags AI search engines read on your homepage.",
         "websiteNoFaq": "No FAQ schema found — add one to boost AI citation chances.",
         "websiteGood": "Website signals look solid.",
-        "localNotInPack": "Not in Google\u2019s local 3-pack — get more reviews and optimize your profile.",
+        "localNotInPack": "You’re not in Google’s map results yet — more reviews and a complete profile fix this.",
         "localNotOrganic": "Not ranking organically for your main search queries.",
         "localGood": "Appearing in local search results.",
         "aiNone": "None of the major AI tools mention you yet.",
@@ -280,7 +286,7 @@
         "title": "Why this score?",
         "subtitle": "Raw signals from the last audit",
         "noData": "No raw data available for this audit.",
-        "gbpFound": "Found in Knowledge Graph",
+        "gbpFound": "Found in Google’s business listings",
         "gbpTitle": "Business title",
         "gbpCategory": "Category",
         "rating": "Rating",
@@ -288,12 +294,12 @@
         "gbpWebsite": "Website on listing",
         "gbpPhone": "Phone on listing",
         "websiteReachable": "Website reachable",
-        "localBusinessSchema": "LocalBusiness schema",
-        "faqSchema": "FAQ / HowTo schema",
-        "inLocalPack": "In Google local pack",
+        "localBusinessSchema": "LocalBusiness tags",
+        "faqSchema": "FAQ tags",
+        "inLocalPack": "In Google map results",
         "localPackPos": "Local pack position",
         "inOrganic": "In organic results",
-        "notInPack": "Not in pack",
+        "notInPack": "Not in map results",
         "mentionedChatgpt": "Mentioned by ChatGPT",
         "chatgptNote": "ChatGPT answers from training data — improvements appear in future model updates (6–12 months).",
         "mentionedPerplexity": "Mentioned by Perplexity",
@@ -306,8 +312,8 @@
         "notMentioned": "Not mentioned",
         "noAnswer": "No answer found for this engine.",
         "queryLabel": "Query asked",
-        "competitorSingular": "1 competitor named above — you weren\u2019t.",
-        "competitorPlural": "{count} competitors named above — you weren\u2019t one of them."
+        "competitorSingular": "1 competitor named above — you weren’t.",
+        "competitorPlural": "{count} competitors named above — you weren’t one of them."
       }
     },
     "scoreHistory": {
@@ -319,9 +325,9 @@
     },
     "actionPlan": {
       "pageTitle": "Action Plan",
-      "subtitle": "Prioritized fixes that will raise your AEO score and get your business found in AI search.",
+      "subtitle": "Prioritized fixes that will raise your AI visibility score and get your business found in AI search.",
       "noAuditTitle": "No audit results yet",
-      "noAuditBody": "Run an AEO audit from the Dashboard and your action plan will appear here.",
+      "noAuditBody": "Run an AI visibility audit from the Dashboard and your action plan will appear here.",
       "goRunAudit": "Go to Dashboard →"
     },
     "ownReputation": {
@@ -331,9 +337,9 @@
       "reviewPlural": "reviews",
       "viaGoogle": "via Google Maps",
       "strengths": "✅ What customers love",
-      "weaknesses": "\u26a0\ufe0f What needs attention",
+      "weaknesses": "⚠️ What needs attention",
       "nameMismatchTitle": "Reputation data unavailable",
-      "nameMismatchBody": "We couldn\u2019t match your business on Google Maps. This usually means the business name in your profile doesn\u2019t match your Google listing exactly. Check your Settings and make sure the name matches your Google Business Profile precisely."
+      "nameMismatchBody": "We couldn’t match your business on Google Maps. This usually means the business name in your profile doesn’t match your Google listing exactly. Check your Settings and make sure the name matches your Google Business Profile precisely."
     },
     "content": {
       "pageTitle": "AI Content Generator",
@@ -350,11 +356,26 @@
       "noContentBody": "Click Generate Content to create optimized descriptions, FAQs, schema markup, and social bios.",
       "noProfile": "Complete your business profile in Settings first.",
       "steps": {
-        "description": { "label": "Description",    "sublabel": "Per platform" },
-        "social":      { "label": "Social bio",     "sublabel": "≤ 150 chars" },
-        "faq":         { "label": "FAQ",            "sublabel": "10 Q&As" },
-        "faq_schema":  { "label": "FAQ schema",     "sublabel": "JSON-LD" },
-        "schema":      { "label": "Schema markup",  "sublabel": "JSON-LD" }
+        "description": {
+          "label": "Description",
+          "sublabel": "Per platform"
+        },
+        "social": {
+          "label": "Social bio",
+          "sublabel": "≤ 150 chars"
+        },
+        "faq": {
+          "label": "FAQ",
+          "sublabel": "10 Q&As"
+        },
+        "faq_schema": {
+          "label": "FAQ schema",
+          "sublabel": "JSON-LD"
+        },
+        "schema": {
+          "label": "Schema markup",
+          "sublabel": "JSON-LD"
+        }
       },
       "guidance": {
         "sectionTitle": "What this is for",
@@ -363,7 +384,7 @@
         "description": {
           "whatItIs": "Three description variants — one tuned for each platform you publish on.",
           "whereToPaste": "Website: paste in your homepage About section (and use as the page's meta description). Google: sign in to business.google.com → Edit profile → Business description. Yelp: biz.yelp.com → Edit Business Information → Description.",
-          "whyItMatters": "Highest-impact AEO content. Direct signal to ChatGPT, Perplexity, and Google AI Overview. AI engines crawl your homepage + GBP + Yelp listings and cite the description text verbatim when answering \"what does [business] do?\" / \"best [type] in [city]?\" queries."
+          "whyItMatters": "Highest-impact AI-search content. Direct signal to ChatGPT, Perplexity, and Google AI Overview. AI engines crawl your homepage + GBP + Yelp listings and cite the description text verbatim when answering \"what does [business] do?\" / \"best [type] in [city]?\" queries."
         },
         "social": {
           "whatItIs": "A short bio used consistently across every social platform you have.",
@@ -373,7 +394,7 @@
         "faq": {
           "whatItIs": "10 question-and-answer pairs written for the questions real customers ask AI engines.",
           "whereToPaste": "Build a /faq page on your website (or add a FAQ section to your homepage / About page). Paste the Q&As as visible page content — the same way you would write any other article. No HTML or code involved at this step.",
-          "whyItMatters": "FAQs are the highest-leverage AEO content per word. AI engines — especially ChatGPT and Perplexity — cite FAQ answers verbatim when responding to user questions that match. Verify each answer carefully — a wrong FAQ answer published on your site is worse than no FAQ at all. The next step (FAQ schema) is the technical wrapper that turns these Q&As into a Google rich-result snippet."
+          "whyItMatters": "FAQs are the highest-leverage AI-search content per word. AI engines — especially ChatGPT and Perplexity — cite FAQ answers verbatim when responding to user questions that match. Verify each answer carefully — a wrong FAQ answer published on your site is worse than no FAQ at all. The next step (FAQ schema) is the technical wrapper that turns these Q&As into a Google rich-result snippet."
         },
         "faq_schema": {
           "whatItIs": "A JSON-LD wrapper around your FAQ Q&As that tells Google + AI engines exactly which question goes with which answer.",
@@ -383,15 +404,24 @@
         "schema": {
           "whatItIs": "Machine-readable description of your business in the format AI crawlers prefer.",
           "whereToPaste": "Inside the head tag of your homepage (and any other key pages — About, Contact, Services). The Copy button wraps it in a complete script[type=application/ld+json] tag — paste it as-is.",
-          "whyItMatters": "Most direct signal you can give Google's Knowledge Graph + AI Overview. Required for rich-result eligibility (review stars, opening hours, price range showing in search results). Every AI crawler reads this — including GPTBot, PerplexityBot, ClaudeBot. A single correct JSON-LD block is worth more than 1000 words of marketing copy for AEO purposes."
+          "whyItMatters": "Most direct signal you can give Google's Knowledge Graph + AI Overview. Required for rich-result eligibility (review stars, opening hours, price range showing in search results). Every AI crawler reads this — including GPTBot, PerplexityBot, ClaudeBot. A single correct JSON-LD block is worth more than 1000 words of marketing copy for AI search."
         }
       },
       "desc": {
         "title": "Business Description",
         "tabs": {
-          "website": { "label": "Website", "hint": "300–400 words for your homepage / About page" },
-          "gbp":     { "label": "Google",  "hint": "Google Business Profile description (≤ 700 chars)" },
-          "yelp":    { "label": "Yelp",    "hint": "Yelp / directory style, 200–250 words" }
+          "website": {
+            "label": "Website",
+            "hint": "300–400 words for your homepage / About page"
+          },
+          "gbp": {
+            "label": "Google",
+            "hint": "Google Business Profile description (≤ 700 chars)"
+          },
+          "yelp": {
+            "label": "Yelp",
+            "hint": "Yelp / directory style, 200–250 words"
+          }
         },
         "charCount": "{count} / 700 characters"
       },
@@ -407,7 +437,7 @@
       },
       "existingFaqs": {
         "title": "Existing FAQs from your website (optional)",
-        "hint": "Already have an FAQ page? Paste it here. We'll use your existing Q&As verbatim and generate fresh AEO-optimized questions on different topics — combined into one valid FAQ schema.",
+        "hint": "Already have an FAQ page? Paste it here. We'll use your existing Q&As verbatim and generate fresh AI-search-optimized questions on different topics — combined into one valid FAQ schema.",
         "format": "Format: question on one line, answer on the next, blank line between pairs.",
         "detected": "Detected {count} Q&A {pairWord} · total final FAQ count: {total}",
         "pair": "pair",
@@ -436,11 +466,11 @@
         "profileWarningLink": "Update profile →"
       },
       "missingFields": {
-        "name":           "Business name",
-        "image_url":      "Logo or photo URL",
+        "name": "Business name",
+        "image_url": "Logo or photo URL",
         "street_address": "Street address",
-        "city":           "City",
-        "phone":          "Phone number"
+        "city": "City",
+        "phone": "Phone number"
       },
       "validationWarning": "Note: {warnings}. Re-run if anything looks off.",
       "schemaWarning": {
@@ -461,26 +491,26 @@
         "lastStep": "Last step"
       },
       "edit": {
-        "verified":             "Verified",
-        "markVerified":         "Mark verified",
-        "edit":                 "Edit",
-        "regenerate":           "Regenerate",
-        "regen":                "Regen",
-        "cancel":               "Cancel",
-        "save":                 "Save",
-        "copy":                 "Copy",
-        "copied":               "✓ Copied",
-        "charCountWith":        "{count} / {limit} chars",
-        "charCount":            "{count} chars",
-        "saveFailed":           "Save failed",
-        "verifyFailed":         "Verify failed",
-        "regenFailed":          "Regenerate failed — try again or simplify your notes.",
-        "regenFailedFaq":       "Regenerate failed",
-        "regenNotesTitle":      "What should change? (optional — leave blank for a fresh take)",
-        "regenNotesPlaceholder":"e.g. make it shorter; remove the part about parking; mention free consultations",
-        "faqRegenTitle":        "What should change about this Q&A?",
-        "faqRegenPlaceholder":  "e.g. The answer is wrong about pricing",
-        "noContent":            "No content for this section yet."
+        "verified": "Verified",
+        "markVerified": "Mark verified",
+        "edit": "Edit",
+        "regenerate": "Regenerate",
+        "regen": "Regen",
+        "cancel": "Cancel",
+        "save": "Save",
+        "copy": "Copy",
+        "copied": "✓ Copied",
+        "charCountWith": "{count} / {limit} chars",
+        "charCount": "{count} chars",
+        "saveFailed": "Save failed",
+        "verifyFailed": "Verify failed",
+        "regenFailed": "Regenerate failed — try again or simplify your notes.",
+        "regenFailedFaq": "Regenerate failed",
+        "regenNotesTitle": "What should change? (optional — leave blank for a fresh take)",
+        "regenNotesPlaceholder": "e.g. make it shorter; remove the part about parking; mention free consultations",
+        "faqRegenTitle": "What should change about this Q&A?",
+        "faqRegenPlaceholder": "e.g. The answer is wrong about pricing",
+        "noContent": "No content for this section yet."
       },
       "faqItem": {
         "qLabel": "Q{n}"
@@ -521,7 +551,9 @@
         "avgRating": "Average competitor rating: {rating}★.",
         "mentioned": "{count}× mentioned",
         "noThemes": "No clear complaint patterns found — your competitors have strong reputations.",
-        "opportunityLabel": "🎯 Strategic opportunity"
+        "opportunityLabel": "🎯 Strategic opportunity",
+        "strengthsTitle": "What competitors do well",
+        "strengthsSubtitle": "What customers consistently praise about your competitors — the bar you'll need to match."
       },
       "citations": {
         "title": "Directory Presence",
@@ -539,7 +571,7 @@
         "profileBody": "We need your business name, type, and city before we can find competitors.",
         "goSettings": "Go to Settings",
         "noAudit": "Run an audit first",
-        "noAuditBody": "Once you run your first AEO audit, we'll automatically identify your top 3 local competitors.",
+        "noAuditBody": "Once you run your first AI visibility audit, we'll automatically identify your top 3 local competitors.",
         "goDashboard": "Go to Dashboard",
         "noCompetitorsTitle": "No local competitors found in Google's map results",
         "noCompetitorsBody": "We couldn't find businesses Google associates with your category in your city. Two common reasons:",
@@ -605,7 +637,7 @@
         "period": "/ month",
         "tagline": "Everything you need to dominate local AI search.",
         "features": [
-          "Full AEO readiness audit",
+          "Full AI visibility audit",
           "5-pillar scoring with per-signal breakdown",
           "Top 3 competitor benchmarking",
           "Competitor weak-point mining (AI-powered)",
@@ -624,7 +656,7 @@
         "features": [
           "Everything in Starter",
           "Weekly audits",
-          "Action tracking (mark a recommendation done \u2192 re-checks that pillar)",
+          "Action tracking (mark a recommendation done → re-checks that pillar)",
           "Downloadable PDF audit report",
           "Weekly email digest",
           "12-month score history",
@@ -645,17 +677,17 @@
         ]
       }
     },
-     "profile": {
-        "menuLink": "Profile",
-        "heading": "Your Profile",
-        "subtitle": "Manage your account information",
-        "fullName": "Full name",
-        "email": "Email address",
-        "emailHint": "Email cannot be changed here",
-        "save": "Save changes",
-        "saving": "Saving…",
-        "saved": "Saved"
-      },
+    "profile": {
+      "menuLink": "Profile",
+      "heading": "Your Profile",
+      "subtitle": "Manage your account information",
+      "fullName": "Full name",
+      "email": "Email address",
+      "emailHint": "Email cannot be changed here",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "saved": "Saved"
+    },
     "chat": {
       "pageTitle": "Dashboard",
       "inputPlaceholder": "Ask anything or type a command…",
@@ -665,7 +697,6 @@
         "evening": "Good evening",
         "attention": "Here's what needs your attention today:"
       },
-     
       "reviewsCard": {
         "label": "Google Reviews",
         "badge": "pending",
@@ -710,66 +741,66 @@
     }
   },
   "onboarding": {
-  "stepper": {
-    "step1": "Business Info",
-    "step2": "All Set"
-  },
-  "step1": {
-    "heading": "Tell us about your business",
-    "subtitle": "This helps us audit your AI search visibility accurately",
-    "businessName": "Business name",
-    "businessType": "Business type",
-    "country": "Country",
-    "city": "City",
-    "provinceState": "Province / State",
-    "servicesLabel": "Services offered",
-    "servicesPlaceholder": "e.g. haircuts, balayage, bridal hair, keratin treatment",
-    "servicesHint": "Optional — helps us give you more accurate audit results",
-    "next": "Continue",
-    "saving": "Saving…",
-    "types": {
-      "restaurant": "Restaurant",
-      "salon": "Salon",
-      "retail": "Retail",
-      "plumber": "Plumber",
-      "cafe": "Café",
-      "other": "Other"
+    "stepper": {
+      "step1": "Business Info",
+      "step2": "All Set"
     },
-    "customType": "Describe your business",
-    "customTypePlaceholder": "e.g. photography studio, gym, consulting",
-    "websiteLabel": "Website",
-    "websiteHint": "Optional — used to check if AI search engines are citing your site",
-    "streetAddressLabel": "Street address",
-    "streetAddressPlaceholder": "123 Main St",
-    "streetAddressHint": "Optional — improves your schema markup and local search match",
-    "postalCodeLabel": "Postal code",
-    "postalCodePlaceholder": "K1P 5N7",
-    "phoneLabel": "Phone",
-    "phonePlaceholder": "+1 613 555 0123",
-    "imageUrlLabel": "Logo or photo URL",
-    "imageUrlPlaceholder": "https://yourbusiness.com/logo.png",
-    "priceRangeLabel": "Price range",
-    "priceRangeHint": "$ = inexpensive, $$$$ = high-end",
-    "schemaTip": "Tip: you can add hours of operation later in Settings to fully complete your schema markup."
-  },
-  "step2": {
-    "heading": "Connect Google Business Profile",
-    "subtitle": "To respond to reviews, we need access to your Google Business account",
-    "permission1": "Read your Google reviews",
-    "permission2": "Post responses to reviews",
-    "permission3": "Access your business information",
-    "connect": "Connect Google Business Profile",
-    "comingSoon": "Google connection — coming soon",
-    "skip": "Skip for now"
-  },
-  "step3": {
-    "heading": "Setting up your dashboard",
-    "body": "Getting everything ready for you…"
-  },
-  "step4": {
-    "heading": "You're all set",
-    "body": "Your dashboard is ready. Start managing your reviews with AI.",
-    "cta": "Go to dashboard"
+    "step1": {
+      "heading": "Tell us about your business",
+      "subtitle": "This helps us audit your AI search visibility accurately",
+      "businessName": "Business name",
+      "businessType": "Business type",
+      "country": "Country",
+      "city": "City",
+      "provinceState": "Province / State",
+      "servicesLabel": "Services offered",
+      "servicesPlaceholder": "e.g. haircuts, balayage, bridal hair, keratin treatment",
+      "servicesHint": "Optional — helps us give you more accurate audit results",
+      "next": "Continue",
+      "saving": "Saving…",
+      "types": {
+        "restaurant": "Restaurant",
+        "salon": "Salon",
+        "retail": "Retail",
+        "plumber": "Plumber",
+        "cafe": "Café",
+        "other": "Other"
+      },
+      "customType": "Describe your business",
+      "customTypePlaceholder": "e.g. photography studio, gym, consulting",
+      "websiteLabel": "Website",
+      "websiteHint": "Optional — used to check if AI search engines are citing your site",
+      "streetAddressLabel": "Street address",
+      "streetAddressPlaceholder": "123 Main St",
+      "streetAddressHint": "Optional — improves your schema markup and local search match",
+      "postalCodeLabel": "Postal code",
+      "postalCodePlaceholder": "K1P 5N7",
+      "phoneLabel": "Phone",
+      "phonePlaceholder": "+1 613 555 0123",
+      "imageUrlLabel": "Logo or photo URL",
+      "imageUrlPlaceholder": "https://yourbusiness.com/logo.png",
+      "priceRangeLabel": "Price range",
+      "priceRangeHint": "$ = inexpensive, $$$$ = high-end",
+      "schemaTip": "Tip: you can add hours of operation later in Settings to fully complete your schema markup."
+    },
+    "step2": {
+      "heading": "Connect Google Business Profile",
+      "subtitle": "To respond to reviews, we need access to your Google Business account",
+      "permission1": "Read your Google reviews",
+      "permission2": "Post responses to reviews",
+      "permission3": "Access your business information",
+      "connect": "Connect Google Business Profile",
+      "comingSoon": "Google connection — coming soon",
+      "skip": "Skip for now"
+    },
+    "step3": {
+      "heading": "Setting up your dashboard",
+      "body": "Getting everything ready for you…"
+    },
+    "step4": {
+      "heading": "You're all set",
+      "body": "Your dashboard is ready. Start managing your reviews with AI.",
+      "cta": "Go to dashboard"
+    }
   }
- }
 }

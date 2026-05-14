@@ -25,40 +25,40 @@
       "footer": "© 2026 LeapOne · leapone.ca · Pour les entreprises canadiennes"
     },
     "signup": {
-    "trialBadge": "14 jours d'essai gratuit · Sans carte de crédit",
-    "createAccount": "Créer votre compte",
-    "subtitle": "Commencez en moins de 5 minutes",
-    "signupWithGoogle": "S'inscrire avec Google",
-    "orUseEmail": "ou utiliser un courriel",
-    "firstName": "Prénom",
-    "lastName": "Nom",
-    "workEmail": "Courriel professionnel",
-    "password": "Mot de passe",
-    "terms": "J'accepte les Conditions d'utilisation et la Politique de confidentialité. LeapOne respecte la LPRPDE.",
-    "submit": "Créer un compte gratuit",
-    "alreadyHaveAccount": "Déjà un compte?",
-    "signIn": "Se connecter",
-    "brandHeadline1": "Commencez gratuitement.",
-    "brandHeadline2": "Croissez avec l'IA.",
-    "brandDescription": "Rejoignez les PME canadiennes qui économisent des heures chaque semaine. Essai gratuit de 14 jours, sans carte de crédit.",
-    "brandFeature1": "14 jours d'essai gratuit",
-    "brandFeature2": "Sans carte de crédit",
-    "brandFeature3": "Annulez à tout moment",
-    "brandFeature4": "Configuration en moins de 5 minutes",
-    "signingUp": "Création du compte…",
-    "errorTerms": "Vous devez accepter les conditions et la politique de confidentialité.",
-    "errorPasswordLength": "Le mot de passe doit contenir au moins 8 caractères.",
-    "errorPasswordWeak": "Le mot de passe doit contenir au moins une majuscule et un chiffre.",
-    "errorEmailExists": "Un compte avec ce courriel existe déjà.",
-    "confirmPassword": "Confirmer le mot de passe",
-    "errorPasswordMatch": "Les mots de passe ne correspondent pas."
+      "trialBadge": "14 jours d'essai gratuit · Sans carte de crédit",
+      "createAccount": "Créer votre compte",
+      "subtitle": "Commencez en moins de 5 minutes",
+      "signupWithGoogle": "S'inscrire avec Google",
+      "orUseEmail": "ou utiliser un courriel",
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "workEmail": "Courriel professionnel",
+      "password": "Mot de passe",
+      "terms": "J'accepte les Conditions d'utilisation et la Politique de confidentialité. LeapOne respecte la LPRPDE.",
+      "submit": "Créer un compte gratuit",
+      "alreadyHaveAccount": "Déjà un compte?",
+      "signIn": "Se connecter",
+      "brandHeadline1": "Commencez gratuitement.",
+      "brandHeadline2": "Croissez avec l'IA.",
+      "brandDescription": "Rejoignez les PME canadiennes qui économisent des heures chaque semaine. Essai gratuit de 14 jours, sans carte de crédit.",
+      "brandFeature1": "14 jours d'essai gratuit",
+      "brandFeature2": "Sans carte de crédit",
+      "brandFeature3": "Annulez à tout moment",
+      "brandFeature4": "Configuration en moins de 5 minutes",
+      "signingUp": "Création du compte…",
+      "errorTerms": "Vous devez accepter les conditions et la politique de confidentialité.",
+      "errorPasswordLength": "Le mot de passe doit contenir au moins 8 caractères.",
+      "errorPasswordWeak": "Le mot de passe doit contenir au moins une majuscule et un chiffre.",
+      "errorEmailExists": "Un compte avec ce courriel existe déjà.",
+      "confirmPassword": "Confirmer le mot de passe",
+      "errorPasswordMatch": "Les mots de passe ne correspondent pas."
     },
     "verifyEmail": {
       "heading": "Vérifiez vos courriels",
       "body": "Nous avons envoyé un lien de confirmation à votre adresse. Cliquez dessus pour activer votre compte.",
       "backToLogin": "Retour à la connexion"
     },
-   "forgotPassword": {
+    "forgotPassword": {
       "heading": "Mot de passe oublié ?",
       "subtitle": "Entrez votre courriel et nous vous enverrons un lien de réinitialisation.",
       "emailLabel": "Adresse courriel",
@@ -102,8 +102,8 @@
       "emptySummary": "Le résumé IA apparaîtra une fois les avis synchronisés."
     },
     "planTier": {
-      "starter":  "Débutant",
-      "pro":      "Pro",
+      "starter": "Débutant",
+      "pro": "Pro",
       "business": "Entreprise"
     },
     "reviews": {
@@ -179,7 +179,7 @@
       "errorSave": "Échec de l'enregistrement",
       "businessProfile": {
         "title": "Profil d'entreprise",
-        "subtitle": "Utilisé pour votre audit AEO — mettez à jour ici dès que quelque chose change.",
+        "subtitle": "Utilisé pour votre audit de visibilité IA — mettez à jour ici dès que quelque chose change.",
         "nameLabel": "Nom de l'entreprise",
         "typeLabel": "Type d'entreprise",
         "typeHint": "p. ex. clinique de physiothérapie, restaurant italien",
@@ -220,18 +220,18 @@
     },
     "report": {
       "download": "Télécharger PDF",
-      "title": "Rapport de visibilité AEO",
+      "title": "Rapport de visibilité IA",
       "generatedOn": "Généré le",
       "preparedFor": "Préparé pour"
     },
     "aeo": {
-      "label": "AUDIT DE VISIBILITÉ IA",
-      "scoreLabel": "Score de maturité AEO",
+      "label": "VISIBILITÉ IA",
+      "scoreLabel": "Score de visibilité IA",
       "noBusinessTitle": "Configurez d'abord votre profil d'entreprise",
       "noBusinessDesc": "Nous avons besoin du nom, du type et de la ville de votre entreprise pour lancer l'audit.",
       "completeProfile": "Compléter votre profil →",
       "findOutVisible": "Découvrez si les moteurs de recherche IA trouvent votre entreprise",
-      "runAudit": "Lancer l'audit de maturité AEO →",
+      "runAudit": "Lancer l'audit de visibilité IA →",
       "rerunAudit": "Relancer l'audit",
       "running": "Audit en cours… (30 à 60 secondes)",
       "whyThisScore": "Pourquoi ce score ? →",
@@ -243,24 +243,24 @@
       "pillars": {
         "gbp": "Profil Google Business",
         "reviews": "Avis & réputation",
-        "website": "Site web & schéma",
-        "localSearch": "Présence en recherche locale",
-        "aiCitation": "Citations IA"
+        "website": "Configuration du site",
+        "localSearch": "Où vous apparaissez sur Google",
+        "aiCitation": "Mentions IA"
       },
       "pillarHints": {
-        "gbpNotFound": "R\u00e9clamez votre fiche Google pour gagner en visibilit\u00e9 locale.",
-        "gbpIncomplete": "Il manque le t\u00e9l\u00e9phone ou le site web — compl\u00e9tez votre fiche.",
-        "gbpGood": "Votre fiche Google Business est compl\u00e8te.",
-        "reviewsLow": "Seulement {count} avis Google — plus d\u2019avis am\u00e9liorent votre classement IA.",
-        "reviewsRating": "Note\u00a0: {rating}\u2605 — visez 4,5+ pour appara\u00eetre dans plus de r\u00e9ponses IA.",
-        "reviewsGood": "Bon nombre d\u2019avis et bonne note.",
-        "websiteUnreachable": "Votre site \u00e9tait inaccessible pendant l\u2019audit — v\u00e9rifiez l\u2019h\u00e9bergement.",
-        "websiteNoSchema": "Ajoutez un sch\u00e9ma LocalBusiness pour que les outils IA vous identifient.",
-        "websiteNoFaq": "Aucun sch\u00e9ma FAQ — ajoutez-en un pour \u00eatre cit\u00e9 par les IA.",
+        "gbpNotFound": "Réclamez votre fiche Google pour gagner en visibilité locale.",
+        "gbpIncomplete": "Il manque le téléphone ou le site web — complétez votre fiche.",
+        "gbpGood": "Votre fiche Google Business est complète.",
+        "reviewsLow": "Seulement {count} avis Google — plus d’avis améliorent votre classement IA.",
+        "reviewsRating": "Note : {rating}★ — visez 4,5+ pour apparaître dans plus de réponses IA.",
+        "reviewsGood": "Bon nombre d’avis et bonne note.",
+        "websiteUnreachable": "Votre site était inaccessible pendant l’audit — vérifiez l’hébergement.",
+        "websiteNoSchema": "Ajoutez les petites balises que les moteurs de recherche IA lisent sur votre page d'accueil.",
+        "websiteNoFaq": "Aucun schéma FAQ — ajoutez-en un pour être cité par les IA.",
         "websiteGood": "Les signaux de site web sont solides.",
-        "localNotInPack": "Absent du top\u00a03 local Google — obtenez plus d\u2019avis et optimisez votre fiche.",
-        "localNotOrganic": "Pas de classement organique pour vos principales requ\u00eates.",
-        "localGood": "Vous apparaissez dans les r\u00e9sultats de recherche locale.",
+        "localNotInPack": "Vous n'apparaissez pas encore dans les résultats Google Maps — plus d'avis et une fiche complète résolvent cela.",
+        "localNotOrganic": "Pas de classement organique pour vos principales requêtes.",
+        "localGood": "Vous apparaissez dans les résultats de recherche locale.",
         "aiNone": "Aucun des grands outils IA ne vous mentionne encore.",
         "aiSome": "{count} moteur(s) IA sur 3 vous mentionnent.",
         "aiAll": "Tous les grands outils IA mentionnent votre entreprise."
@@ -269,7 +269,7 @@
         "title": "Pourquoi ce score ?",
         "subtitle": "Signaux bruts du dernier audit",
         "noData": "Aucune donnée brute disponible pour cet audit.",
-        "gbpFound": "Trouvé dans le Knowledge Graph",
+        "gbpFound": "Trouvé dans la fiche Google",
         "gbpTitle": "Nom de l'entreprise",
         "gbpCategory": "Catégorie",
         "rating": "Note",
@@ -277,12 +277,12 @@
         "gbpWebsite": "Site web sur la fiche",
         "gbpPhone": "Téléphone sur la fiche",
         "websiteReachable": "Site web accessible",
-        "localBusinessSchema": "Schéma LocalBusiness",
-        "faqSchema": "Schéma FAQ / HowTo",
-        "inLocalPack": "Dans le pack local Google",
+        "localBusinessSchema": "Balises LocalBusiness",
+        "faqSchema": "Balises FAQ",
+        "inLocalPack": "Dans les résultats Google Maps",
         "localPackPos": "Position dans le pack local",
         "inOrganic": "Dans les résultats organiques",
-        "notInPack": "Absent du pack",
+        "notInPack": "Absent des résultats Maps",
         "mentionedChatgpt": "Mentionné par ChatGPT",
         "chatgptNote": "Les réponses de ChatGPT proviennent de données d'entraînement — les améliorations apparaissent lors des prochaines mises à jour du modèle (6 à 12 mois).",
         "mentionedPerplexity": "Mentionné par Perplexity",
@@ -296,7 +296,13 @@
         "noAnswer": "Aucune réponse trouvée pour ce moteur.",
         "queryLabel": "Question posée",
         "competitorSingular": "1 concurrent nommé ci-dessus — pas vous.",
-        "competitorPlural": "{count} concurrents nommés ci-dessus — vous n\u2019en faites pas partie."
+        "competitorPlural": "{count} concurrents nommés ci-dessus — vous n’en faites pas partie."
+      },
+      "scoreTier": {
+        "excellent": "Excellent — forte visibilité IA",
+        "good": "Bon — base solide",
+        "fair": "Moyen — marge d'amélioration",
+        "needsWork": "À travailler — commençons les améliorations"
       }
     },
     "scoreHistory": {
@@ -308,9 +314,9 @@
     },
     "actionPlan": {
       "pageTitle": "Plan d'action",
-      "subtitle": "Corrections priorisées pour améliorer votre score AEO et rendre votre entreprise visible dans la recherche IA.",
+      "subtitle": "Corrections priorisées pour améliorer votre score visibilité IA et rendre votre entreprise visible dans la recherche IA.",
       "noAuditTitle": "Aucun résultat d'audit",
-      "noAuditBody": "Lancez un audit AEO depuis le Tableau de bord et votre plan d'action s'affichera ici.",
+      "noAuditBody": "Lancez un audit de visibilité IA depuis le Tableau de bord et votre plan d'action s'affichera ici.",
       "goRunAudit": "Aller au Tableau de bord →"
     },
     "ownReputation": {
@@ -339,11 +345,26 @@
       "noContentBody": "Cliquez sur Générer le contenu pour créer des descriptions optimisées, des FAQ, des balises schema et des bios sociaux.",
       "noProfile": "Complétez d'abord votre profil d'entreprise dans les Paramètres.",
       "steps": {
-        "description": { "label": "Description",      "sublabel": "Par plateforme" },
-        "social":      { "label": "Bio sociale",      "sublabel": "≤ 150 car." },
-        "faq":         { "label": "FAQ",              "sublabel": "10 Q&R" },
-        "faq_schema":  { "label": "Schéma FAQ",       "sublabel": "JSON-LD" },
-        "schema":      { "label": "Balisage schema",  "sublabel": "JSON-LD" }
+        "description": {
+          "label": "Description",
+          "sublabel": "Par plateforme"
+        },
+        "social": {
+          "label": "Bio sociale",
+          "sublabel": "≤ 150 car."
+        },
+        "faq": {
+          "label": "FAQ",
+          "sublabel": "10 Q&R"
+        },
+        "faq_schema": {
+          "label": "Schéma FAQ",
+          "sublabel": "JSON-LD"
+        },
+        "schema": {
+          "label": "Balisage schema",
+          "sublabel": "JSON-LD"
+        }
       },
       "guidance": {
         "sectionTitle": "À quoi ça sert",
@@ -352,7 +373,7 @@
         "description": {
           "whatItIs": "Trois variantes de description — une adaptée à chaque plateforme sur laquelle vous publiez.",
           "whereToPaste": "Site web : collez dans la section À propos de votre page d'accueil (et utilisez-la comme méta-description). Google : connectez-vous à business.google.com → Modifier le profil → Description de l'entreprise. Yelp : biz.yelp.com → Modifier les informations → Description.",
-          "whyItMatters": "Contenu AEO à plus fort impact. Signal direct vers ChatGPT, Perplexity et Google AI Overview. Les moteurs IA analysent votre page d'accueil + GBP + annonces Yelp et citent le texte de description mot pour mot lorsqu'ils répondent aux questions « que fait [entreprise] ? » / « meilleur(e) [type] à [ville] ? »."
+          "whyItMatters": "Contenu IA à plus fort impact. Signal direct vers ChatGPT, Perplexity et Google AI Overview. Les moteurs IA analysent votre page d'accueil + GBP + annonces Yelp et citent le texte de description mot pour mot lorsqu'ils répondent aux questions « que fait [entreprise] ? » / « meilleur(e) [type] à [ville] ? »."
         },
         "social": {
           "whatItIs": "Une courte bio utilisée de manière cohérente sur toutes vos plateformes sociales.",
@@ -362,7 +383,7 @@
         "faq": {
           "whatItIs": "10 paires question-réponse rédigées pour les questions que les vrais clients posent aux moteurs IA.",
           "whereToPaste": "Créez une page /faq sur votre site web (ou ajoutez une section FAQ à votre page d'accueil / À propos). Collez les Q&R comme contenu de page visible — de la même façon que vous rédigeriez n'importe quel autre article. Aucun code impliqué à cette étape.",
-          "whyItMatters": "Les FAQ sont le contenu AEO à plus fort levier par mot. Les moteurs IA — surtout ChatGPT et Perplexity — citent les réponses FAQ mot pour mot lorsqu'ils répondent à des questions correspondantes. Vérifiez chaque réponse soigneusement — une mauvaise réponse publiée est pire qu'aucune FAQ. L'étape suivante (schéma FAQ) est l'enveloppe technique qui transforme ces Q&R en extrait riche Google."
+          "whyItMatters": "Les FAQ sont le contenu IA à plus fort levier par mot. Les moteurs IA — surtout ChatGPT et Perplexity — citent les réponses FAQ mot pour mot lorsqu'ils répondent à des questions correspondantes. Vérifiez chaque réponse soigneusement — une mauvaise réponse publiée est pire qu'aucune FAQ. L'étape suivante (schéma FAQ) est l'enveloppe technique qui transforme ces Q&R en extrait riche Google."
         },
         "faq_schema": {
           "whatItIs": "Une enveloppe JSON-LD autour de vos Q&R FAQ qui indique précisément à Google et aux moteurs IA quelle question correspond à quelle réponse.",
@@ -372,15 +393,24 @@
         "schema": {
           "whatItIs": "Description lisible par machine de votre entreprise dans le format préféré des robots IA.",
           "whereToPaste": "Dans la balise head de votre page d'accueil (et de toutes les autres pages clés — À propos, Contact, Services). Le bouton Copier l'enveloppe dans une balise script[type=application/ld+json] complète — collez-la telle quelle.",
-          "whyItMatters": "Signal le plus direct que vous puissiez donner au Knowledge Graph de Google + AI Overview. Requis pour être éligible aux résultats riches (étoiles d'avis, horaires, gamme de prix). Chaque robot IA le lit — y compris GPTBot, PerplexityBot, ClaudeBot. Un seul bloc JSON-LD correct vaut plus que 1000 mots de marketing pour l'AEO."
+          "whyItMatters": "Signal le plus direct que vous puissiez donner au Knowledge Graph de Google + AI Overview. Requis pour être éligible aux résultats riches (étoiles d'avis, horaires, gamme de prix). Chaque robot IA le lit — y compris GPTBot, PerplexityBot, ClaudeBot. Un seul bloc JSON-LD correct vaut plus que 1000 mots de marketing pour la recherche IA."
         }
       },
       "desc": {
         "title": "Description de l'entreprise",
         "tabs": {
-          "website": { "label": "Site web", "hint": "300–400 mots pour votre page d'accueil / page À propos" },
-          "gbp":     { "label": "Google",   "hint": "Description du profil Google Business (≤ 700 car.)" },
-          "yelp":    { "label": "Yelp",     "hint": "Style Yelp / répertoire, 200–250 mots" }
+          "website": {
+            "label": "Site web",
+            "hint": "300–400 mots pour votre page d'accueil / page À propos"
+          },
+          "gbp": {
+            "label": "Google",
+            "hint": "Description du profil Google Business (≤ 700 car.)"
+          },
+          "yelp": {
+            "label": "Yelp",
+            "hint": "Style Yelp / répertoire, 200–250 mots"
+          }
         },
         "charCount": "{count} / 700 caractères"
       },
@@ -396,7 +426,7 @@
       },
       "existingFaqs": {
         "title": "FAQ existantes de votre site web (optionnel)",
-        "hint": "Vous avez déjà une page FAQ ? Collez-la ici. Nous utiliserons vos Q&R existants mot pour mot et génèrerons de nouvelles questions AEO optimisées sur d'autres sujets — combinées en un schéma FAQ valide.",
+        "hint": "Vous avez déjà une page FAQ ? Collez-la ici. Nous utiliserons vos Q&R existants mot pour mot et génèrerons de nouvelles questions optimisées pour la recherche IA sur d'autres sujets — combinées en un schéma FAQ valide.",
         "format": "Format : question sur une ligne, réponse sur la suivante, ligne vide entre chaque paire.",
         "detected": "Détecté {count} {pairWord} Q&R · nombre total de FAQ : {total}",
         "pair": "paire",
@@ -425,11 +455,11 @@
         "profileWarningLink": "Mettre à jour le profil →"
       },
       "missingFields": {
-        "name":           "Nom de l'entreprise",
-        "image_url":      "URL du logo ou d'une photo",
+        "name": "Nom de l'entreprise",
+        "image_url": "URL du logo ou d'une photo",
         "street_address": "Adresse",
-        "city":           "Ville",
-        "phone":          "Numéro de téléphone"
+        "city": "Ville",
+        "phone": "Numéro de téléphone"
       },
       "validationWarning": "Remarque : {warnings}. Relancez si quelque chose semble incorrect.",
       "schemaWarning": {
@@ -450,26 +480,26 @@
         "lastStep": "Dernière étape"
       },
       "edit": {
-        "verified":             "Vérifié",
-        "markVerified":         "Marquer comme vérifié",
-        "edit":                 "Modifier",
-        "regenerate":           "Régénérer",
-        "regen":                "Régén.",
-        "cancel":               "Annuler",
-        "save":                 "Enregistrer",
-        "copy":                 "Copier",
-        "copied":               "✓ Copié",
-        "charCountWith":        "{count} / {limit} car.",
-        "charCount":            "{count} car.",
-        "saveFailed":           "Échec de l'enregistrement",
-        "verifyFailed":         "Échec de la vérification",
-        "regenFailed":          "La régénération a échoué — réessayez ou simplifiez vos notes.",
-        "regenFailedFaq":       "La régénération a échoué",
-        "regenNotesTitle":      "Qu'est-ce qui doit changer ? (optionnel — laissez vide pour une nouvelle version)",
-        "regenNotesPlaceholder":"ex. rendre plus court ; supprimer la partie sur le parking ; mentionner les consultations gratuites",
-        "faqRegenTitle":        "Qu'est-ce qui doit changer dans ce Q&R ?",
-        "faqRegenPlaceholder":  "ex. La réponse est incorrecte concernant les tarifs",
-        "noContent":            "Aucun contenu pour cette section."
+        "verified": "Vérifié",
+        "markVerified": "Marquer comme vérifié",
+        "edit": "Modifier",
+        "regenerate": "Régénérer",
+        "regen": "Régén.",
+        "cancel": "Annuler",
+        "save": "Enregistrer",
+        "copy": "Copier",
+        "copied": "✓ Copié",
+        "charCountWith": "{count} / {limit} car.",
+        "charCount": "{count} car.",
+        "saveFailed": "Échec de l'enregistrement",
+        "verifyFailed": "Échec de la vérification",
+        "regenFailed": "La régénération a échoué — réessayez ou simplifiez vos notes.",
+        "regenFailedFaq": "La régénération a échoué",
+        "regenNotesTitle": "Qu'est-ce qui doit changer ? (optionnel — laissez vide pour une nouvelle version)",
+        "regenNotesPlaceholder": "ex. rendre plus court ; supprimer la partie sur le parking ; mentionner les consultations gratuites",
+        "faqRegenTitle": "Qu'est-ce qui doit changer dans ce Q&R ?",
+        "faqRegenPlaceholder": "ex. La réponse est incorrecte concernant les tarifs",
+        "noContent": "Aucun contenu pour cette section."
       },
       "faqItem": {
         "qLabel": "Q{n}"
@@ -502,8 +532,10 @@
         "local_search": "Local",
         "ai_citation": "IA"
       },
-      "insights": {        "strengthsTitle": "Ce que font bien les concurrents",
-        "strengthsSubtitle": "Ce que les clients louent régulièrement chez vos concurrents — la barre que vous devez atteindre ou dépasser.",        "title": "Faiblesses des concurrents — Votre opportunité",
+      "insights": {
+        "strengthsTitle": "Ce que font bien les concurrents",
+        "strengthsSubtitle": "Ce que les clients louent régulièrement chez vos concurrents — la barre que vous devez atteindre ou dépasser.",
+        "title": "Faiblesses des concurrents — Votre opportunité",
         "analysed": "Analyse de {reviews} avis clients sur {count} {competitors}.",
         "analysedCompetitor": "concurrent",
         "analysedCompetitors": "concurrents",
@@ -528,7 +560,7 @@
         "profileBody": "Nous avons besoin du nom, du type et de la ville de votre entreprise avant de pouvoir trouver des concurrents.",
         "goSettings": "Aller aux paramètres",
         "noAudit": "Lancez d'abord un audit",
-        "noAuditBody": "Une fois votre premier audit AEO effectué, nous identifierons automatiquement vos 3 principaux concurrents locaux.",
+        "noAuditBody": "Une fois votre premier audit de visibilité IA effectué, nous identifierons automatiquement vos 3 principaux concurrents locaux.",
         "goDashboard": "Aller au tableau de bord",
         "noCompetitorsTitle": "Aucun concurrent local trouvé dans Google Maps",
         "noCompetitorsBody": "Nous n'avons pas trouvé d'entreprises que Google associe à votre catégorie dans votre ville. Deux raisons courantes :",
@@ -605,7 +637,7 @@
         "period": "/ mois",
         "tagline": "Tout ce qu'il faut pour dominer la recherche IA locale.",
         "features": [
-          "Audit AEO complet",
+          "Audit de visibilité IA complet",
           "Score sur 5 piliers avec détail des signaux",
           "Analyse des 3 principaux concurrents",
           "Détection des points faibles des concurrents (IA)",
@@ -645,18 +677,17 @@
         ]
       }
     },
-    
-      "profile": {
-        "menuLink": "Profil",
-        "heading": "Votre profil",
-        "subtitle": "Gérez vos informations de compte",
-        "fullName": "Nom complet",
-        "email": "Adresse courriel",
-        "emailHint": "L'adresse courriel ne peut pas être modifiée ici",
-        "save": "Enregistrer",
-        "saving": "Enregistrement…",
-        "saved": "Enregistré"
-      },
+    "profile": {
+      "menuLink": "Profil",
+      "heading": "Votre profil",
+      "subtitle": "Gérez vos informations de compte",
+      "fullName": "Nom complet",
+      "email": "Adresse courriel",
+      "emailHint": "L'adresse courriel ne peut pas être modifiée ici",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saved": "Enregistré"
+    },
     "chat": {
       "pageTitle": "Tableau de bord",
       "inputPlaceholder": "Posez une question ou tapez une commande…",
@@ -710,66 +741,66 @@
     }
   },
   "onboarding": {
-  "stepper": {
-    "step1": "Infos entreprise",
-    "step2": "C'est parti"
-  },
-  "step1": {
-    "heading": "Parlez-nous de votre entreprise",
-    "subtitle": "Cela nous aide à auditer votre visibilité sur les moteurs de recherche IA",
-    "businessName": "Nom de l'entreprise",
-    "businessType": "Type d'entreprise",
-    "country": "Pays",
-    "city": "Ville",
-    "provinceState": "Province / État",
-    "servicesLabel": "Services offerts",
-    "servicesPlaceholder": "ex. coupes de cheveux, balayage, coiffure nuptiale, traitement kératine",
-    "servicesHint": "Optionnel — nous aide à vous donner des résultats d'audit plus précis",
-    "next": "Continuer",
-    "saving": "Enregistrement…",
-    "types": {
-      "restaurant": "Restaurant",
-      "salon": "Salon",
-      "retail": "Commerce",
-      "plumber": "Plombier",
-      "cafe": "Café",
-      "other": "Autre"
+    "stepper": {
+      "step1": "Infos entreprise",
+      "step2": "C'est parti"
     },
-    "customType": "Décrivez votre entreprise",
-    "customTypePlaceholder": "ex. studio photo, gym, conseil",
-    "websiteLabel": "Site web",
-    "websiteHint": "Optionnel — utilisé pour vérifier si les moteurs de recherche IA citent votre site",
-    "streetAddressLabel": "Adresse",
-    "streetAddressPlaceholder": "123 rue Principale",
-    "streetAddressHint": "Optionnel — améliore votre balisage de schéma et la correspondance en recherche locale",
-    "postalCodeLabel": "Code postal",
-    "postalCodePlaceholder": "K1P 5N7",
-    "phoneLabel": "Téléphone",
-    "phonePlaceholder": "+1 613 555 0123",
-    "imageUrlLabel": "URL du logo ou de la photo",
-    "imageUrlPlaceholder": "https://votreentreprise.com/logo.png",
-    "priceRangeLabel": "Gamme de prix",
-    "priceRangeHint": "$ = abordable, $$$$ = haut de gamme",
-    "schemaTip": "Astuce : vous pourrez ajouter vos heures d'ouverture plus tard dans les paramètres pour compléter votre balisage de schéma."
-  },
-  "step2": {
-    "heading": "Connecter Google Business Profile",
-    "subtitle": "Pour répondre aux avis, nous avons besoin d'accès à votre compte Google Business",
-    "permission1": "Lire vos avis Google",
-    "permission2": "Publier des réponses aux avis",
-    "permission3": "Accéder à vos informations d'entreprise",
-    "connect": "Connecter Google Business Profile",
-    "comingSoon": "Connexion Google — bientôt disponible",
-    "skip": "Passer pour l'instant"
-  },
-  "step3": {
-    "heading": "Configuration de votre tableau de bord",
-    "body": "Nous préparons tout pour vous…"
-  },
-  "step4": {
-    "heading": "Tout est prêt",
-    "body": "Votre tableau de bord est prêt. Commencez à gérer vos avis avec l'IA.",
-    "cta": "Accéder au tableau de bord"
+    "step1": {
+      "heading": "Parlez-nous de votre entreprise",
+      "subtitle": "Cela nous aide à auditer votre visibilité sur les moteurs de recherche IA",
+      "businessName": "Nom de l'entreprise",
+      "businessType": "Type d'entreprise",
+      "country": "Pays",
+      "city": "Ville",
+      "provinceState": "Province / État",
+      "servicesLabel": "Services offerts",
+      "servicesPlaceholder": "ex. coupes de cheveux, balayage, coiffure nuptiale, traitement kératine",
+      "servicesHint": "Optionnel — nous aide à vous donner des résultats d'audit plus précis",
+      "next": "Continuer",
+      "saving": "Enregistrement…",
+      "types": {
+        "restaurant": "Restaurant",
+        "salon": "Salon",
+        "retail": "Commerce",
+        "plumber": "Plombier",
+        "cafe": "Café",
+        "other": "Autre"
+      },
+      "customType": "Décrivez votre entreprise",
+      "customTypePlaceholder": "ex. studio photo, gym, conseil",
+      "websiteLabel": "Site web",
+      "websiteHint": "Optionnel — utilisé pour vérifier si les moteurs de recherche IA citent votre site",
+      "streetAddressLabel": "Adresse",
+      "streetAddressPlaceholder": "123 rue Principale",
+      "streetAddressHint": "Optionnel — améliore votre balisage de schéma et la correspondance en recherche locale",
+      "postalCodeLabel": "Code postal",
+      "postalCodePlaceholder": "K1P 5N7",
+      "phoneLabel": "Téléphone",
+      "phonePlaceholder": "+1 613 555 0123",
+      "imageUrlLabel": "URL du logo ou de la photo",
+      "imageUrlPlaceholder": "https://votreentreprise.com/logo.png",
+      "priceRangeLabel": "Gamme de prix",
+      "priceRangeHint": "$ = abordable, $$$$ = haut de gamme",
+      "schemaTip": "Astuce : vous pourrez ajouter vos heures d'ouverture plus tard dans les paramètres pour compléter votre balisage de schéma."
+    },
+    "step2": {
+      "heading": "Connecter Google Business Profile",
+      "subtitle": "Pour répondre aux avis, nous avons besoin d'accès à votre compte Google Business",
+      "permission1": "Lire vos avis Google",
+      "permission2": "Publier des réponses aux avis",
+      "permission3": "Accéder à vos informations d'entreprise",
+      "connect": "Connecter Google Business Profile",
+      "comingSoon": "Connexion Google — bientôt disponible",
+      "skip": "Passer pour l'instant"
+    },
+    "step3": {
+      "heading": "Configuration de votre tableau de bord",
+      "body": "Nous préparons tout pour vous…"
+    },
+    "step4": {
+      "heading": "Tout est prêt",
+      "body": "Votre tableau de bord est prêt. Commencez à gérer vos avis avec l'IA.",
+      "cta": "Accéder au tableau de bord"
+    }
   }
- }
 }

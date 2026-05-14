@@ -1,6 +1,6 @@
 # LeapOne — Built Functionality, Implementation & Competitive Notes
 
-**Date:** 2026-05-11 (updated with full EN/FR translation pass, BottomNav Content tab, Competitors + Content page headers)
+**Date:** 2026-05-15 (added multi-source own reputation with source attribution; flagged competitor-weakness Perplexity rewrite as partial — source + per-competitor attribution still pending)
 **Audience:** Founder / sales conversations / competitive comparisons
 **Companion docs:**
 [feature-inventory-current.md](feature-inventory-current.md) (what exists, by surface) ·
@@ -1131,10 +1131,10 @@ and Health Service"). Competitor count is also shown as a verdict line.
 
 ---
 
-## 19. Multi-source competitor weakness via Perplexity prompt rewrite (TO BUILD)
+## 19. Multi-source competitor weakness via Perplexity (PARTIAL — shipped 2026-05-14)
 
 **Added:** 2026-05-12
-**Status:** Planned — zero new API calls, prompt change only
+**Status:** Partial — Perplexity fetch + multi-source prompt section shipped. Source attribution per theme and per-competitor attribution still pending.
 
 ### Problem it solves
 
@@ -1195,22 +1195,78 @@ the BBB presence in the weakness output as a credibility signal.
 **Zero additional API calls.** The Perplexity competitor weakness call already
 happens during the audit. This is a prompt text change only.
 
-### Files to touch
+### What shipped 2026-05-14
 
-- `api/aeo/router.py` — find the Perplexity competitor weakness prompt
-  (search for the function that calls `_perplexity_one` with competitor name)
-  and replace the prompt text
-- Optionally: post-process weakness text to flag BBB links found in
-  `organic_results_raw` for that competitor's query
+`_analyze_competitor_weaknesses` in [api/aeo/router.py](../api/aeo/router.py)
+now fans out `_fetch_competitor_perplexity` in parallel with the Google
+review fetcher (see line ~1751). The LLM prompt has both sections:
 
-### Expected outcome
+- `Google Reviews:` — up to 40 review snippets across all scored competitors
+- `Multi-source web insights (Yelp, BBB, RateMDs, etc.):` — Perplexity's
+  answer about each competitor, with citation sources
+
+Return shape: `{strengths, themes, opportunity_summary, competitors_analysed,
+reviews_analysed, perplexity_supplemented}`. Frontend renders the themes and
+strengths on the Competitors page.
+
+### What's still TO BUILD on this feature (gap surfaced 2026-05-15)
+
+The competitor-weakness prompt produces aggregated themes across all
+competitors with **no source attribution** and **no per-competitor
+attribution**. Compare with `_analyze_own_reputation` which already asks for
+a `source` field per item. The owner's feedback: they can see "Long wait
+times" as a competitor weakness, but they cannot see:
+
+1. **Which competitor** had that complaint — is it competitor #1, #2, #3, or
+   all of them? Without this, the insight is too generic to act on.
+2. **Where the signal came from** — is "Long wait times" from Google Maps
+   reviews, Yelp, BBB, or Perplexity's web synthesis? Without this, the
+   owner cannot judge how credible the signal is.
+
+**The fix is a prompt-text change only** (matches the own-reputation prompt
+pattern). Update the JSON shape in the LLM prompt at
+[api/aeo/router.py:1802-1819](../api/aeo/router.py#L1802-L1819) to:
+
+```json
+{
+  "strengths": [
+    {"theme": "...", "count": N, "example": "...", "source": "Google", "competitor": "ACT Physio"}
+  ],
+  "weaknesses": [
+    {"theme": "...", "count": N, "example": "...", "source": "Yelp", "competitor": "Milton Wellness"}
+  ],
+  "opportunity_summary": "..."
+}
+```
+
+And expand the instructions to:
+- *"For each theme, set `source` to the actual platform (Google, Yelp, BBB,
+  RateMDs, HomeStars, Yellow Pages, Web). Set `competitor` to the
+  competitor name the signal applies to. If a theme applies to multiple
+  competitors, return one entry per competitor."*
+
+Frontend ([apps/web/components/dashboard/CompetitorsPage.tsx](../apps/web/components/dashboard/CompetitorsPage.tsx))
+already has the source-pill rendering pattern from `OwnReputationCard.tsx`
+to copy from — add a small green/amber `source` pill plus a slate
+`competitor` pill on each theme card.
+
+### Optional follow-on: use organic_results_raw for BBB signals
+
+The audit already captures `organic_results_raw` (top 10 organic results per
+query, stored in `raw_results` JSONB). BBB complaint pages rank organically
+for "[business name] complaints" or "[competitor] BBB" queries. This data is
+currently unused in the weakness analysis. Post-process the LLM output to
+flag BBB-domain links found in `organic_results_raw` as a credibility
+signal.
+
+### Expected outcome (after the source + competitor attribution fix)
 
 Weakness cards that surface patterns like:
-- "Multiple BBB complaints about billing" (from BBB organic ranking)
-- "Yelp reviewers mention long wait times" (Perplexity citing Yelp)
-- "RateMDs shows 2 unresolved patient complaints" (Perplexity citing RateMDs)
+- **Long wait times** — `Milton Wellness` — `Yelp` (12 mentions)
+- **Billing disputes** — `ACT Physio` — `BBB` (3 complaints)
+- **Limited evening hours** — `Burlington Family Dental` — `Google` (8 reviews)
 
-Instead of: "Limited negative feedback found in Google Reviews."
+Instead of: "Long wait times — 12 mentions" with no way to know who or where.
 
 ---
 
@@ -1431,6 +1487,44 @@ r"\b[A-Z]{2}\s+\d{5}(?:-\d{4})?\b"  # matches "NJ 08060", "WA 98101-1234"
 
 Zero — pure logic change, no new API calls.
 
+### Known remaining issue — same-country competitors from wrong city/region
+
+**Status: Open — not yet fixed**
+
+The cross-border filter prevents US businesses appearing for Canadian users, but
+does not guarantee that the competitors shown are actually local to the business's
+city. SerpApi's local pack results are city-scoped when the `location` param is
+set correctly, but the `location` string is built from whatever the user entered
+in their profile (e.g. `"Milton, Ontario"`) and is not validated or normalized.
+
+If the `location` value is:
+- A province name only (`"Ontario"`) → SerpApi returns province-wide results, not city-level
+- Misspelled or abbreviated → SerpApi may fall back to country-level
+- A postal code only (`"L9T"`) → ambiguous, behaviour varies
+
+**Observed symptom:** A Milton ON physiotherapy clinic sees competitors from
+Toronto, Mississauga, or other Ontario cities it doesn't compete with.
+
+**Why the current `gl` fix doesn't solve this:** `gl` only sets the country;
+the `location` string controls the local scope within that country. These are
+independent SerpApi parameters.
+
+**Planned fix options (not yet implemented):**
+
+| Option | Effort | Notes |
+|---|---|---|
+| Validate + normalize `location` at profile save using Google Places Autocomplete | Medium | Guarantees `"{city}, {province}"` format going forward; no help for existing profiles |
+| Append city to location if it's missing (derive from postal code via Canada Post API or free DB) | Medium | Handles postal-code-only profiles |
+| Use SerpApi `location` autocomplete endpoint to find the closest valid location string before running a search | Low | Best short-term fix — no user-facing change, runs at audit time |
+
+The SerpApi autocomplete approach is lowest effort: before calling `_google_one`,
+resolve `f"{city}, {province}"` through SerpApi's location API and use the
+canonical string it returns. This is a single extra API call per audit (not per
+query) and guarantees city-scoped results.
+
+**File to change when this is fixed:** `api/aeo/router.py` — `run_google_multi`
+location string construction.
+
 ---
 
 ## 23. Score breakdown inline pillar hints (completed 2026-05-14)
@@ -1472,3 +1566,165 @@ count, rating, AI engine count) are interpolated using `t('key', { count })`.
 | `apps/web/components/dashboard/AeoAuditCard.tsx` | Added `getPillarHint()` inside component; added `hint` prop to `PillarRow`; hint rendered below bar with color-matched text |
 | `apps/web/messages/en.json` | Added `dashboard.aeo.pillarHints` object (15 keys) |
 | `apps/web/messages/fr.json` | Same keys in French |
+
+---
+
+## 24. Own reputation — multi-source signals with source attribution (completed 2026-05-14)
+
+**Added:** 2026-05-14
+**Status:** Built — shipped on the dashboard `OwnReputationCard` and in
+the `AuditReportPrint` PDF report.
+
+### Problem it solves
+
+Google Reviews alone gives a single-source view of the business's reputation.
+Well-managed clinics, restaurants, and service businesses often accumulate
+high Google star ratings with very little complaint text — Google reviewers
+self-censor, leaving negatives muted. Meanwhile customers complaining
+elsewhere — Yelp, BBB, RateMDs, TrustedPros, HomeStars, Yellow Pages — never
+show up in the Google snapshot. The dashboard's "Your Reputation" card was
+missing a real chunk of the truth.
+
+### What it does
+
+The dashboard `OwnReputationCard` shows strengths and weaknesses derived
+from **two parallel data sources**:
+
+1. **Google Maps reviews** — up to 5 pages (180-365 days) via SerpApi
+   `google_maps_reviews`, same pipeline used for competitor analysis.
+2. **Perplexity multi-source web signal** — a single Perplexity query
+   asking *"What do customers say about {business_name} in {location}?
+   Search across Google, Yelp, BBB, RateMDs, TrustedPros, HomeStars, and
+   any local directories. Cite your sources."* Perplexity already indexes
+   these platforms; we don't need direct API integrations.
+
+Each strength and weakness rendered on the card carries a `source` badge
+showing the actual platform name (Google · Yelp · BBB · RateMDs · HomeStars
+· TrustedPros · Yellow Pages · Reddit · Facebook · etc.) — so the owner
+can immediately see how broad the signal is.
+
+### Implementation
+
+Code:
+- Endpoint `GET /api/v1/aeo/own-reputation` in
+  [api/aeo/router.py](../api/aeo/router.py) line 2573.
+- Perplexity fetcher `_fetch_own_perplexity_reputation` at line 1614.
+- LLM analysis `_analyze_own_reputation` at line 1923.
+- Frontend [apps/web/components/dashboard/OwnReputationCard.tsx](../apps/web/components/dashboard/OwnReputationCard.tsx).
+
+**Parallel fetch via `asyncio.gather`:**
+```python
+reviews, perplexity_text = await asyncio.gather(
+    _fetch_own_reviews(place_id, country, max_days=365, max_pages=5),
+    _fetch_own_perplexity_reputation(business["name"], city, province, country),
+)
+```
+
+**Citation-source mapping.** Perplexity returns citations as URLs.
+`_fetch_own_perplexity_reputation` maps each citation domain to a
+friendly platform name via a domain→label dictionary covering ~15
+review/directory platforms (Yelp, BBB, RateMDs, HomeStars, TrustedPros,
+Yellow Pages, TripAdvisor, Facebook, Reddit, Birdeye, Fresha, Zocdoc,
+Opencare, Healthgrades, etc.). The mapped list is **prepended** to the
+answer as a numbered citation header so it survives truncation:
+
+```
+Citation sources:
+[1] Google
+[2] Yelp
+[3] Yellow Pages
+[4] BBB
+
+<Perplexity's actual answer text follows>
+```
+
+**LLM prompt with source attribution.** `_analyze_own_reputation` builds
+the prompt with two explicitly labelled sections (Google Reviews and
+Multi-source web signals) and explicit source-tagging instructions:
+
+> *"For signals from Google Reviews use `source`: 'Google'. For signals
+> from the multi-source section, use the ACTUAL platform name mentioned
+> in that text (e.g. 'Yellow Pages', 'Yelp', 'BBB', 'RateMDs', 'HomeStars') —
+> not just 'Web'. If the platform is unclear, use 'Web'."*
+
+The instruction is conditional on `has_perplexity` — when Perplexity
+returns empty (no API key, rate-limited, etc.) the source-tag instruction
+collapses to `'Use "source": "Google" for all items.'` so we never
+hallucinate a source.
+
+**Return shape per item:**
+```json
+{"theme": "Fast and friendly service",
+ "detail": "Staff greeted patients immediately...",
+ "example": "In and out in 30 minutes",
+ "source": "Yellow Pages"}
+```
+
+**Caching.** Result is persisted into `aeo_audits.raw_results.own_reputation`
+so repeat dashboard loads are instant. Cache invalidates only when a new
+audit runs (one Perplexity + Google reviews fetch per audit). A `refresh=true`
+query param forces re-computation.
+
+**Failure handling.**
+- Missing Perplexity key → silent fall-back to Google-only; backend logs
+  `[AEO][OWN] Perplexity returned EMPTY ... check PERPLEXITY_API_KEY`.
+- Both empty → empty `{strengths:[], weaknesses:[], summary:""}` response,
+  card renders the empty state.
+- Place-id resolution failure (no Knowledge Graph match) →
+  `{error: 'no_place_id'}` and the card shows a profile-claim CTA.
+
+### Frontend rendering
+
+`OwnReputationCard.tsx`:
+- Strengths in green cards, weaknesses in amber cards
+- Each card renders the `theme` headline + optional `detail` + italic
+  `example` quote
+- **Source pill** rendered top-right of the headline row — green pill on
+  strengths, amber pill on weaknesses. Conditional render (`{w.source && …}`)
+  so old cached items without source field don't break.
+
+The same data is rendered in `AuditReportPrint.tsx` (PDF) via the
+`reputationLabel` helper at line 77 — supports both legacy string entries
+and current `ReputationItem` objects with source.
+
+### Cost impact
+
+| Call | Cost per refresh |
+|---|---|
+| 1× Perplexity `sonar` query | ~$0.002 |
+| Up to 5× SerpApi `google_maps_reviews` page fetches | ~$0.005-$0.025 |
+| 1× LLM call (≤900 tokens out) | ~$0.001 |
+| **Total per audit** | **~$0.008-$0.028** |
+
+Refresh is one-per-audit (cached), so this cost adds to the audit budget,
+not per-dashboard-load.
+
+### Competitive notes
+
+- **No SMB AEO competitor surfaces a multi-source reputation roll-up on
+  the dashboard.** BrightLocal does white-label review monitoring across
+  some platforms (Yelp, Facebook) but doesn't synthesize themes, attribute
+  sources, or merge them with strategic recommendations.
+- The source attribution is what makes this owner-trustworthy — without
+  it, a clinic owner reading "long wait times" can't judge if it's a
+  Google fluke or a real Yelp/RateMDs pattern. With it, the signal is
+  defensible in a Monday morning team meeting.
+
+### Files changed (May 2026 multi-source pass)
+
+| File | Change |
+|---|---|
+| `api/aeo/router.py` | New `_fetch_own_perplexity_reputation` (line 1614); `GET /aeo/own-reputation` endpoint (line 2573) now parallel-fetches both sources; `_analyze_own_reputation` (line 1923) rewritten with source-tagging prompt |
+| `apps/web/components/dashboard/OwnReputationCard.tsx` | `ReputationItem.source?: string`; source pill rendered top-right of each theme card |
+| `apps/web/components/dashboard/AuditReportPrint.tsx` | `reputationLabel()` helper renders source in PDF output |
+| `apps/web/components/dashboard/AeoAuditCard.tsx` | Renders `<OwnReputationCard />` inline after the audit summary on the dashboard |
+| `apps/web/app/[locale]/dashboard/page.tsx` | Pre-fetches `/aeo/own-reputation` server-side so `AuditReportPrint` can include it in the PDF |
+
+### Known follow-ons
+
+- The PDF (`AuditReportPrint.tsx`) reputation rendering should be
+  spot-checked to confirm source pills appear in the printed output, not
+  just on screen.
+- The deep-dive doc previously described `OwnReputationCard` as
+  Google-only in §17's i18n pass entry — that description is now
+  superseded by this section.
