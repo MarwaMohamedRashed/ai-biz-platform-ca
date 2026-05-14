@@ -303,7 +303,9 @@
         "good": "Bon — base solide",
         "fair": "Moyen — marge d'amélioration",
         "needsWork": "À travailler — commençons les améliorations"
-      }
+      },
+      "whatWeChecked": "Ce que nous avons vérifié",
+      "hideDetails": "Masquer les détails"
     },
     "scoreHistory": {
       "runMore": "Effectuez au moins 2 audits pour voir l'évolution de votre score.",

@@ -314,7 +314,9 @@
         "queryLabel": "Query asked",
         "competitorSingular": "1 competitor named above — you weren’t.",
         "competitorPlural": "{count} competitors named above — you weren’t one of them."
-      }
+      },
+      "whatWeChecked": "What we checked",
+      "hideDetails": "Hide details"
     },
     "scoreHistory": {
       "runMore": "Run at least 2 audits to see your score trend.",

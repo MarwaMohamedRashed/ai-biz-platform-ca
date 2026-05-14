@@ -186,6 +186,57 @@ export default function AeoAuditCard({ businessId, initialAudit, initialRecommen
     return 'needsWork'
   }
 
+  // Per-pillar signals for the inline "What we checked" expand. Same raw
+  // data as the legacy "Why this score?" drawer — surfaced inline so owners
+  // don't have to click through to understand a score.
+  function getPillarSignals(
+    key: keyof Breakdown,
+    raw: RawResults | null,
+  ): { label: string; value: string | boolean | number | null | undefined }[] {
+    if (!raw) return []
+    const kg = raw.google?.knowledge_graph
+    const ws = raw.website
+    const lp = raw.google?.local_pack
+
+    switch (key) {
+      case 'gbp':
+        return [
+          { label: t('drawer.gbpFound'),    value: kg?.found },
+          { label: t('drawer.gbpTitle'),    value: kg?.title ?? null },
+          { label: t('drawer.gbpCategory'), value: kg?.type ?? null },
+          { label: t('drawer.rating'),      value: kg?.rating != null ? `${kg.rating}★` : null },
+          { label: t('drawer.reviewCount'), value: kg?.reviews_count ?? null },
+          { label: t('drawer.gbpWebsite'),  value: kg?.website ?? null },
+          { label: t('drawer.gbpPhone'),    value: kg?.phone ?? null },
+        ]
+      case 'reviews':
+        return [
+          { label: t('drawer.rating'),      value: kg?.rating != null ? `${kg.rating}★` : null },
+          { label: t('drawer.reviewCount'), value: kg?.reviews_count ?? null },
+        ]
+      case 'website':
+        return [
+          { label: t('drawer.websiteReachable'),    value: ws?.reachable },
+          { label: t('drawer.localBusinessSchema'), value: ws?.has_local_business_schema },
+          { label: t('drawer.faqSchema'),           value: ws?.has_faq_schema },
+        ]
+      case 'local_search':
+        return [
+          { label: t('drawer.inLocalPack'),  value: lp?.present },
+          { label: t('drawer.localPackPos'), value: lp?.position != null ? `#${lp.position}` : t('drawer.notInPack') },
+          { label: t('drawer.inOrganic'),    value: raw.google?.organic?.present },
+        ]
+      case 'ai_citation':
+        return [
+          { label: t('drawer.mentionedChatgpt'),    value: raw.chatgpt?.mentioned },
+          { label: t('drawer.mentionedPerplexity'), value: raw.perplexity?.mentioned },
+          { label: t('drawer.mentionedGoogleAI'),   value: raw.google?.ai_overview?.mentioned },
+        ]
+      default:
+        return []
+    }
+  }
+
   if (!businessId) {
     return (
       <div className="bg-white rounded-2xl border-l-[3px] border-l-[#4f46e5] shadow-sm border border-slate-100 p-4">
@@ -241,6 +292,7 @@ export default function AeoAuditCard({ businessId, initialAudit, initialRecommen
                   max={p.max}
                   delta={delta}
                   hint={getPillarHint(p.key, audit.raw_results)}
+                  signals={getPillarSignals(p.key, audit.raw_results)}
                 />
               )
             })}
@@ -455,31 +507,62 @@ function AISnapshotSection({ rawResults }: { rawResults: RawResults | null }) {
   )
 }
 
-function PillarRow({ label, points, max, delta, hint }: { label: string; points: number; max: number; delta: number | null; hint?: string | null }) {
+function PillarRow({
+  label, points, max, delta, hint, signals,
+}: {
+  label: string
+  points: number
+  max: number
+  delta: number | null
+  hint?: string | null
+  signals?: { label: string; value: string | boolean | number | null | undefined }[]
+}) {
+  const t = useTranslations('dashboard.aeo')
+  const [expanded, setExpanded] = useState(false)
   const pct = max === 0 ? 0 : (points / max) * 100
   const color = pct >= 75 ? 'bg-green-500' : pct >= 40 ? 'bg-amber-400' : 'bg-red-300'
   const hintColor = pct >= 75 ? 'text-green-600' : pct >= 40 ? 'text-amber-600' : 'text-red-500'
   const deltaLabel = delta === null || delta === 0 ? null : delta > 0 ? `+${delta}` : `${delta}`
   const deltaColor = delta && delta > 0 ? 'text-green-600' : 'text-red-500'
+  const hasSignals = (signals?.length ?? 0) > 0
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-0.5">
-          <p className="text-[11px] font-semibold text-[#1e293b] truncate">{label}</p>
-          <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-            {deltaLabel && (
-              <span className={`text-[9px] font-bold ${deltaColor}`}>{deltaLabel}</span>
-            )}
-            <p className="text-[10px] text-slate-500">{points}/{max}</p>
+    <div className="flex flex-col">
+      <div className="flex items-center gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-0.5">
+            <p className="text-[11px] font-semibold text-[#1e293b] truncate">{label}</p>
+            <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+              {deltaLabel && (
+                <span className={`text-[9px] font-bold ${deltaColor}`}>{deltaLabel}</span>
+              )}
+              <p className="text-[10px] text-slate-500">{points}/{max}</p>
+            </div>
           </div>
+          <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+            <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${pct}%` }} />
+          </div>
+          {hint && (
+            <p className={`text-[10px] mt-1 leading-snug ${hintColor}`}>{hint}</p>
+          )}
+          {hasSignals && (
+            <button
+              type="button"
+              onClick={() => setExpanded(e => !e)}
+              aria-expanded={expanded}
+              className="text-[10px] text-slate-400 hover:text-[#4f46e5] mt-1 inline-flex items-center gap-1 transition-colors">
+              <span aria-hidden="true">{expanded ? '▴' : '▾'}</span>
+              {expanded ? t('hideDetails') : t('whatWeChecked')}
+            </button>
+          )}
         </div>
-        <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
-          <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${pct}%` }} />
-        </div>
-        {hint && (
-          <p className={`text-[10px] mt-1 leading-snug ${hintColor}`}>{hint}</p>
-        )}
       </div>
+      {hasSignals && expanded && (
+        <div className="mt-2 ml-1 pl-3 border-l-2 border-slate-100">
+          {signals!.map((s, i) => (
+            <Signal key={i} label={s.label} value={s.value} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
