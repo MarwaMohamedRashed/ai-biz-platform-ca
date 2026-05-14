@@ -10,6 +10,7 @@ import json
 import os
 import logging
 import re
+from datetime import datetime, timezone
 from core.ai_engine import AIEngine
 from .schema_builder import build_schema, build_faq_schema, find_missing_required_fields
 from . import knowledge as kb
@@ -1510,11 +1511,73 @@ async def _run_audit_core(business: dict) -> dict:
     recommendations = generate_recommendations(business, perplexity_result, google_result, website_check, breakdown, recency, chatgpt_result)
     print(f"[AEO] Score: {score}/100  breakdown={breakdown}  recs={len(recommendations)}")
 
+    # ─── User-locked competitor list (migration 021) ───────────────────────
+    # If the owner has confirmed a competitor list, that list is the source of
+    # truth -- not the local pack. Auto-discovered competitors from this audit
+    # are still preserved on the response so the UI can offer them as
+    # "suggestions" the owner can accept into their list. Each user-locked
+    # entry is either matched against auto-detected data (free) or looked up
+    # by place_id (1 SerpApi call per missing entry).
+    user_competitors_locked = business.get("user_competitors")
+    auto_competitors = google_result.get("competitors", [])
+    auto_suggestions: list[dict] = []
+    if user_competitors_locked is not None:
+        auto_by_id = {c.get("place_id"): c for c in auto_competitors if c.get("place_id")}
+        now_iso = datetime.now(timezone.utc).isoformat()
+        resolved: list[dict] = []
+        needs_lookup: list[dict] = []
+        for uc in (user_competitors_locked or [])[:5]:
+            pid = (uc or {}).get("place_id")
+            if not pid:
+                continue
+            if pid in auto_by_id:
+                # Refresh-in-place: use this audit's local-pack data, preserve the
+                # owner's source/added_at metadata, bump last_seen_at.
+                resolved.append({
+                    **auto_by_id[pid],
+                    "source":       uc.get("source", "manual"),
+                    "added_at":     uc.get("added_at"),
+                    "last_seen_at": now_iso,
+                    "status":       "active",
+                })
+            else:
+                needs_lookup.append(uc)
+        if needs_lookup:
+            lookup_results = await asyncio.gather(
+                *[_lookup_competitor_by_place_id((uc or {}).get("place_id"), country=country) for uc in needs_lookup],
+                return_exceptions=True,
+            )
+            for uc, look in zip(needs_lookup, lookup_results):
+                if isinstance(look, Exception) or not look:
+                    # Place not found -- keep stub so the owner sees a "stale" flag
+                    resolved.append({
+                        "place_id":     uc.get("place_id"),
+                        "name":         uc.get("name", "Unknown"),
+                        "source":       uc.get("source", "manual"),
+                        "added_at":     uc.get("added_at"),
+                        "last_seen_at": uc.get("last_seen_at"),
+                        "status":       "stale",
+                    })
+                else:
+                    resolved.append({
+                        **look,
+                        "source":       uc.get("source", "manual"),
+                        "added_at":     uc.get("added_at"),
+                        "last_seen_at": now_iso,
+                        "status":       "closed" if look.get("business_status") == "CLOSED_PERMANENTLY" else "active",
+                    })
+        competitors_raw = resolved
+        # Auto-detected competitors NOT in the user list become suggestions
+        locked_ids = {r.get("place_id") for r in resolved if r.get("place_id")}
+        auto_suggestions = [c for c in auto_competitors if c.get("place_id") and c["place_id"] not in locked_ids]
+        logger.info(f"[AEO][COMP] User-locked list: {len(resolved)} scored, {len(auto_suggestions)} fresh suggestions")
+    else:
+        competitors_raw = auto_competitors
+
     # ─── Competitor scoring ────────────────────────────────────────────────
-    # Score the top 3 competitors apples-to-apples using the same pillar formula.
+    # Score the top N competitors apples-to-apples using the same pillar formula.
     # Website fetches + AI citation matching run in parallel — no extra API cost,
     # only $0 httpx fetches and free text scanning over data we already paid for.
-    competitors_raw = google_result.get("competitors", [])
     scored_competitors: list[dict] = []
     if competitors_raw:
         comp_websites, comp_ai = await asyncio.gather(
@@ -1559,6 +1622,28 @@ async def _run_audit_core(business: dict) -> dict:
         [c.get("name") for c in scored_competitors if c.get("name")],
     )
 
+    # Persist refreshed last_seen_at / status back to businesses.user_competitors
+    # so the next page load sees the new state (without a separate API call).
+    if user_competitors_locked is not None:
+        try:
+            updated_uc = [
+                {
+                    "place_id":     c.get("place_id"),
+                    "name":         c.get("name"),
+                    "source":       c.get("source", "manual"),
+                    "added_at":     c.get("added_at"),
+                    "last_seen_at": c.get("last_seen_at"),
+                    "status":       c.get("status", "active"),
+                }
+                for c in scored_competitors
+                if c.get("place_id")
+            ]
+            supabase_admin.table("businesses").update({
+                "user_competitors": updated_uc
+            }).eq("id", business["id"]).execute()
+        except Exception as e:
+            logger.warning(f"[AEO][COMP] Failed to refresh user_competitors metadata: {e}")
+
     return {
         "score":                score,
         "breakdown":            breakdown,
@@ -1566,10 +1651,117 @@ async def _run_audit_core(business: dict) -> dict:
         "perplexity":           perplexity_result,
         "google":               google_result,
         "chatgpt":              chatgpt_result,
+        "auto_suggestions":     auto_suggestions,
         "website":              website_check,
         "competitors":          scored_competitors,
         "competitor_insights":  competitor_insights,
         "citation_gaps":        citation_gaps,
+    }
+
+
+async def _lookup_competitor_by_place_id(place_id: str, country: str | None = None) -> dict | None:
+    """Resolve a Google Maps place_id to a competitor dict in the same shape as
+    extract_competitors() output. Used when a user adds a competitor manually
+    that we never saw in the audit's local pack queries.
+
+    Returns None when SerpApi can't find the place (closed, deleted, bad id)."""
+    if not place_id:
+        return None
+    gl = country_to_gl(country) or "ca"
+    params: dict[str, str] = {
+        "api_key":  SERPAPI_KEY,
+        "engine":   "google_maps",
+        "place_id": place_id,
+        "hl":       "en",
+        "gl":       gl,
+    }
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get("https://serpapi.com/search", params=params, timeout=20.0)
+            response.raise_for_status()
+            data = response.json()
+    except Exception as e:
+        logger.warning(f"[AEO][COMP] place_id lookup failed for {place_id}: {e}")
+        return None
+    place = data.get("place_results") or {}
+    if not place:
+        return None
+    return {
+        "name":            place.get("title", ""),
+        "place_id":        place_id,
+        "rating":          place.get("rating"),
+        "reviews":         place.get("reviews"),
+        "type":            place.get("type") or (place.get("types") or [None])[0],
+        "website":         place.get("website") or (place.get("links") or {}).get("website"),
+        "phone":           place.get("phone"),
+        "address":         place.get("address"),
+        "business_status": place.get("business_status"),  # 'OPERATIONAL' | 'CLOSED_TEMPORARILY' | 'CLOSED_PERMANENTLY'
+        "position":        0,
+    }
+
+
+async def _score_user_competitor(
+    entry: dict,
+    country: str | None = None,
+    perplexity_result: dict | None = None,
+    google_result: dict | None = None,
+    chatgpt_result: dict | None = None,
+) -> dict:
+    """Score one user-locked competitor end-to-end: place_id lookup, website
+    check, AI citation matching (when audit results provided), and the 5-pillar
+    formula. Used by POST /aeo/competitors when an owner adds a competitor that
+    wasn't found by the audit's local pack queries."""
+    base = await _lookup_competitor_by_place_id(entry["place_id"], country=country)
+    if not base:
+        return {
+            "place_id":     entry["place_id"],
+            "name":         entry.get("name", "Unknown"),
+            "source":       entry.get("source", "manual"),
+            "added_at":     entry.get("added_at"),
+            "last_seen_at": datetime.now(timezone.utc).isoformat(),
+            "status":       "stale",
+            "score":        0,
+            "has_full_data": False,
+        }
+
+    # Website check + AI citation matching against the latest audit (when provided).
+    # Each is best-effort; failures degrade the score, not the response.
+    website_check_results = await check_competitor_websites([base])
+    website_check = website_check_results.get(_competitor_key(base))
+
+    perplexity_m = google_ai_m = chatgpt_m = None
+    if perplexity_result and google_result and chatgpt_result:
+        matches = match_competitor_ai_citations([base], perplexity_result, google_result, chatgpt_result)
+        m = matches.get(_competitor_key(base))
+        if m:
+            perplexity_m = m["perplexity_mentioned"]
+            google_ai_m  = m["google_ai_mentioned"]
+            chatgpt_m    = m["chatgpt_mentioned"]
+
+    scored = score_competitor(
+        base,
+        website_check=website_check,
+        perplexity_mentioned=perplexity_m,
+        google_ai_mentioned=google_ai_m,
+        chatgpt_mentioned=chatgpt_m,
+    )
+
+    status = "closed" if base.get("business_status") == "CLOSED_PERMANENTLY" else "active"
+    return {
+        **base,
+        "score":         scored["total"],
+        "breakdown":     scored["breakdown"],
+        "has_full_data": scored["has_full_data"],
+        "website_check": website_check,
+        "ai_citation": {
+            "perplexity_mentioned": perplexity_m,
+            "google_ai_mentioned":  google_ai_m,
+            "chatgpt_mentioned":    chatgpt_m,
+        },
+        "source":       entry.get("source", "manual"),
+        "added_at":     entry.get("added_at") or datetime.now(timezone.utc).isoformat(),
+        "last_seen_at": datetime.now(timezone.utc).isoformat(),
+        "status":       status,
     }
 
 
@@ -2500,6 +2692,207 @@ async def update_business_profile(
     }).eq("id", business["id"]).execute()
 
     return {"message": "Business profile updated"}
+
+
+class CompetitorEntry(BaseModel):
+    place_id: str
+    name: str
+    source: str = "manual"  # 'auto' | 'manual'
+
+
+class CompetitorListRequest(BaseModel):
+    competitors: list[CompetitorEntry]
+
+
+@router.get("/competitor-search")
+async def competitor_search(
+    q: str = Query(..., min_length=2),
+    current_user: dict = Depends(get_current_user),
+):
+    """Search Google Maps for businesses matching `q`, scoped to the user's
+    city/country. Used by the CompetitorPicker UI to let owners add a specific
+    competitor by name. Cost: ~$0.005 per search (SerpApi google_maps engine)."""
+    business = await get_business_by_user(current_user["id"])
+    if not business:
+        raise HTTPException(status_code=404, detail="Business profile not found")
+
+    city     = business.get("city") or ""
+    country  = business.get("country") or "Canada"
+    province = business.get("province") or ""
+    gl = country_to_gl(country) or province_to_gl(province) or "ca"
+
+    params: dict[str, str] = {
+        "api_key": SERPAPI_KEY,
+        "engine":  "google_maps",
+        "q":       q,
+        "hl":      "en",
+        "gl":      gl,
+    }
+    if city:
+        params["location"] = f"{city}, {province}" if province else city
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get("https://serpapi.com/search", params=params, timeout=20.0)
+            response.raise_for_status()
+            data = response.json()
+    except Exception as e:
+        logger.warning(f"[AEO][COMP-SEARCH] '{q}' failed: {e}")
+        raise HTTPException(status_code=502, detail="Search failed")
+
+    places = data.get("local_results") or []
+    if isinstance(places, dict):
+        places = places.get("places", [])
+
+    results = []
+    for p in places[:8]:
+        pid = p.get("place_id")
+        if not pid:
+            continue
+        results.append({
+            "place_id": pid,
+            "name":     p.get("title", ""),
+            "address":  p.get("address"),
+            "rating":   p.get("rating"),
+            "reviews":  p.get("reviews"),
+            "type":     p.get("type"),
+            "website":  p.get("website") or (p.get("links") or {}).get("website"),
+            "phone":    p.get("phone"),
+        })
+    return {"results": results}
+
+
+@router.post("/competitors")
+async def save_competitor_list(
+    request: CompetitorListRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """Save the owner's confirmed competitor list (capped at 5). Diffs against
+    the existing list to find newly-added entries; scores each in parallel via
+    `_score_user_competitor` so the UI gets back a fully scored list it can
+    render immediately. Updates `businesses.user_competitors` and patches the
+    latest audit's `raw_results.competitors` with the scored entries so the
+    Competitors page reflects them on the next page load.
+
+    Cost: ~$0.015 per newly-added competitor (SerpApi reviews + Perplexity +
+    LLM). Reused entries cost $0 — we just refresh metadata."""
+    business = await get_business_by_user(current_user["id"])
+    if not business:
+        raise HTTPException(status_code=404, detail="Business profile not found")
+
+    country = business.get("country") or "Canada"
+
+    # Dedupe + cap at 5
+    seen_ids: set[str] = set()
+    incoming: list[dict] = []
+    now_iso = datetime.now(timezone.utc).isoformat()
+    for c in request.competitors[:5]:
+        if not c.place_id or c.place_id in seen_ids:
+            continue
+        seen_ids.add(c.place_id)
+        incoming.append({
+            "place_id": c.place_id,
+            "name":     c.name,
+            "source":   c.source if c.source in ("auto", "manual") else "manual",
+            "added_at": now_iso,
+        })
+
+    # Pull the latest audit so we can reuse existing scores (zero-cost path)
+    audits = (
+        supabase_admin.table("aeo_audits")
+        .select("id, raw_results")
+        .eq("business_id", business["id"])
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    latest_audit = audits.data[0] if audits.data else None
+    latest_raw   = (latest_audit or {}).get("raw_results") or {}
+    existing_scored = {
+        c.get("place_id"): c
+        for c in (latest_raw.get("competitors") or [])
+        if c.get("place_id")
+    }
+
+    # Preserve original added_at when an entry already exists
+    existing_uc = {
+        e.get("place_id"): e
+        for e in (business.get("user_competitors") or [])
+        if isinstance(e, dict) and e.get("place_id")
+    }
+
+    final_list: list[dict] = []
+    needs_scoring: list[dict] = []
+    for entry in incoming:
+        pid = entry["place_id"]
+        added_at = (existing_uc.get(pid) or {}).get("added_at") or entry["added_at"]
+        if pid in existing_scored:
+            scored = dict(existing_scored[pid])
+            scored.update({
+                "source":       entry["source"],
+                "added_at":     added_at,
+                "last_seen_at": now_iso,
+                "status":       scored.get("status") or "active",
+            })
+            final_list.append(scored)
+        else:
+            needs_scoring.append({**entry, "added_at": added_at})
+
+    if needs_scoring:
+        perp = latest_raw.get("perplexity") or {}
+        goog = latest_raw.get("google") or {}
+        chat = latest_raw.get("chatgpt") or {}
+        scored_results = await asyncio.gather(
+            *[
+                _score_user_competitor(entry, country, perp, goog, chat)
+                for entry in needs_scoring
+            ],
+            return_exceptions=True,
+        )
+        for entry, scored in zip(needs_scoring, scored_results):
+            if isinstance(scored, Exception):
+                logger.warning(f"[AEO][COMP] Score failed for {entry['place_id']}: {scored}")
+                final_list.append({
+                    "place_id":     entry["place_id"],
+                    "name":         entry["name"],
+                    "source":       entry["source"],
+                    "added_at":     entry["added_at"],
+                    "last_seen_at": now_iso,
+                    "status":       "stale",
+                    "score":        0,
+                    "has_full_data": False,
+                })
+            else:
+                final_list.append(scored)
+
+    # Persist minimal metadata to businesses.user_competitors
+    storage = [
+        {
+            "place_id":     c.get("place_id"),
+            "name":         c.get("name"),
+            "source":       c.get("source", "manual"),
+            "added_at":     c.get("added_at"),
+            "last_seen_at": c.get("last_seen_at"),
+            "status":       c.get("status", "active"),
+        }
+        for c in final_list
+    ]
+    supabase_admin.table("businesses").update({
+        "user_competitors": storage
+    }).eq("id", business["id"]).execute()
+
+    # Patch the latest audit's raw_results with the freshly-scored list so the
+    # Competitors page immediately reflects the new state
+    if latest_audit:
+        updated_raw = {**latest_raw, "competitors": final_list}
+        try:
+            supabase_admin.table("aeo_audits").update({
+                "raw_results": updated_raw
+            }).eq("id", latest_audit["id"]).execute()
+        except Exception as e:
+            logger.warning(f"[AEO][COMP] Failed to patch audit raw_results: {e}")
+
+    return {"competitors": final_list, "count": len(final_list)}
 
 
 @router.post("/audit")
