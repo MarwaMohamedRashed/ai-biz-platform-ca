@@ -604,7 +604,15 @@
         "website": "Website",
         "local_search": "Local Search",
         "ai_citation": "AI Citations"
-      }
+      },
+      "startHere": {
+        "label": "🎯 START WITH THIS",
+        "subtitle": "Quickest win for the biggest score lift"
+      },
+      "totalPoints": "+{points} pts available",
+      "pillarPoints": "+{points} pts",
+      "itemsCount": "{count, plural, one {# item} other {# items}}",
+      "whyThisMatters": "Why this matters"
     },
     "planStatus": {
       "trialing": "Free Trial",

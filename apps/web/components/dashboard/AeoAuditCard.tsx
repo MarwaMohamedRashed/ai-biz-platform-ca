@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import RecommendationsList, { Recommendation } from './RecommendationsList'
+import type { Recommendation } from './RecommendationsList'
 import OwnReputationCard from './OwnReputationCard'
 
 interface Breakdown {

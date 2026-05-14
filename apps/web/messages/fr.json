@@ -593,7 +593,15 @@
         "website": "Site web",
         "local_search": "Recherche locale",
         "ai_citation": "Citations IA"
-      }
+      },
+      "startHere": {
+        "label": "🎯 COMMENCEZ PAR CECI",
+        "subtitle": "Le gain le plus rapide pour le plus grand bond de score"
+      },
+      "totalPoints": "+{points} pts disponibles",
+      "pillarPoints": "+{points} pts",
+      "itemsCount": "{count, plural, one {# élément} other {# éléments}}",
+      "whyThisMatters": "Pourquoi c'est important"
     },
     "nav": {
       "chat": "Tableau de bord",
