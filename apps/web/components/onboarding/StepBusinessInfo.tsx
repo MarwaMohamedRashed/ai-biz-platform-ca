@@ -4,12 +4,13 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase'
 
-const COUNTRIES = [
-  'Canada', 'United States', 'United Kingdom', 'Australia', 'France',
-  'Germany', 'Spain', 'Italy', 'Netherlands', 'Belgium', 'Switzerland',
-  'New Zealand', 'Ireland', 'Portugal', 'Mexico', 'Brazil', 'India',
-  'Japan', 'South Korea', 'Singapore', 'South Africa', 'Other'
-]
+// LeapOne is Canada-only at launch. We hardcode 'Canada' on submit so we
+// can keep tax/billing aligned with Stripe Tax (HST/GST/PST) and so the
+// Canadian-specific recommendations (HomeStars, RateMDs, Realtor.ca, etc.)
+// always apply. Non-Canadian visitors get a waitlist link.
+const CA_PROVINCES = [
+  'AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'NT', 'NU', 'ON', 'PE', 'QC', 'SK', 'YT',
+] as const
 
 const TYPES = ['restaurant', 'salon', 'retail', 'plumber', 'cafe', 'other'] as const
 
@@ -22,7 +23,8 @@ export default function StepBusinessInfo({ userId, onComplete }: Props) {
   const t = useTranslations('onboarding.step1')
   const [name, setName] = useState('')
   const [type, setType] = useState('')
-  const [country, setCountry] = useState('Canada')
+  // Country is hardcoded to Canada at launch — see CA_PROVINCES note above.
+  const country = 'Canada'
   const [city, setCity] = useState('')
   const [province, setProvince] = useState('')
   const [loading, setLoading] = useState(false)
@@ -39,7 +41,7 @@ export default function StepBusinessInfo({ userId, onComplete }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name || !type || !city) return
+    if (!name || !type || !city || !province) return
     setError('')
     setLoading(true)
 
@@ -141,21 +143,20 @@ export default function StepBusinessInfo({ userId, onComplete }: Props) {
         </div>
       )}
 
-      {/* Country */}
-      <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-[#1e293b]">{t('country')}</label>
-        <select
-          value={country}
-          onChange={e => setCountry(e.target.value)}
-          className="border border-slate-200 rounded-xl px-4 py-3 text-sm text-[#1e293b]
-                     outline-none focus:border-[#4f46e5] transition-colors bg-white">
-          {COUNTRIES.map(c => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
+      {/* Canada-only badge + waitlist escape for non-Canadian visitors */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap">
+        <span className="text-xs font-semibold text-[#1e293b]">{t('canadaOnlyBadge')}</span>
+        <span className="text-xs text-slate-500">
+          {t('waitlistPrompt')}{' '}
+          <a
+            href="mailto:support@leapone.ca?subject=Waitlist%20for%20LeapOne&body=Hi%20LeapOne%20team%2C%0A%0AI%27d%20like%20to%20join%20the%20waitlist%20for%20when%20you%20expand%20outside%20Canada.%0A%0ACountry%3A%20%0ABusiness%20name%3A%20%0A%0AThanks%21"
+            className="text-[#4f46e5] font-semibold hover:underline">
+            {t('waitlistCta')}
+          </a>
+        </span>
       </div>
 
-      {/* City + Province/State */}
+      {/* City + Province */}
       <div className="flex gap-3">
         <div className="flex flex-col gap-1.5 flex-1">
           <label className="text-sm font-medium text-[#1e293b]">{t('city')}</label>
@@ -167,14 +168,19 @@ export default function StepBusinessInfo({ userId, onComplete }: Props) {
             className="border border-slate-200 rounded-xl px-4 py-3 text-sm text-[#1e293b]
                        outline-none focus:border-[#4f46e5] transition-colors" />
         </div>
-        <div className="flex flex-col gap-1.5 w-32">
+        <div className="flex flex-col gap-1.5 w-48">
           <label className="text-sm font-medium text-[#1e293b]">{t('provinceState')}</label>
-          <input
-            type="text"
+          <select
+            required
             value={province}
             onChange={e => setProvince(e.target.value)}
             className="border border-slate-200 rounded-xl px-4 py-3 text-sm text-[#1e293b]
-                       outline-none focus:border-[#4f46e5] transition-colors" />
+                       outline-none focus:border-[#4f46e5] transition-colors bg-white">
+            <option value="">{t('provincePlaceholder')}</option>
+            {CA_PROVINCES.map(code => (
+              <option key={code} value={code}>{t(`provinces.${code}`)} ({code})</option>
+            ))}
+          </select>
         </div>
       </div>
       <div className="flex flex-col gap-1.5">
@@ -256,7 +262,7 @@ export default function StepBusinessInfo({ userId, onComplete }: Props) {
 
       <button
         type="submit"
-        disabled={loading || !name || !type || !city || (type === 'other' && !customType)}
+        disabled={loading || !name || !type || !city || !province || (type === 'other' && !customType)}
         className="w-full py-3 rounded-xl bg-[#4f46e5] text-white text-sm font-semibold
                    hover:bg-indigo-700 transition-colors disabled:opacity-50">
         {loading ? t('saving') : t('next')}

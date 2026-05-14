@@ -801,7 +801,26 @@
       "imageUrlPlaceholder": "https://yourbusiness.com/logo.png",
       "priceRangeLabel": "Price range",
       "priceRangeHint": "$ = inexpensive, $$$$ = high-end",
-      "schemaTip": "Tip: you can add hours of operation later in Settings to fully complete your schema markup."
+      "schemaTip": "Tip: you can add hours of operation later in Settings to fully complete your schema markup.",
+      "canadaOnlyBadge": "🍁 Available in Canada",
+      "waitlistPrompt": "Outside Canada?",
+      "waitlistCta": "Join the waitlist →",
+      "provincePlaceholder": "Select a province or territory…",
+      "provinces": {
+        "AB": "Alberta",
+        "BC": "British Columbia",
+        "MB": "Manitoba",
+        "NB": "New Brunswick",
+        "NL": "Newfoundland and Labrador",
+        "NS": "Nova Scotia",
+        "NT": "Northwest Territories",
+        "NU": "Nunavut",
+        "ON": "Ontario",
+        "PE": "Prince Edward Island",
+        "QC": "Quebec",
+        "SK": "Saskatchewan",
+        "YT": "Yukon"
+      }
     },
     "step2": {
       "heading": "Connect Google Business Profile",
