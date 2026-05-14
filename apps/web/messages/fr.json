@@ -761,8 +761,9 @@
   },
   "onboarding": {
     "stepper": {
-      "step1": "Infos entreprise",
-      "step2": "C'est parti"
+      "step1": "Parlez-nous de votre entreprise",
+      "step2": "Vérifier votre visibilité IA",
+      "step3": "Vos premiers gains"
     },
     "step1": {
       "heading": "Parlez-nous de votre entreprise",
@@ -820,6 +821,27 @@
       "heading": "Tout est prêt",
       "body": "Votre tableau de bord est prêt. Commencez à gérer vos avis avec l'IA.",
       "cta": "Accéder au tableau de bord"
+    },
+    "stepAudit": {
+      "heading": "Vérification de la perception IA de votre entreprise…",
+      "subtitle": "Nous effectuons une vérification unique sur les moteurs de recherche IA. Cela prend 30 à 60 secondes — prenez un café.",
+      "msg1": "On interroge ChatGPT sur votre catégorie…",
+      "msg2": "On vérifie les mentions sur Perplexity…",
+      "msg3": "On regarde Google AI Overview…",
+      "msg4": "On lit votre site web…",
+      "msg5": "On calcule le score…",
+      "done": "Audit terminé !",
+      "failed": "Nous n'avons pas pu lancer l'audit pour le moment — vous pouvez réessayer depuis le tableau de bord.",
+      "skip": "Passer et aller au tableau de bord →"
+    },
+    "stepWins": {
+      "heading": "Vos premiers gains, {firstName}",
+      "subtitle": "Voici les actions à plus fort impact pour cette semaine. Nous vous guiderons à travers chacune depuis votre tableau de bord.",
+      "noWins": "Votre visibilité IA est déjà en bonne forme ! Rendez-vous au tableau de bord pour la vue d'ensemble.",
+      "noAudit": "L'audit n'a pas été lancé — vous pouvez réessayer depuis le tableau de bord.",
+      "ctaGo": "Aller à mon tableau de bord →",
+      "ctaSkip": "Passer la visite →",
+      "pointsLift": "+{points} pts ensemble"
     }
   }
 }

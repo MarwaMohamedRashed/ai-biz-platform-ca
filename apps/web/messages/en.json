@@ -761,8 +761,9 @@
   },
   "onboarding": {
     "stepper": {
-      "step1": "Business Info",
-      "step2": "All Set"
+      "step1": "Tell us about your business",
+      "step2": "Check your AI visibility",
+      "step3": "Your first wins"
     },
     "step1": {
       "heading": "Tell us about your business",
@@ -820,6 +821,27 @@
       "heading": "You're all set",
       "body": "Your dashboard is ready. Start managing your reviews with AI.",
       "cta": "Go to dashboard"
+    },
+    "stepAudit": {
+      "heading": "Checking how AI sees your business…",
+      "subtitle": "We're running a one-time check across the AI search engines. This takes 30 to 60 seconds — feel free to grab a coffee.",
+      "msg1": "Asking ChatGPT about your category…",
+      "msg2": "Checking Perplexity for mentions…",
+      "msg3": "Looking at Google AI Overview…",
+      "msg4": "Reading your website…",
+      "msg5": "Scoring the results…",
+      "done": "Audit complete!",
+      "failed": "We couldn't run the audit just now — you can try again from your dashboard.",
+      "skip": "Skip and go to dashboard →"
+    },
+    "stepWins": {
+      "heading": "Your first wins, {firstName}",
+      "subtitle": "Here are the highest-impact things you can do this week. We'll guide you through each one inside your dashboard.",
+      "noWins": "Your AI visibility is already in good shape! Head to the dashboard for the full picture.",
+      "noAudit": "Audit didn't run — you can try again from the dashboard.",
+      "ctaGo": "Go to my dashboard →",
+      "ctaSkip": "Skip the tour →",
+      "pointsLift": "+{points} pts together"
     }
   }
 }

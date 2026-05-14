@@ -1,12 +1,11 @@
 'use client'
 
-import { useState } from 'react'
-import { useTranslations } from 'next-intl'
+import { useState, useCallback } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
+import { createClient } from '@/lib/supabase'
 import StepBusinessInfo from './StepBusinessInfo'
-import StepSuccess from './StepSuccess'
-// Phase 3 — restore when Google/Meta API approved (~July 2026)
-// import StepConnectGoogle from './StepConnectGoogle'
-// import StepSyncing from './StepSyncing'
+import StepRunAudit, { type AuditResult } from './StepRunAudit'
+import StepQuickWins from './StepQuickWins'
 
 interface Props {
   userId: string
@@ -15,13 +14,35 @@ interface Props {
 }
 
 export default function OnboardingFlow({ userId, userName, initialStep }: Props) {
-  
-  
   const [step, setStep] = useState(initialStep)
   const [businessName, setBusinessName] = useState('')
+  const [businessId, setBusinessId] = useState<string | null>(null)
+  const [auditResult, setAuditResult] = useState<AuditResult | null>(null)
   const t = useTranslations('onboarding.stepper')
+  const locale = useLocale()
 
-  const steps = [t('step1'), t('step2')]
+  const steps = [t('step1'), t('step2'), t('step3')]
+
+  // After business is saved we need its id for the audit call.
+  const handleBusinessSaved = useCallback(async (name: string) => {
+    setBusinessName(name)
+    try {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('businesses')
+        .select('id')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+      if (data?.id) setBusinessId(data.id)
+    } catch {
+      // Audit step will surface the failed-state UI if businessId is null
+    }
+    setStep(2)
+  }, [userId])
+
+  const firstName = (userName || '').trim().split(' ')[0] || 'there'
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
@@ -52,16 +73,23 @@ export default function OnboardingFlow({ userId, userName, initialStep }: Props)
           {step === 1 && (
             <StepBusinessInfo
               userId={userId}
-              onComplete={(name) => { setBusinessName(name); setStep(2) }}
+              onComplete={handleBusinessSaved}
             />
           )}
           {step === 2 && (
-            <StepSuccess businessName={businessName} userName={userName} />
+            <StepRunAudit
+              businessId={businessId}
+              locale={locale}
+              onComplete={result => { setAuditResult(result); setStep(3) }}
+            />
           )}
-          {/* Phase 3 — restore when Google/Meta API approved (~July 2026)
-          {step === 3 && <StepConnectGoogle onSkip={() => setStep(3)} />}
-          {step === 4 && <StepSyncing onComplete={() => setStep(4)} />}
-          */}
+          {step === 3 && (
+            <StepQuickWins
+              businessName={businessName}
+              firstName={firstName}
+              auditResult={auditResult}
+            />
+          )}
         </div>
       </div>
 
