@@ -255,9 +255,24 @@ export default function AeoAuditCard({ businessId, initialAudit, initialRecommen
       <div className="bg-white rounded-2xl border-l-[3px] border-l-[#4f46e5] shadow-sm border border-slate-100 p-5">
         {audit && (
           <div className="mb-4">
-            <p className={`text-4xl font-extrabold ${scoreColor}`}>
-              {audit.score}<span className="text-base font-semibold text-slate-400">/100</span>
-            </p>
+            <div className="flex items-baseline gap-2">
+              <p className={`text-4xl font-extrabold ${scoreColor}`}>
+                {audit.score}<span className="text-base font-semibold text-slate-400">/100</span>
+              </p>
+              <Link
+                href={`/${locale}/methodology`}
+                title={t('howCalculated')}
+                aria-label={t('howCalculated')}
+                className="inline-flex items-center justify-center w-5 h-5 rounded-full
+                           text-slate-400 hover:text-[#4f46e5] hover:bg-indigo-50
+                           transition-colors">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                  <line x1="12" y1="10" x2="12" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  <circle cx="12" cy="7" r="1" fill="currentColor"/>
+                </svg>
+              </Link>
+            </div>
             <p className={`text-sm font-semibold mt-1 ${scoreColor}`}>
               {t(`scoreTier.${scoreTierKey(audit.score)}`)}
             </p>
@@ -317,14 +332,6 @@ export default function AeoAuditCard({ businessId, initialAudit, initialRecommen
             className="text-xs font-semibold bg-[#4f46e5] text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50">
             {loading ? t('running') : audit ? t('rerunAudit') : t('runAudit')}
           </button>
-        </div>
-
-        <div className="flex items-center gap-3 mt-3 border-t border-slate-50 pt-2">
-          <Link
-            href={`/${locale}/methodology`}
-            className="text-[11px] text-slate-400 hover:text-[#4f46e5] hover:underline transition-colors">
-            {t('howCalculated')}
-          </Link>
         </div>
       </div>
 
@@ -531,7 +538,7 @@ function PillarRow({
               type="button"
               onClick={() => setExpanded(e => !e)}
               aria-expanded={expanded}
-              className="text-[11px] text-slate-400 hover:text-[#4f46e5] mt-1.5 inline-flex items-center gap-1 transition-colors">
+              className="text-xs font-medium text-[#4f46e5] hover:underline mt-1.5 inline-flex items-center gap-1 transition-colors">
               <span aria-hidden="true">{expanded ? '▴' : '▾'}</span>
               {expanded ? t('hideDetails') : t('whatWeChecked')}
             </button>
