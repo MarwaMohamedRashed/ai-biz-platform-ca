@@ -265,6 +265,29 @@ _DIETARY_PATTERNS: list[tuple[str, re.Pattern, str]] = [
     ("jain",        re.compile(r"\bjain\b",                    re.IGNORECASE), "jain vegetarian restaurant {city}"),
 ]
 
+# Healthcare service signals — scanned from the website homepage.
+# Each entry: (tag_key, compiled_pattern, query_template).
+# tag_key is the slug used internally; query_template must contain {city}.
+# Only triggered when is_healthcare=True so a plumber whose site mentions
+# 'sports medicine' coverage in a testimonial doesn't get stray queries.
+_CLINIC_SERVICE_PATTERNS: list[tuple[str, re.Pattern, str]] = [
+    ("massage_therapy",      re.compile(r"\bmassage\s+therap\w*|\bRMT\b|\bregistered\s+massage",          re.IGNORECASE), "massage therapy {city}"),
+    ("physiotherapy",        re.compile(r"\bphysiother\w+|\bphysical\s+therap\w*",                         re.IGNORECASE), "physiotherapy clinic {city}"),
+    ("chiropractic",         re.compile(r"\bchiropract\w+",                                                 re.IGNORECASE), "chiropractor {city}"),
+    ("acupuncture",          re.compile(r"\bacupuncture\b|\bacupuncturist\b",                               re.IGNORECASE), "acupuncture {city}"),
+    ("naturopath",           re.compile(r"\bnaturopath\w*",                                                 re.IGNORECASE), "naturopath {city}"),
+    ("dietitian",            re.compile(r"\bdietitian\b|\bnutritionist\b|\bnutrition\s+counsel\w*",         re.IGNORECASE), "dietitian {city}"),
+    ("psychology",           re.compile(r"\bpsycholog\w+|\bmental\s+health\b|\bcounsell?\w+|\btherapist\b", re.IGNORECASE), "psychologist {city}"),
+    ("optometry",            re.compile(r"\boptometr\w+|\beye\s+care\b|\beye\s+exam\b",                     re.IGNORECASE), "optometrist {city}"),
+    ("podiatry",             re.compile(r"\bpodiatr\w+|\bfoot\s+care\b|\bchiropod\w+",                      re.IGNORECASE), "podiatrist {city}"),
+    ("speech_therapy",       re.compile(r"\bspeech\s+therap\w+|\bspeech.language\s+path\w+|\bSLP\b",       re.IGNORECASE), "speech therapist {city}"),
+    ("occupational_therapy", re.compile(r"\boccupational\s+therap\w+",                                      re.IGNORECASE), "occupational therapy {city}"),
+    ("walk_in",              re.compile(r"\bwalk.in\b|\burgent\s+care\b|\bno\s+appointment\b",              re.IGNORECASE), "walk-in clinic {city}"),
+    ("dermatology",          re.compile(r"\bdermatolog\w+|\bskin\s+clinic\b",                               re.IGNORECASE), "dermatologist {city}"),
+    ("sports_medicine",      re.compile(r"\bsports\s+medicine\b|\bsports\s+injur\w+",                       re.IGNORECASE), "sports medicine clinic {city}"),
+    ("pediatric",            re.compile(r"\bpediatric\w*|\bchildren.s\s+clinic\b|\bkids\s+clinic\b",        re.IGNORECASE), "pediatric clinic {city}"),
+]
+
 
 def extract_search_name(business_name: str, city: str) -> str:
     return re.sub(rf'\s+in\s+{re.escape(city)}\s*$', '', business_name, flags=re.IGNORECASE).strip()
@@ -370,6 +393,7 @@ def build_queries(
     is_healthcare: bool = False,
     business_name: str = "",
     dietary_tags: list[str] | None = None,
+    service_tags: list[str] | None = None,
 ) -> list[str]:
     """
     Returns the list of search-query strings to run against each AI engine.
@@ -390,8 +414,14 @@ def build_queries(
       * Dietary queries from verified website/name signals — halal,
         vegetarian, vegan, kosher — only when explicitly detected, never
         assumed from cuisine origin alone.
+      * Healthcare service queries from website signals — e.g. a clinic
+        whose homepage mentions massage therapy and dietitian gets targeted
+        queries like 'massage therapy Toronto' alongside the generic clinic
+        query. Capped at 2 extras, skipped if the service is already
+        captured in the normalized business type.
     """
     dietary_tags = dietary_tags or []
+    service_tags = service_tags or []
     queries = [t.format(type=business_type_en, city=city, province=province)
                for t in QUERY_TEMPLATES]
 
@@ -404,22 +434,16 @@ def build_queries(
         queries.append(f"{business_type_en} open weekends {city}")
 
     # Restaurant vertical: add cuisine-specific and parent-category queries.
-    # These are the high-intent queries that users actually type when looking
-    # for a specific cuisine — generic 'restaurant' queries miss niche establishments.
     if business_name and _RESTAURANT_RE.search(f"{business_name} {business_type_en}"):
         cuisine, parent, is_halal_name = _detect_cuisine(business_name, business_type_en)
         extras: list[str] = []
-        # Add cuisine-specific query only if not already in the normalized type
         if cuisine and cuisine.lower() not in business_type_en.lower():
             extras.append(f"best {cuisine.lower()} restaurant {city}")
-        # Add parent category query (e.g. Middle Eastern) if different from specific cuisine
         if parent and parent.lower() not in business_type_en.lower():
             extras.append(f"{parent.lower()} food {city}")
-        queries.extend(extras[:2])  # cap cuisine extras at 2 to control API cost
+        queries.extend(extras[:2])
 
-        # Dietary queries: combine signals from the business name/type AND from
-        # the website/GBP text (passed in via dietary_tags from check_website).
-        # Cap at 1 dietary query total — more would double the API cost.
+        # Dietary queries: combine name-based flag with website signals.
         effective_tags = set(dietary_tags)
         if is_halal_name:
             effective_tags.add("halal")
@@ -429,6 +453,28 @@ def build_queries(
                 if dq not in queries:
                     queries.append(dq)
                 break  # one dietary query max
+
+    # Healthcare vertical: inject service-specific queries from website signals.
+    # Example: a clinic whose homepage lists massage therapy + dietitian gets
+    # 'massage therapy Toronto' and 'dietitian Toronto' added so AI engines can
+    # cite it for those specific service searches, not just the generic clinic query.
+    if is_healthcare and service_tags:
+        added = 0
+        for tag, _pat, tmpl in _CLINIC_SERVICE_PATTERNS:
+            if tag not in service_tags:
+                continue
+            # Skip if this service is already captured in the normalized type
+            # e.g. don't add 'physiotherapy clinic Toronto' when the type is
+            # already 'physiotherapy clinic' (base queries cover it).
+            keyword = tag.replace("_", " ")
+            if keyword in business_type_en.lower():
+                continue
+            sq = tmpl.format(city=city)
+            if sq not in queries:
+                queries.append(sq)
+                added += 1
+            if added >= 2:
+                break  # cap at 2 service queries to control API cost
 
     return queries
 
@@ -469,10 +515,11 @@ async def run_perplexity_multi(
     is_trades: bool = False,
     is_healthcare: bool = False,
     dietary_tags: list[str] | None = None,
+    service_tags: list[str] | None = None,
 ) -> dict:
     results = []
     for query in build_queries(business_type_en, city, province, postal_code, is_trades, is_healthcare,
-                                business_name=business_name, dietary_tags=dietary_tags):
+                                business_name=business_name, dietary_tags=dietary_tags, service_tags=service_tags):
         try:
             results.append(await _perplexity_one(business_name, query, city))
         except Exception as e:
@@ -518,10 +565,11 @@ async def run_chatgpt_multi(
     is_trades: bool = False,
     is_healthcare: bool = False,
     dietary_tags: list[str] | None = None,
+    service_tags: list[str] | None = None,
 ) -> dict:
     results = []
     for query in build_queries(business_type_en, city, province, postal_code, is_trades, is_healthcare,
-                                business_name=business_name, dietary_tags=dietary_tags):
+                                business_name=business_name, dietary_tags=dietary_tags, service_tags=service_tags):
         try:
             results.append(await _chatgpt_one(business_name, query, city))
         except Exception as e:
@@ -858,10 +906,11 @@ async def run_google_multi(
     is_healthcare: bool = False,
     competitor_scope: str = "local",
     dietary_tags: list[str] | None = None,
+    service_tags: list[str] | None = None,
 ) -> dict:
     results = []
     for query in build_queries(business_type_en, city, province, postal_code, is_trades, is_healthcare,
-                                business_name=business_name, dietary_tags=dietary_tags):
+                                business_name=business_name, dietary_tags=dietary_tags, service_tags=service_tags):
         try:
             results.append(await _google_one(
                 business_name, query, city, website, province, country,
@@ -1019,6 +1068,12 @@ async def check_website(website: str | None) -> dict:
     dietary_tags: list[str] = [
         tag for tag, pattern, _ in _DIETARY_PATTERNS if pattern.search(html)
     ]
+    # Healthcare service tags — specific services mentioned on the homepage
+    # (massage therapy, physiotherapy, dietitian, etc.) so we can build
+    # service-specific queries for multi-service clinics.
+    service_tags: list[str] = [
+        tag for tag, pattern, _ in _CLINIC_SERVICE_PATTERNS if pattern.search(html)
+    ]
     # Cuisine hint from homepage text — used if the business name alone is ambiguous.
     cuisine_hint: str | None = None
     cuisine_hint_parent: str | None = None
@@ -1028,12 +1083,13 @@ async def check_website(website: str | None) -> dict:
             cuisine_hint_parent = parent
             break
 
-    print(f"[AEO] Website: reachable=True local_schema={has_local_business} faq_schema={has_faq} dietary={dietary_tags} cuisine_hint={cuisine_hint}")
+    print(f"[AEO] Website: reachable=True local_schema={has_local_business} faq_schema={has_faq} dietary={dietary_tags} services={service_tags} cuisine_hint={cuisine_hint}")
     return {
         "reachable": True,
         "has_local_business_schema": has_local_business,
         "has_faq_schema": has_faq,
         "dietary_tags": dietary_tags,
+        "service_tags": service_tags,
         "cuisine_hint": cuisine_hint,
         "cuisine_hint_parent": cuisine_hint_parent,
     }
@@ -1653,23 +1709,25 @@ async def _run_audit_core(business: dict) -> dict:
     # so the net latency impact is minimal.
     website_check = await check_website(website)
     dietary_tags_v: list[str] = website_check.get("dietary_tags") or []
-    # Fall back to cuisine hint from website if name-based detection is ambiguous
+    service_tags_v: list[str] = website_check.get("service_tags") or []
     cuisine_hint_v: str | None = website_check.get("cuisine_hint")
     if cuisine_hint_v:
         print(f"[AEO] Website cuisine hint: {cuisine_hint_v} (parent={website_check.get('cuisine_hint_parent')})")
     if dietary_tags_v:
         print(f"[AEO] Website dietary tags: {dietary_tags_v}")
+    if service_tags_v:
+        print(f"[AEO] Website service tags: {service_tags_v}")
 
     perplexity_result, google_result, chatgpt_result = await asyncio.gather(
         run_perplexity_multi(business_name, business_type_en, city, province,
                              postal_code=postal_code, is_trades=is_trades_v, is_healthcare=is_healthcare_v,
-                             dietary_tags=dietary_tags_v),
+                             dietary_tags=dietary_tags_v, service_tags=service_tags_v),
         run_google_multi(business_name, business_type_en, city, province, website, country,
                          postal_code=postal_code, is_trades=is_trades_v, is_healthcare=is_healthcare_v,
-                         competitor_scope=competitor_scope, dietary_tags=dietary_tags_v),
+                         competitor_scope=competitor_scope, dietary_tags=dietary_tags_v, service_tags=service_tags_v),
         run_chatgpt_multi(business_name, business_type_en, city, province,
                           postal_code=postal_code, is_trades=is_trades_v, is_healthcare=is_healthcare_v,
-                          dietary_tags=dietary_tags_v),
+                          dietary_tags=dietary_tags_v, service_tags=service_tags_v),
     )
 
     # Recency check — only if the KG gave us a place_id (i.e. business is indexed by Google)
