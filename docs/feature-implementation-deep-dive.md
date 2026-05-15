@@ -1,6 +1,6 @@
 # LeapOne — Built Functionality, Implementation & Competitive Notes
 
-**Date:** 2026-05-15 (added multi-source own reputation with source attribution; flagged competitor-weakness Perplexity rewrite as partial — source + per-competitor attribution still pending)
+**Date:** 2026-05-16 (added Canada-only signup, competitor scope toggle, and user-confirmed competitor list with score-on-add)
 **Audience:** Founder / sales conversations / competitive comparisons
 **Companion docs:**
 [feature-inventory-current.md](feature-inventory-current.md) (what exists, by surface) ·
@@ -1728,3 +1728,228 @@ not per-dashboard-load.
 - The deep-dive doc previously described `OwnReputationCard` as
   Google-only in §17's i18n pass entry — that description is now
   superseded by this section.
+
+---
+
+## 25. Canada-only signup (completed 2026-05-16)
+
+**Status:** Built.
+
+### Problem it solves
+
+Stripe Tax is configured for Canadian HST/GST/PST; the Canadian-vertical
+moat (HomeStars, RateMDs, Realtor.ca, Quebec FR, Yellow Pages.ca) assumes
+Canadian businesses. A US or UK signup creates a real legal liability
+(charging without proper tax handling) and a degraded product experience.
+Easier to widen markets post-launch than to retroactively narrow.
+
+### What was built
+
+`StepBusinessInfo` (onboarding):
+- Country dropdown removed entirely; `country` hardcoded to `"Canada"`
+  on submit
+- Maple-leaf "Available in Canada" badge with an inline waitlist mailto
+  link (`support@leapone.ca` with pre-filled subject + body)
+- Province field switched from free-text input to a strict 13-entry
+  dropdown of Canadian provinces + territories
+- Province is now **required** at submit (was optional). Stops audits
+  from running with empty province — which was the root cause of some
+  cross-city / wrong-region competitor leaks
+
+i18n: `onboarding.step1.{canadaOnlyBadge, waitlistPrompt, waitlistCta,
+provincePlaceholder, provinces.{AB..YT}}` in both EN and FR.
+
+Settings still shows the country field for existing accounts so legacy
+non-CA rows (none today) can be edited if needed — Canada-only is a
+*signup* gate, not a strict invariant on the table.
+
+---
+
+## 26. Competitor scope toggle — local / country / global (completed 2026-05-16)
+
+**Status:** Built.
+
+### Problem it solves
+
+Two failure modes of pure-local competitor discovery surfaced during
+testing:
+
+- **SaaS / online services**: a Canadian SaaS company in Milton has no
+  real local competitors. The local pack returns nothing or pulls in
+  irrelevant businesses. Empty/wrong competitor list = no value.
+- **Thin local markets**: a niche service in a small town genuinely
+  has no nearby competition. Owner wants regional or national reference
+  points.
+
+The owner now picks how broadly the audit looks during onboarding (and
+edits any time from Settings).
+
+### What was built
+
+Migration `020_business_competitor_scope.sql`:
+```sql
+ALTER TABLE businesses
+ADD COLUMN IF NOT EXISTS competitor_scope text
+  NOT NULL DEFAULT 'local'
+  CHECK (competitor_scope IN ('local', 'country', 'global'));
+```
+
+Backend (`api/aeo/router.py`):
+- `_google_one` accepts `competitor_scope`; builds SerpApi params per scope:
+  - `local`   → `location=city`, `gl=country`
+  - `country` → no `location`, `gl=country`
+  - `global`  → no `location`, no `gl`
+- `run_google_multi` threads scope to `_google_one`; cross-border filter
+  bypassed when scope=`global` (owner explicitly asked for worldwide)
+- `_run_audit_core` reads `business.competitor_scope` (default `local`)
+
+Frontend:
+- 3 large radio cards in StepBusinessInfo + Settings business profile
+  editor: "Local businesses / Across Canada / Industry-wide"
+- Same i18n shape under `onboarding.step1.competitorScopes` and
+  `dashboard.settings.businessProfile.competitorScopes`
+
+Cost impact: **zero extra API calls**. The scope only changes which
+SerpApi params we send on the existing 3-6 audit queries.
+
+---
+
+## 27. User-confirmed competitor list (completed 2026-05-16)
+
+**Status:** Built — Pro-shaped feature, available to all tiers at launch.
+
+### Problem it solves
+
+The clinic owner's "wrong competitors" frustration was the top trust
+hit during testing. The audit was a black box: it picked competitors
+from the local pack, the owner had no way to override, and on every
+re-audit the list could shuffle. Three real failure modes:
+
+1. **Mismatched discovery**: SerpApi returns businesses the owner
+   doesn't consider competitors (different sub-vertical, different
+   price band).
+2. **Missing competitors**: the owner *knows* X5 is their main rival,
+   but X5 doesn't appear in any of the audit's category-based local
+   pack queries.
+3. **List churn**: each audit re-discovers competitors from scratch,
+   so the list silently changes week to week. Owner can't track "did
+   X1's score go up this month?" because X1 might be missing next
+   audit.
+
+### What was built
+
+**Migration `021_business_user_competitors.sql`:**
+```sql
+ALTER TABLE businesses
+ADD COLUMN IF NOT EXISTS user_competitors JSONB DEFAULT NULL;
+```
+- `NULL` = use auto-discovery (preserves pre-migration behaviour)
+- `[]` = owner said "no competitors"
+- `[...]` = locked list, max 5 entries
+
+Each entry: `{place_id, name, source: 'auto'|'manual', added_at,
+last_seen_at, status: 'active'|'stale'|'closed'}`.
+
+**Backend helpers** in [api/aeo/router.py](../api/aeo/router.py):
+- `_lookup_competitor_by_place_id(place_id, country)` — resolves a
+  Google Maps place_id to a competitor dict in the same shape as
+  `extract_competitors()`. Used when an owner adds a competitor that
+  wasn't found by the audit's local-pack queries. ~$0.005 per call.
+- `_score_user_competitor(entry, country, perplexity, google, chatgpt)`
+  — full scoring pipeline for one user-locked competitor: place_id
+  lookup → website check → AI citation matching → 5-pillar score.
+  Returns `status: 'closed'` when `business_status=CLOSED_PERMANENTLY`
+  in the place data.
+
+**New endpoints:**
+- `GET /api/v1/aeo/competitor-search?q=...` — searches Google Maps for
+  businesses matching `q`, scoped to the owner's city/country.
+  Returns up to 8 matches. Used by the search-and-pick UI. ~$0.005 per
+  search.
+- `POST /api/v1/aeo/competitors` — body `{competitors:
+  [{place_id, name, source}]}`. Saves the owner's confirmed list
+  (capped at 5, deduped). Diffs against the latest audit's
+  `raw_results.competitors` to find newly-added entries; scores them
+  in parallel via `_score_user_competitor`. Reused entries cost $0
+  (we just refresh metadata). Persists the list to
+  `businesses.user_competitors` AND patches the latest audit's
+  `raw_results.competitors` so the Competitors page immediately
+  reflects the new state.
+
+**`_run_audit_core` integration:**
+When `business.user_competitors` is non-null, the audit treats that
+list as the source of truth:
+- Matches against this audit's auto-detected competitors when possible
+  (free)
+- Looks up missing entries by place_id (parallel `asyncio.gather`)
+- Falls back to a `'stale'` stub on lookup failure (never auto-removes)
+- Auto-detected competitors NOT in the user list become
+  `raw_results.auto_suggestions` so the UI can offer them as
+  one-click additions
+- Refreshed `last_seen_at` and `status` are persisted back to
+  `businesses.user_competitors` after every audit
+
+**Frontend:**
+- New reusable [components/dashboard/CompetitorPicker.tsx](../apps/web/components/dashboard/CompetitorPicker.tsx)
+  — search-and-pick UI (350ms-debounced) + current list cards with
+  source pills and remove buttons + suggestions section + blocking
+  modal scoring overlay during save
+- New [components/onboarding/StepConfirmCompetitors.tsx](../apps/web/components/onboarding/StepConfirmCompetitors.tsx)
+  — onboarding step inserted between StepRunAudit and StepQuickWins.
+  Seeded with the audit's top-3 auto-detected competitors. Continue
+  triggers the picker's save (via imperative `saveRef`); Skip
+  bypasses scoring.
+- OnboardingFlow stepper grows from 3 to 4 steps.
+- CompetitorsPage on the Competitors tab gains a `CompetitorEditorSection`
+  at the bottom that wraps `CompetitorPicker` with the same UX.
+
+### Rules
+
+| Rule | Behaviour |
+|---|---|
+| Hard max | **5 total** per business (enforced at picker AND backend) |
+| User additions | Always preserved across audits; never auto-removed |
+| Auto-detected | Refilled each audit, only into slots not held by user additions |
+| Add-flow | Search-and-pick via SerpApi `google_maps` — requires a Google Maps match |
+| Score for new manual additions | Lands on the POST `/aeo/competitors` call (~15s blocking modal) |
+| Closed business | Soft-flag `stale`/`closed`, never auto-remove |
+
+### Cost impact
+
+- $0 for existing accounts (NULL = legacy path)
+- $0 per audit when a user-locked competitor matches auto-discovery
+- ~$0.005 per audit per user-locked competitor not in the local pack
+  (one SerpApi place_id lookup)
+- ~$0.015 per newly-added manual competitor on the POST call
+  (one-time cost: SerpApi reviews + Perplexity + LLM)
+- Lifetime cap per business: ~5 manual adds × $0.015 = **~$0.075**
+
+### i18n
+
+New namespaces in both EN and FR (parity verified):
+- `dashboard.competitorPicker.*` — full picker UI (title, subtitle,
+  empty state, add CTA, search states, suggestions, scoring modal,
+  status flags)
+- `onboarding.stepConfirmCompetitors.*` — step heading, subtitle, CTAs
+- `onboarding.stepper.*` — renumbered 1-4
+
+### Competitive notes
+
+- **No SMB AEO tool we've evaluated lets the owner curate the
+  competitor list.** BrightLocal lets you "add a competitor" but only
+  for citation tracking, not as the canonical comparison list. Most
+  competitors (Otterly, Athena, Profound, HubSpot AEO) operate purely
+  on auto-discovery — owner has no agency.
+- The owner-curated list is also a moat against the silent-list-churn
+  trust hit: when X1's score drops next month, the owner knows it's
+  because X1's score *actually changed*, not because the audit picked
+  a different X1 this week.
+
+### Known follow-ons (not yet built)
+
+- Bulk import (CSV / paste-list) for owners who already have a
+  competitor research spreadsheet — defer to post-launch
+- Closed-business auto-notification (email when a user_competitor
+  flips to `status: 'closed'`) — relates to the deferred score-change
+  email work; defer until email infra is in place
+
