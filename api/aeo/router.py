@@ -10,7 +10,7 @@ import json
 import os
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from core.ai_engine import AIEngine
 from .schema_builder import build_schema, build_faq_schema, find_missing_required_fields
 from . import knowledge as kb
@@ -874,6 +874,30 @@ async def check_website(website: str | None) -> dict:
         return {"reachable": False, "has_local_business_schema": False, "has_faq_schema": False}
 
     has_local_business = '"@type":"localbusiness"' in html.replace(" ", "") or '"@type": "localbusiness"' in html
+    # Also detect Schema.org LocalBusiness subtypes — many CMS plugins emit a
+    # specific type (Restaurant, Dentist, Plumber, etc.) rather than the generic
+    # LocalBusiness parent.  AI engines accept any of these as local-business signals.
+    if not has_local_business:
+        _LB_SUBTYPES = {
+            "restaurant", "foodestablishment", "cafeorcoffeeshop", "fastfoodrestaurant",
+            "barorpub", "bakery", "icecreamshop", "winery", "distillery",
+            "dentist", "physician", "medicalbusiness", "healthandbeautybusiness",
+            "medicalclinic", "optician", "pharmacy", "physiotherapist",
+            "homeandconstructionbusiness", "electrician", "generalcontractor",
+            "hvacbusiness", "housepainter", "locksmith", "movingcompany",
+            "plumber", "roofingcontractor",
+            "autodealer", "autorepair", "autobodyshop",
+            "legalservice", "accountingservice", "financialservice",
+            "insuranceagency", "realestateagent",
+            "hairsalon", "beautysalon", "nailsalon", "dayspa", "tattooparlor",
+            "store", "sportinggoods", "clothingstore", "electronicsstore",
+            "lodging", "hotel", "motel", "bedandbreakfast",
+            "veterinarycare", "animalshelter",
+        }
+        html_nospace = html.replace(" ", "")
+        has_local_business = any(
+            f'"@type":"{t}"' in html_nospace for t in _LB_SUBTYPES
+        )
     has_faq = '"@type":"faqpage"' in html.replace(" ", "") or '"@type": "faqpage"' in html
     print(f"[AEO] Website: reachable=True local_schema={has_local_business} faq_schema={has_faq}")
     return {
@@ -2717,19 +2741,21 @@ async def competitor_search(
         raise HTTPException(status_code=404, detail="Business profile not found")
 
     city     = business.get("city") or ""
-    country  = business.get("country") or "Canada"
     province = business.get("province") or ""
-    gl = country_to_gl(country) or province_to_gl(province) or "ca"
+
+    # google_maps engine does NOT support `location` or `gl` — those are for
+    # the regular `google` engine. Geo-scope by appending city+province to `q`.
+    loc_suffix = ""
+    if city:
+        loc_suffix = f" {city}, {province}" if province else f" {city}"
+    q_scoped = f"{q}{loc_suffix}"
 
     params: dict[str, str] = {
         "api_key": SERPAPI_KEY,
         "engine":  "google_maps",
-        "q":       q,
+        "q":       q_scoped,
         "hl":      "en",
-        "gl":      gl,
     }
-    if city:
-        params["location"] = f"{city}, {province}" if province else city
 
     try:
         async with httpx.AsyncClient() as client:
@@ -2911,6 +2937,37 @@ async def run_audit(
         if not subscription:
             raise HTTPException(status_code=402, detail="Active subscription required")
 
+    # Reuse-recent-audit guard. If a successful audit ran in the last 10 minutes
+    # (e.g. user refreshed the onboarding page while the previous audit's
+    # response was still in flight), return the existing row instead of firing
+    # a duplicate. Stops SerpApi rate-limit cascades on slow audits.
+    recent = supabase_admin.table("aeo_audits") \
+        .select("id, score, score_breakdown, raw_results, created_at") \
+        .eq("business_id", business["id"]) \
+        .gte("created_at", (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat()) \
+        .order("created_at", desc=True) \
+        .limit(1) \
+        .execute()
+    if recent.data:
+        row = recent.data[0]
+        raw = row.get("raw_results") or {}
+        logger.info(f"[AEO] Returning recent audit {row.get('id')} (no rerun)")
+        return {
+            "score":                row.get("score"),
+            "breakdown":             row.get("score_breakdown"),
+            "recommendations":       (raw.get("recommendations") or []),
+            "perplexity":            raw.get("perplexity") or {},
+            "google":                raw.get("google") or {},
+            "chatgpt":               raw.get("chatgpt") or {},
+            "website":               raw.get("website") or {},
+            "competitors":           raw.get("competitors") or [],
+            "competitor_insights":   raw.get("competitor_insights") or {},
+            "citation_gaps":         raw.get("citation_gaps") or {},
+            "auto_suggestions":      raw.get("auto_suggestions") or [],
+            "raw_results":           raw,
+            "reused": True,
+        }
+
     prev_audits = supabase_admin.table("aeo_audits") \
         .select("score") \
         .eq("business_id", business["id"]) \
@@ -2940,6 +2997,7 @@ async def run_audit(
             "competitors":          result.get("competitors", []),
             "competitor_insights":  result.get("competitor_insights", {}),
             "citation_gaps":        result.get("citation_gaps", {}),
+            "auto_suggestions":     result.get("auto_suggestions", []),
         },
     }).execute()
 
@@ -2958,6 +3016,7 @@ async def run_audit(
         "competitors":         result.get("competitors", []),
         "competitor_insights": result.get("competitor_insights", {}),
         "citation_gaps":       result.get("citation_gaps", {}),
+        "auto_suggestions":    result.get("auto_suggestions", []),
     }
     return result
 
