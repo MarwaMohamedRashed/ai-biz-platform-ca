@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase'
 import StepBusinessInfo from './StepBusinessInfo'
 import StepRunAudit, { type AuditResult } from './StepRunAudit'
+import StepConfirmCompetitors from './StepConfirmCompetitors'
 import StepQuickWins from './StepQuickWins'
 
 interface Props {
@@ -21,7 +22,7 @@ export default function OnboardingFlow({ userId, userName, initialStep }: Props)
   const t = useTranslations('onboarding.stepper')
   const locale = useLocale()
 
-  const steps = [t('step1'), t('step2'), t('step3')]
+  const steps = [t('step1'), t('step2'), t('step3'), t('step4')]
 
   // After business is saved we need its id for the audit call.
   const handleBusinessSaved = useCallback(async (name: string) => {
@@ -84,6 +85,12 @@ export default function OnboardingFlow({ userId, userName, initialStep }: Props)
             />
           )}
           {step === 3 && (
+            <StepConfirmCompetitors
+              auditResult={auditResult}
+              onComplete={() => setStep(4)}
+            />
+          )}
+          {step === 4 && (
             <StepQuickWins
               businessName={businessName}
               firstName={firstName}

@@ -14,7 +14,7 @@ export default async function Page() {
   if (!user) redirect(`/${locale}/login`)
 
   const [{ data: business }, { data: profile }] = await Promise.all([
-    supabase.from('businesses').select('id, name, type, city, province').limit(1).single(),
+    supabase.from('businesses').select('id, name, type, city, province, user_competitors').limit(1).single(),
     supabase.from('profiles').select('full_name').eq('id', user.id).single(),
   ])
 
@@ -55,6 +55,7 @@ export default async function Page() {
         businessId={business?.id ?? null}
         businessName={business?.name ?? null}
         latestAudit={latestAudit ?? null}
+        userCompetitors={business?.user_competitors ?? null}
         locale={locale}
       />
     </div>

@@ -773,13 +773,41 @@
         "addAvailability": "Add availability",
         "connectGoogle": "Connect Google"
       }
+    },
+    "competitorPicker": {
+      "title": "Your competitors",
+      "subtitle": "Pick up to 5 businesses you want us to compare you against.",
+      "currentList": "Your competitor list",
+      "emptyList": "No competitors selected yet.",
+      "addCta": "Add a competitor",
+      "addPlaceholder": "Search Google Maps by name…",
+      "searchEmpty": "No matches found. Try the full business name or check the spelling.",
+      "searching": "Searching…",
+      "max": "5 competitors max",
+      "remove": "Remove",
+      "sourceAuto": "Found by us",
+      "sourceManual": "Added by you",
+      "statusClosed": "Permanently closed",
+      "statusStale": "Not appearing in Google anymore",
+      "scoring": "Scoring your new competitors…",
+      "scoringHint": "We're checking reviews, web mentions, and AI citations. About 15 seconds.",
+      "scoreError": "We couldn't score one of your additions — you can try again later.",
+      "save": "Save list",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "suggestionsTitle": "Suggested by Google",
+      "suggestionsHint": "Businesses we found in your category that you haven't added yet.",
+      "acceptSuggestion": "Add to my list",
+      "rating": "{rating}★",
+      "reviewsCount": "{count, plural, one {# review} other {# reviews}}"
     }
   },
   "onboarding": {
     "stepper": {
       "step1": "Tell us about your business",
       "step2": "Check your AI visibility",
-      "step3": "Your first wins"
+      "step3": "Confirm competitors",
+      "step4": "Your first wins"
     },
     "step1": {
       "heading": "Tell us about your business",
@@ -893,6 +921,14 @@
       "ctaGo": "Go to my dashboard →",
       "ctaSkip": "Skip the tour →",
       "pointsLift": "+{points} pts together"
+    },
+    "stepConfirmCompetitors": {
+      "stepperLabel": "Confirm competitors",
+      "heading": "Confirm who you want to be compared against",
+      "subtitle": "We found these from your local search results. Remove anything off-base, or add a competitor we missed.",
+      "continue": "Continue →",
+      "skip": "Skip — I'll edit later",
+      "scoringHint": "Adding more? They'll be scored in the next 15 seconds."
     }
   }
 }

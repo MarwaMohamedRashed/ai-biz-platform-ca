@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import OwnReputationCard from '@/components/dashboard/OwnReputationCard'
+import CompetitorPicker, { type CompetitorEntry } from '@/components/dashboard/CompetitorPicker'
 
 interface Breakdown {
   gbp: number
@@ -66,6 +67,8 @@ interface Audit {
     competitors?: Competitor[]
     competitor_insights?: CompetitorInsights
     citation_gaps?: CitationGaps
+    /** Auto-detected competitors NOT in the user's locked list (migration 021). */
+    auto_suggestions?: Competitor[]
     google?: {
       competitors?: Competitor[]
       local_pack?: { present: boolean; position: number | null; rating: number | null; reviews: number | null }
@@ -120,6 +123,8 @@ interface Props {
   businessId: string | null
   businessName: string | null
   latestAudit: Audit | null
+  /** Owner-confirmed competitor list (migration 021). NULL = legacy auto-discovery. */
+  userCompetitors: unknown[] | null
   locale: string
 }
 
@@ -165,7 +170,7 @@ function mergeCompetitors(scored: Competitor[], raw: Competitor[]): Competitor[]
   })
 }
 
-export default function CompetitorsPage({ businessId, businessName, latestAudit, locale }: Props) {
+export default function CompetitorsPage({ businessId, businessName, latestAudit, userCompetitors, locale }: Props) {
   const t = useTranslations('dashboard.competitors')
   if (!businessId) {
     return (
@@ -273,8 +278,72 @@ export default function CompetitorsPage({ businessId, businessName, latestAudit,
       <div className="mt-4">
         <OwnReputationCard />
       </div>
+
+      <CompetitorEditorSection
+        userCompetitors={userCompetitors}
+        scoredCompetitors={competitors}
+        autoSuggestions={latestAudit.raw_results?.auto_suggestions ?? []}
+      />
     </div>
     </PageShell>
+  )
+}
+
+/** Owner-facing competitor list editor. Wraps CompetitorPicker and seeds it
+ *  from businesses.user_competitors when set; otherwise from the most recent
+ *  audit's scored competitors. Save round-trips through POST /aeo/competitors
+ *  which scores any new entries and patches the latest audit's raw_results. */
+function CompetitorEditorSection({
+  userCompetitors, scoredCompetitors, autoSuggestions,
+}: {
+  userCompetitors: unknown[] | null
+  scoredCompetitors: Competitor[]
+  autoSuggestions: Competitor[]
+}) {
+  const t = useTranslations('dashboard.competitorPicker')
+
+  // Seed from user_competitors when the owner has curated; fall back to the
+  // latest audit's scored competitors so first-time users see a starting list.
+  const initialList: CompetitorEntry[] = (() => {
+    if (Array.isArray(userCompetitors) && userCompetitors.length > 0) {
+      return userCompetitors
+        .filter((c): c is { place_id: string; name?: string; source?: string } =>
+          Boolean(c && typeof c === 'object' && (c as { place_id?: string }).place_id))
+        .map(c => ({
+          place_id: c.place_id,
+          name:     c.name ?? 'Unknown',
+          source:   c.source === 'manual' ? 'manual' as const : 'auto' as const,
+        }))
+        .slice(0, 5)
+    }
+    return scoredCompetitors
+      .filter((c): c is Competitor & { place_id: string; name: string } =>
+        Boolean(c.place_id && c.name))
+      .slice(0, 5)
+      .map(c => ({ place_id: c.place_id!, name: c.name, source: 'auto' as const }))
+  })()
+
+  const suggestions: CompetitorEntry[] = autoSuggestions
+    .filter((c): c is Competitor & { place_id: string; name: string } =>
+      Boolean(c.place_id && c.name))
+    .map(c => ({
+      place_id: c.place_id!,
+      name:     c.name,
+      source:   'auto' as const,
+      address:  c.address ?? null,
+      rating:   c.rating ?? null,
+      reviews:  c.reviews ?? null,
+    }))
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 mt-4">
+      <h2 className="text-sm font-extrabold text-[#1e293b]">{t('title')}</h2>
+      <p className="text-xs text-slate-500 mt-0.5 mb-4">{t('subtitle')}</p>
+      <CompetitorPicker
+        initialList={initialList}
+        suggestions={suggestions}
+      />
+    </div>
   )
 }
 

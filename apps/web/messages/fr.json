@@ -773,13 +773,41 @@
         "addAvailability": "Ajouter des disponibilités",
         "connectGoogle": "Connecter Google"
       }
+    },
+    "competitorPicker": {
+      "title": "Vos concurrents",
+      "subtitle": "Sélectionnez jusqu'à 5 entreprises auxquelles vous voulez être comparé.",
+      "currentList": "Votre liste de concurrents",
+      "emptyList": "Aucun concurrent sélectionné pour l'instant.",
+      "addCta": "Ajouter un concurrent",
+      "addPlaceholder": "Rechercher sur Google Maps par nom…",
+      "searchEmpty": "Aucun résultat. Essayez le nom complet ou vérifiez l'orthographe.",
+      "searching": "Recherche…",
+      "max": "5 concurrents maximum",
+      "remove": "Retirer",
+      "sourceAuto": "Trouvé par nous",
+      "sourceManual": "Ajouté par vous",
+      "statusClosed": "Fermé définitivement",
+      "statusStale": "N'apparaît plus sur Google",
+      "scoring": "Évaluation de vos nouveaux concurrents…",
+      "scoringHint": "Nous vérifions les avis, les mentions web et les citations IA. Environ 15 secondes.",
+      "scoreError": "Nous n'avons pas pu évaluer un de vos ajouts — vous pouvez réessayer plus tard.",
+      "save": "Enregistrer la liste",
+      "saving": "Enregistrement…",
+      "saved": "Enregistré",
+      "suggestionsTitle": "Suggéré par Google",
+      "suggestionsHint": "Entreprises trouvées dans votre catégorie que vous n'avez pas encore ajoutées.",
+      "acceptSuggestion": "Ajouter à ma liste",
+      "rating": "{rating}★",
+      "reviewsCount": "{count, plural, one {# avis} other {# avis}}"
     }
   },
   "onboarding": {
     "stepper": {
       "step1": "Parlez-nous de votre entreprise",
       "step2": "Vérifier votre visibilité IA",
-      "step3": "Vos premiers gains"
+      "step3": "Confirmer les concurrents",
+      "step4": "Vos premiers gains"
     },
     "step1": {
       "heading": "Parlez-nous de votre entreprise",
@@ -893,6 +921,14 @@
       "ctaGo": "Aller à mon tableau de bord →",
       "ctaSkip": "Passer la visite →",
       "pointsLift": "+{points} pts ensemble"
+    },
+    "stepConfirmCompetitors": {
+      "stepperLabel": "Confirmer les concurrents",
+      "heading": "Confirmez à qui vous voulez être comparé",
+      "subtitle": "Voici ce que nous avons trouvé via la recherche locale. Retirez ce qui ne correspond pas, ou ajoutez un concurrent oublié.",
+      "continue": "Continuer →",
+      "skip": "Passer — je modifierai plus tard",
+      "scoringHint": "Vous en ajoutez ? Ils seront évalués dans les 15 prochaines secondes."
     }
   }
 }
