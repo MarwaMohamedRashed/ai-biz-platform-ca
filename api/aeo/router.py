@@ -58,7 +58,10 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 SERPAPI_KEY = os.getenv("SERPAPI_KEY")
 CRON_SECRET = os.getenv("CRON_SECRET")
 BILLING_ENABLED = os.getenv("BILLING_ENABLED", "false").lower() == "true"
-KNOWN_TYPES = {"restaurant", "salon", "retail", "plumber", "cafe"}
+# NOTE: "restaurant" and "cafe" intentionally omitted — the LLM must
+# enrich them with cuisine context (e.g. "Egyptian restaurant") so that
+# AI-citation queries are specific rather than generic.
+KNOWN_TYPES = {"salon", "retail", "plumber"}
 
 # Map full country names (as stored on businesses.country, set in onboarding) to
 # Google's ISO 3166-1 alpha-2 region codes used by the SerpApi `gl` parameter.
@@ -213,6 +216,55 @@ QUERY_TEMPLATES = [
     "top {type} {city} {province}",
 ]
 
+# Cuisine/diet detectors for restaurant-specific query enrichment.
+# Each entry: (compiled_pattern, cuisine_label, parent_category).
+# parent_category=None means the cuisine IS already the broadest useful category.
+_CUISINE_DETECTORS: list[tuple[re.Pattern, str | None, str | None]] = [
+    (re.compile(r"\begyptian\b",             re.IGNORECASE), "Egyptian",       "Middle Eastern"),
+    (re.compile(r"\blebanese\b",             re.IGNORECASE), "Lebanese",       "Middle Eastern"),
+    (re.compile(r"\bsyrian\b",               re.IGNORECASE), "Syrian",         "Middle Eastern"),
+    (re.compile(r"\bturkish\b",              re.IGNORECASE), "Turkish",        "Middle Eastern"),
+    (re.compile(r"\bmoroc\w*\b",             re.IGNORECASE), "Moroccan",       "Middle Eastern"),
+    (re.compile(r"\bpersian\b|\biranian\b",  re.IGNORECASE), "Persian",        "Middle Eastern"),
+    (re.compile(r"\bafghan\w*",              re.IGNORECASE), "Afghan",         "Middle Eastern"),
+    (re.compile(r"\barab\w*\b",              re.IGNORECASE), "Arabic",         "Middle Eastern"),
+    (re.compile(r"\bmiddle.?east\w*",        re.IGNORECASE), "Middle Eastern",  None),
+    (re.compile(r"\bindian\b",               re.IGNORECASE), "Indian",         "South Asian"),
+    (re.compile(r"\bpakistan\w*",            re.IGNORECASE), "Pakistani",      "South Asian"),
+    (re.compile(r"\bbangladesh\w*",          re.IGNORECASE), "Bangladeshi",    "South Asian"),
+    (re.compile(r"\bsouth.?asian\b",         re.IGNORECASE), "South Asian",     None),
+    (re.compile(r"\bitalian\b",              re.IGNORECASE), "Italian",         None),
+    (re.compile(r"\bgreek\b",                re.IGNORECASE), "Greek",          "Mediterranean"),
+    (re.compile(r"\bmediterranean\b",        re.IGNORECASE), "Mediterranean",   None),
+    (re.compile(r"\bchinese\b",              re.IGNORECASE), "Chinese",        "Asian"),
+    (re.compile(r"\bjapanese\b|\bsushi\b|\bramen\b", re.IGNORECASE), "Japanese", "Asian"),
+    (re.compile(r"\bkorean\b",               re.IGNORECASE), "Korean",         "Asian"),
+    (re.compile(r"\bvietnam\w*|\bpho\b",     re.IGNORECASE), "Vietnamese",     "Asian"),
+    (re.compile(r"\bthai\b",                 re.IGNORECASE), "Thai",           "Asian"),
+    (re.compile(r"\bmexican\b|\btaquer\w*",  re.IGNORECASE), "Mexican",        "Latin"),
+    (re.compile(r"\bcaribbean\b|\bjamaican\b", re.IGNORECASE), "Caribbean",    None),
+    (re.compile(r"\bethiopian\b",            re.IGNORECASE), "Ethiopian",      "African"),
+    (re.compile(r"\bsomali\w*",              re.IGNORECASE), "Somali",         "African"),
+]
+
+_RESTAURANT_RE = re.compile(
+    r"\brestaurant\b|\bcaf[e\u00e9]\b|\bdiner\b|\bkitchen\b|\bbistro\b"
+    r"|\beatery\b|\bbakery\b|\bpizzeria\b|\btakeout\b|\bfood\b",
+    re.IGNORECASE,
+)
+
+# Dietary / religious food restrictions that change which AI queries are relevant.
+# Scanned against: business name, user-entered type, AND website homepage text.
+# Each entry: (tag_key, compiled_pattern, query_template).
+# tag_key is stored in raw_results so future audits can reuse it without re-fetching.
+_DIETARY_PATTERNS: list[tuple[str, re.Pattern, str]] = [
+    ("halal",       re.compile(r"\bhalal\b",                  re.IGNORECASE), "halal restaurant {city}"),
+    ("vegetarian",  re.compile(r"\bvegetarian\b",              re.IGNORECASE), "vegetarian restaurant {city}"),
+    ("vegan",       re.compile(r"\bvegan\b|\bplant.based\b",   re.IGNORECASE), "vegan restaurant {city}"),
+    ("kosher",      re.compile(r"\bkosher\b",                  re.IGNORECASE), "kosher restaurant {city}"),
+    ("jain",        re.compile(r"\bjain\b",                    re.IGNORECASE), "jain vegetarian restaurant {city}"),
+]
+
 
 def extract_search_name(business_name: str, city: str) -> str:
     return re.sub(rf'\s+in\s+{re.escape(city)}\s*$', '', business_name, flags=re.IGNORECASE).strip()
@@ -292,6 +344,23 @@ async def normalize_business_type(raw_type: str, business_name: str) -> str:
     return result.strip()
 
 
+def _detect_cuisine(business_name: str, business_type_en: str) -> tuple[str | None, str | None, bool]:
+    """Detect cuisine, parent category, and halal status from name + type.
+
+    Returns:
+        cuisine_label  -- specific cuisine (e.g. 'Egyptian'), or None
+        parent_category -- broader category (e.g. 'Middle Eastern'), or None when
+                           cuisine is already the broadest useful level
+        is_halal       -- True only when 'halal' appears explicitly in name or type
+    """
+    combined = f"{business_name} {business_type_en}"
+    is_halal = bool(re.search(r"\bhalal\b", combined, re.IGNORECASE))
+    for pattern, cuisine, parent in _CUISINE_DETECTORS:
+        if pattern.search(combined):
+            return cuisine, parent, is_halal
+    return None, None, is_halal
+
+
 def build_queries(
     business_type_en: str,
     city: str,
@@ -299,6 +368,8 @@ def build_queries(
     postal_code: str | None = None,
     is_trades: bool = False,
     is_healthcare: bool = False,
+    business_name: str = "",
+    dietary_tags: list[str] | None = None,
 ) -> list[str]:
     """
     Returns the list of search-query strings to run against each AI engine.
@@ -313,7 +384,14 @@ def build_queries(
         urgency searches
       * Weekend-availability query for trades + healthcare — common
         intent for after-hours services
+      * Cuisine-specific + parent-category queries for food businesses —
+        e.g. 'best Egyptian restaurant Mississauga' + 'Middle Eastern food
+        Mississauga'. Capped at 2 extras to keep API cost predictable.
+      * Dietary queries from verified website/name signals — halal,
+        vegetarian, vegan, kosher — only when explicitly detected, never
+        assumed from cuisine origin alone.
     """
+    dietary_tags = dietary_tags or []
     queries = [t.format(type=business_type_en, city=city, province=province)
                for t in QUERY_TEMPLATES]
 
@@ -324,6 +402,33 @@ def build_queries(
     if is_trades or is_healthcare:
         queries.append(f"Emergency {business_type_en} {city} 24/7")
         queries.append(f"{business_type_en} open weekends {city}")
+
+    # Restaurant vertical: add cuisine-specific and parent-category queries.
+    # These are the high-intent queries that users actually type when looking
+    # for a specific cuisine — generic 'restaurant' queries miss niche establishments.
+    if business_name and _RESTAURANT_RE.search(f"{business_name} {business_type_en}"):
+        cuisine, parent, is_halal_name = _detect_cuisine(business_name, business_type_en)
+        extras: list[str] = []
+        # Add cuisine-specific query only if not already in the normalized type
+        if cuisine and cuisine.lower() not in business_type_en.lower():
+            extras.append(f"best {cuisine.lower()} restaurant {city}")
+        # Add parent category query (e.g. Middle Eastern) if different from specific cuisine
+        if parent and parent.lower() not in business_type_en.lower():
+            extras.append(f"{parent.lower()} food {city}")
+        queries.extend(extras[:2])  # cap cuisine extras at 2 to control API cost
+
+        # Dietary queries: combine signals from the business name/type AND from
+        # the website/GBP text (passed in via dietary_tags from check_website).
+        # Cap at 1 dietary query total — more would double the API cost.
+        effective_tags = set(dietary_tags)
+        if is_halal_name:
+            effective_tags.add("halal")
+        for tag, _pat, tmpl in _DIETARY_PATTERNS:
+            if tag in effective_tags:
+                dq = tmpl.format(city=city)
+                if dq not in queries:
+                    queries.append(dq)
+                break  # one dietary query max
 
     return queries
 
@@ -363,9 +468,11 @@ async def run_perplexity_multi(
     postal_code: str | None = None,
     is_trades: bool = False,
     is_healthcare: bool = False,
+    dietary_tags: list[str] | None = None,
 ) -> dict:
     results = []
-    for query in build_queries(business_type_en, city, province, postal_code, is_trades, is_healthcare):
+    for query in build_queries(business_type_en, city, province, postal_code, is_trades, is_healthcare,
+                                business_name=business_name, dietary_tags=dietary_tags):
         try:
             results.append(await _perplexity_one(business_name, query, city))
         except Exception as e:
@@ -410,9 +517,11 @@ async def run_chatgpt_multi(
     postal_code: str | None = None,
     is_trades: bool = False,
     is_healthcare: bool = False,
+    dietary_tags: list[str] | None = None,
 ) -> dict:
     results = []
-    for query in build_queries(business_type_en, city, province, postal_code, is_trades, is_healthcare):
+    for query in build_queries(business_type_en, city, province, postal_code, is_trades, is_healthcare,
+                                business_name=business_name, dietary_tags=dietary_tags):
         try:
             results.append(await _chatgpt_one(business_name, query, city))
         except Exception as e:
@@ -748,9 +857,11 @@ async def run_google_multi(
     is_trades: bool = False,
     is_healthcare: bool = False,
     competitor_scope: str = "local",
+    dietary_tags: list[str] | None = None,
 ) -> dict:
     results = []
-    for query in build_queries(business_type_en, city, province, postal_code, is_trades, is_healthcare):
+    for query in build_queries(business_type_en, city, province, postal_code, is_trades, is_healthcare,
+                                business_name=business_name, dietary_tags=dietary_tags):
         try:
             results.append(await _google_one(
                 business_name, query, city, website, province, country,
@@ -899,11 +1010,32 @@ async def check_website(website: str | None) -> dict:
             f'"@type":"{t}"' in html_nospace for t in _LB_SUBTYPES
         )
     has_faq = '"@type":"faqpage"' in html.replace(" ", "") or '"@type": "faqpage"' in html
-    print(f"[AEO] Website: reachable=True local_schema={has_local_business} faq_schema={has_faq}")
+
+    # Dietary / cuisine signal extraction from homepage text.
+    # This is the most reliable source for signals not visible in the business
+    # name — e.g. a halal restaurant that says so on the homepage but not
+    # in the GBP name, or a vegetarian restaurant that doesn't use that word
+    # in its Google category.  Only explicitly present words are flagged.
+    dietary_tags: list[str] = [
+        tag for tag, pattern, _ in _DIETARY_PATTERNS if pattern.search(html)
+    ]
+    # Cuisine hint from homepage text — used if the business name alone is ambiguous.
+    cuisine_hint: str | None = None
+    cuisine_hint_parent: str | None = None
+    for pattern, cuisine, parent in _CUISINE_DETECTORS:
+        if pattern.search(html):
+            cuisine_hint = cuisine
+            cuisine_hint_parent = parent
+            break
+
+    print(f"[AEO] Website: reachable=True local_schema={has_local_business} faq_schema={has_faq} dietary={dietary_tags} cuisine_hint={cuisine_hint}")
     return {
         "reachable": True,
         "has_local_business_schema": has_local_business,
         "has_faq_schema": has_faq,
+        "dietary_tags": dietary_tags,
+        "cuisine_hint": cuisine_hint,
+        "cuisine_hint_parent": cuisine_hint_parent,
     }
 
 
@@ -1514,16 +1646,31 @@ async def _run_audit_core(business: dict) -> dict:
 
     print(f"[AEO] Audit start — name='{business_name}' type='{business_type_en}' city='{city}, {province}, {country}' (gl={country_to_gl(country)}, trades={is_trades_v}, healthcare={is_healthcare_v}, fsa={postal_code[:3].upper() if postal_code and len(postal_code) >= 3 else 'n/a'})")
 
+    # Fetch the website first — before the parallel AI calls — so dietary and
+    # cuisine signals extracted from the homepage (halal, vegetarian, vegan,
+    # kosher, cuisine type, etc.) can be injected into ALL three AI engines'
+    # query sets.  The website check takes ~1-3 s; the full audit takes ~15-30 s,
+    # so the net latency impact is minimal.
+    website_check = await check_website(website)
+    dietary_tags_v: list[str] = website_check.get("dietary_tags") or []
+    # Fall back to cuisine hint from website if name-based detection is ambiguous
+    cuisine_hint_v: str | None = website_check.get("cuisine_hint")
+    if cuisine_hint_v:
+        print(f"[AEO] Website cuisine hint: {cuisine_hint_v} (parent={website_check.get('cuisine_hint_parent')})")
+    if dietary_tags_v:
+        print(f"[AEO] Website dietary tags: {dietary_tags_v}")
+
     perplexity_result, google_result, chatgpt_result = await asyncio.gather(
         run_perplexity_multi(business_name, business_type_en, city, province,
-                             postal_code=postal_code, is_trades=is_trades_v, is_healthcare=is_healthcare_v),
+                             postal_code=postal_code, is_trades=is_trades_v, is_healthcare=is_healthcare_v,
+                             dietary_tags=dietary_tags_v),
         run_google_multi(business_name, business_type_en, city, province, website, country,
                          postal_code=postal_code, is_trades=is_trades_v, is_healthcare=is_healthcare_v,
-                         competitor_scope=competitor_scope),
+                         competitor_scope=competitor_scope, dietary_tags=dietary_tags_v),
         run_chatgpt_multi(business_name, business_type_en, city, province,
-                          postal_code=postal_code, is_trades=is_trades_v, is_healthcare=is_healthcare_v),
+                          postal_code=postal_code, is_trades=is_trades_v, is_healthcare=is_healthcare_v,
+                          dietary_tags=dietary_tags_v),
     )
-    website_check = await check_website(website)
 
     # Recency check — only if the KG gave us a place_id (i.e. business is indexed by Google)
     place_id = google_result["knowledge_graph"].get("place_id")
