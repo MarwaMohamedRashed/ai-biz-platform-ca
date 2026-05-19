@@ -1,0 +1,88 @@
+{
+  "_comment": "Copy this to config.json (which is gitignored) and fill in your 5 test businesses. See docs/dataforseo-test-plan.md Step 3.",
+
+  "businesses": [
+    {
+      "slug": "burlington-family-dentists",
+      "name": "Burlington Family Dentists",
+      "vertical": "dentist",
+      "city": "Burlington",
+      "province": "Ontario",
+      "country": "Canada",
+      "website": "burlingtonfamilydentists.ca",
+      "branded_queries": [
+        "Burlington Family Dentists",
+        "Burlington Family Dentists Burlington"
+      ],
+      "seed_keywords": ["dentist", "dental clinic", "family dentist"],
+      "top_query": "best family dentist burlington"
+    },
+    {
+      "slug": "masrawy-egyptian-kitchen",
+      "name": "Masrawy Egyptian Kitchen",
+      "vertical": "restaurant",
+      "city": "Mississauga",
+      "province": "Ontario",
+      "country": "Canada",
+      "website": "",
+      "branded_queries": [
+        "Masrawy Egyptian Kitchen",
+        "Masrawy Egyptian Kitchen Mississauga"
+      ],
+      "seed_keywords": ["restaurant", "egyptian restaurant", "middle eastern restaurant"],
+      "top_query": "best egyptian restaurant mississauga"
+    },
+    {
+      "slug": "james-snow-physiotherapy",
+      "name": "James Snow Physiotherapy",
+      "vertical": "physiotherapist",
+      "city": "Milton",
+      "province": "Ontario",
+      "country": "Canada",
+      "website": "",
+      "branded_queries": [
+        "James Snow Physiotherapy",
+        "James Snow Physiotherapy Milton"
+      ],
+      "seed_keywords": ["physiotherapy", "physiotherapist", "physio clinic"],
+      "top_query": "best physiotherapist milton"
+    },
+    {
+      "slug": "TODO-salon-slug",
+      "name": "TODO — fill in salon business name",
+      "vertical": "salon",
+      "city": "TODO — Oakville / Burlington / Milton / Brampton / etc.",
+      "province": "Ontario",
+      "country": "Canada",
+      "website": "",
+      "branded_queries": ["TODO — business name", "TODO — business name + city"],
+      "seed_keywords": ["hair salon", "beauty salon", "hairdresser"],
+      "top_query": "best hair salon TODO-city"
+    },
+    {
+      "slug": "TODO-plumber-slug",
+      "name": "TODO — fill in plumber business name",
+      "vertical": "plumber",
+      "city": "TODO — Oakville / Burlington / Milton / Brampton / etc.",
+      "province": "Ontario",
+      "country": "Canada",
+      "website": "",
+      "branded_queries": ["TODO — business name", "TODO — business name + city"],
+      "seed_keywords": ["plumber", "plumbing service", "emergency plumber"],
+      "top_query": "emergency plumber TODO-city"
+    }
+  ],
+
+  "toronto_comparison_seeds": {
+    "dentist": ["dentist", "dental clinic", "family dentist"],
+    "restaurant": ["restaurant", "best restaurant", "dining"],
+    "physiotherapist": ["physiotherapy", "physiotherapist", "physio clinic"],
+    "salon": ["hair salon", "beauty salon", "hairdresser"],
+    "plumber": ["plumber", "plumbing service", "emergency plumber"]
+  },
+
+  "historical_window": {
+    "date_from": "2026-02-01",
+    "date_to": "2026-05-01"
+  }
+}

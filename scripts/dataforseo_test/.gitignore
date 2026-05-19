@@ -1,0 +1,6 @@
+# Actual config with real business details — don't ship business names to git
+config.json
+
+# Output artifacts (raw API responses + summary). Each run is timestamped.
+# If a specific run is worth archiving, copy it to docs/ and remove from here.
+results/
