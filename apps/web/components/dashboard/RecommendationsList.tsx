@@ -3,6 +3,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import RecommendationCoach from './RecommendationCoach'
+import {
+  recommendationImpactRange,
+  formatCadRange,
+  type RoiBreakdown,
+} from '@/lib/roi'
 
 export interface Recommendation {
   pillar: 'gbp' | 'reviews' | 'website' | 'local_search' | 'ai_citation'
@@ -20,6 +25,13 @@ interface Props {
   /** Stable per-business namespace for the localStorage completion set.
    *  Falls back to "default" if not provided. */
   businessKey?: string | null
+  /** ROI breakdown for the current business. When provided, each card
+   *  surfaces an estimated $-range impact tag — speaks the owner's
+   *  language (revenue) instead of just "+N points". Computed server-
+   *  side; safe to pass through as a serializable prop. */
+  roi?: RoiBreakdown | null
+  /** Locale for CAD formatting (en-CA vs fr-CA). */
+  locale?: string
 }
 
 /** Stable key for a recommendation — pillar + title hash. Robust across
@@ -95,7 +107,7 @@ const PILLAR_LABEL_KEY: Record<Recommendation['pillar'], string> = {
 }
 
 export default function RecommendationsList({
-  recommendations, currentTier = 'starter', businessKey,
+  recommendations, currentTier = 'starter', businessKey, roi, locale = 'en',
 }: Props) {
   const t = useTranslations('dashboard.recommendations')
   const tPillars = useTranslations('dashboard.aeo.pillars')
@@ -164,6 +176,8 @@ export default function RecommendationsList({
           recommendationKey="hero"
           currentTier={currentTier}
           completion={completion}
+          roi={roi}
+          locale={locale}
         />
       )}
 
@@ -192,6 +206,8 @@ export default function RecommendationsList({
                   recommendationKey={`${pillar}-${i}-${r.title}`}
                   currentTier={currentTier}
                   completion={completion}
+                  roi={roi}
+                  locale={locale}
                 />
               ))}
             </div>
@@ -262,16 +278,19 @@ function CompletedRow({
 
 // ─── Standard recommendation card ────────────────────────────────────────
 function RecCard({
-  rec, recommendationKey, currentTier, completion,
+  rec, recommendationKey, currentTier, completion, roi, locale = 'en',
 }: {
   rec: Recommendation
   recommendationKey: string
   currentTier: 'starter' | 'pro'
   completion: ReturnType<typeof useCompletedSet>
+  roi?: RoiBreakdown | null
+  locale?: string
 }) {
   const t = useTranslations('dashboard.recommendations')
   const [expanded, setExpanded] = useState(false)
   const [coachOpen, setCoachOpen] = useState(false)
+  const dollarRange = roi ? recommendationImpactRange(rec.pillar, rec.impact, roi) : null
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
@@ -284,10 +303,16 @@ function RecCard({
           <span className="text-xs font-bold text-amber-700">+{rec.impact}</span>
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1.5">
+          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
             <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${TIME_PILL[rec.difficulty]}`}>
               {t(`difficulty.${rec.difficulty}`)}
             </span>
+            {dollarRange && (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 tabular-nums"
+                    title={t('dollarTagTooltip')}>
+                ~{formatCadRange(dollarRange, locale)}{' '}{t('perMonthShort')}
+              </span>
+            )}
           </div>
           <p className="text-sm font-semibold text-[#1e293b] mb-1">{rec.title}</p>
           <p className="text-xs text-slate-600 leading-relaxed">{rec.description}</p>
@@ -313,16 +338,19 @@ function RecCard({
 
 // ─── Hero recommendation card (featured "start with this") ───────────────
 function HeroRecCard({
-  rec, recommendationKey, currentTier, completion,
+  rec, recommendationKey, currentTier, completion, roi, locale = 'en',
 }: {
   rec: Recommendation
   recommendationKey: string
   currentTier: 'starter' | 'pro'
   completion: ReturnType<typeof useCompletedSet>
+  roi?: RoiBreakdown | null
+  locale?: string
 }) {
   const t = useTranslations('dashboard.recommendations')
   const [expanded, setExpanded] = useState(true) // hero opens by default
   const [coachOpen, setCoachOpen] = useState(false)
+  const dollarRange = roi ? recommendationImpactRange(rec.pillar, rec.impact, roi) : null
 
   return (
     <div className="bg-gradient-to-br from-indigo-50 to-white border border-indigo-200 rounded-2xl overflow-hidden shadow-sm">
@@ -345,10 +373,16 @@ function HeroRecCard({
           <span className="text-sm font-bold text-white">+{rec.impact}</span>
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
             <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${TIME_PILL[rec.difficulty]}`}>
               {t(`difficulty.${rec.difficulty}`)}
             </span>
+            {dollarRange && (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 tabular-nums"
+                    title={t('dollarTagTooltip')}>
+                ~{formatCadRange(dollarRange, locale)}{' '}{t('perMonthShort')}
+              </span>
+            )}
           </div>
           <p className="text-base font-extrabold text-[#1e293b] mb-1.5 leading-snug">{rec.title}</p>
           <p className="text-sm text-slate-700 leading-relaxed">{rec.description}</p>

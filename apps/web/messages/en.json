@@ -182,7 +182,8 @@
         "subtitle": "Used for your AI visibility audit — update here whenever anything changes.",
         "nameLabel": "Business Name",
         "typeLabel": "Business Type",
-        "typeHint": "e.g. physiotherapy clinic, italian restaurant",
+        "typeHint": "Pick the closest match — or choose Other to enter your own.",
+        "typeRequired": "Please describe your business type before saving.",
         "cityLabel": "City",
         "provinceLabel": "Province / State",
         "provinceHint": "e.g. ON, QC, BC (leave blank if not applicable)",
@@ -211,6 +212,14 @@
         "saving": "Saving…",
         "saved": "Profile saved",
         "errorSave": "Failed to save profile",
+        "roiHeading": "Revenue inputs",
+        "roiSubtitle": "Drives the revenue-exposure card on your dashboard. Industry averages are used if you leave these blank.",
+        "avgCustomerValueLabel": "Average customer value (CAD)",
+        "avgCustomerValuePlaceholder": "e.g. 200",
+        "avgCustomerValueHint": "Typical revenue from one new customer's first visit or order.",
+        "monthlyOnlineLabel": "New customers per month from online",
+        "monthlyOnlinePlaceholder": "e.g. 25",
+        "monthlyOnlineHint": "Your best guess — we use this to estimate AI-influenced revenue.",
         "competitorScopeLabel": "Who should we compare you to?",
         "competitorScopeHint": "You can change this anytime in Settings.",
         "competitorScopes": {
@@ -250,6 +259,61 @@
       "title": "AI Visibility Report",
       "generatedOn": "Generated on",
       "preparedFor": "Prepared for"
+    },
+    "detectedSignals": {
+      "title": "What we detected about your business",
+      "subtitle": "Picked up from your website and the details you gave us. Used to tune your AI audit queries.",
+      "cuisine": "Cuisine",
+      "dietary": "Dietary",
+      "services": "Services"
+    },
+    "progress": {
+      "eyebrow": "Monthly progress",
+      "title": "What changed since your last audit",
+      "comparedTo": "vs audit from {date}",
+      "scoreLabel": "AI Visibility Score",
+      "points": "pts",
+      "citations": {
+        "chatgpt": "ChatGPT mention",
+        "perplexity": "Perplexity mention",
+        "googleAi": "Google AI Overview"
+      },
+      "localPack": "Google local pack",
+      "reviews": "Google reviews",
+      "changeUp": "Improved",
+      "changeDown": "Dropped",
+      "changeFlat": "No change",
+      "newCompetitors": "{count, plural, one {# new competitor appeared} other {# new competitors appeared}}",
+      "droppedCompetitors": "{count, plural, one {# competitor dropped out} other {# competitors dropped out}}",
+      "completedNote": "You've marked {count} action items as done. Keep going.",
+      "disclosure": "Compares your latest audit to the previous one. We refresh this with every new audit.",
+      "lockedTitle": "Your first monthly progress report is on the way",
+      "lockedSubtitle": "We'll show what changed once your next audit runs.",
+      "lockedSubtitleWithDate": "Your next audit unlocks this card around {date}."
+    },
+    "roi": {
+      "eyebrow": "AI-influenced revenue exposure",
+      "headline": "Estimated revenue exposure from AI search this month",
+      "perMonth": "/ month",
+      "captureLine": "You're capturing about {pct}% of it today. Roughly {atRisk} is on the table.",
+      "upsideLabel": "Upside to capture",
+      "upsideHint": "Gap between today and a 95-score ceiling",
+      "potentialLabel": "Potential at score 95",
+      "potentialHint": "Practical ceiling — never promised, never guaranteed",
+      "showMath": "How we calculate this",
+      "hideMath": "Hide the math",
+      "disclosure": "Estimated using your AEO score, owner-provided customer values, and an industry midpoint of {aiShare}% AI share of online discovery (2026 data; we revise quarterly). Score-to-revenue is correlational, not causal — these figures are exposure ranges, not guarantees.",
+      "math": {
+        "score": "AEO score",
+        "monthlyOnline": "Monthly new online customers",
+        "aiShare": "AI share of online discovery",
+        "avgCustomerValue": "Avg customer value",
+        "ltvMultiple": "LTV multiple",
+        "aiInfluenced": "AI-influenced customers / mo",
+        "lifetimeValue": "Lifetime value per customer",
+        "usingDefault": "(industry default)",
+        "customersUnit": "customers"
+      }
     },
     "aeo": {
       "label": "AI VISIBILITY",
@@ -319,7 +383,8 @@
         "mentionedChatgpt": "Mentioned by ChatGPT",
         "chatgptNote": "ChatGPT answers from training data — improvements appear in future model updates (6–12 months).",
         "mentionedPerplexity": "Mentioned by Perplexity",
-        "mentionedGoogleAI": "Mentioned in Google AI Overview"
+        "mentionedGoogleAI": "Mentioned in Google AI Overview",
+        "viewYourGbp": "View your Google Business Profile"
       },
       "aiSnapshot": {
         "label": "What Customers See in AI Search",
@@ -637,7 +702,9 @@
       "completedSection": {
         "title": "Completed",
         "subtitle": "Items you've marked done. They're saved on this device."
-      }
+      },
+      "perMonthShort": "/mo",
+      "dollarTagTooltip": "Estimated monthly revenue exposure unlocked if you complete this. Range, not guarantee."
     },
     "planStatus": {
       "trialing": "Free Trial",
@@ -795,6 +862,8 @@
       "save": "Save list",
       "saving": "Saving…",
       "saved": "Saved",
+      "unsavedChanges": "Unsaved changes — click Save so your audit uses this list.",
+      "saveNow": "Save now",
       "suggestionsTitle": "Suggested by Google",
       "suggestionsHint": "Businesses we found in your category that you haven't added yet.",
       "acceptSuggestion": "Add to my list",
@@ -805,13 +874,29 @@
   "onboarding": {
     "stepper": {
       "step1": "Tell us about your business",
-      "step2": "Check your AI visibility",
-      "step3": "Confirm competitors",
-      "step4": "Your first wins"
+      "step2": "A few more details",
+      "step3": "Check your AI visibility",
+      "step4": "Confirm competitors",
+      "step5": "Your first wins"
     },
     "step1": {
       "heading": "Tell us about your business",
-      "subtitle": "This helps us audit your AI search visibility accurately",
+      "subtitle": "We'll use this to audit how AI search engines see you",
+      "extrasHeading": "A few more details",
+      "extrasSubtitle": "All optional — these help your audit and your schema markup",
+      "extrasSubtitleNamed": "All optional — these sharpen the audit for {name} and improve your schema markup",
+      "extrasContinue": "Continue",
+      "extrasSkip": "Skip — I'll fill these in later",
+      "roi": {
+        "heading": "Help us estimate your revenue impact",
+        "subtitle": "Optional, but the dashboard speaks in dollars when these are filled in. We use industry averages otherwise.",
+        "avgCustomerValueLabel": "Average customer value (CAD)",
+        "avgCustomerValuePlaceholder": "e.g. 200",
+        "avgCustomerValueHint": "Typical revenue from one new customer's first visit or order.",
+        "monthlyOnlineLabel": "New customers per month from online",
+        "monthlyOnlinePlaceholder": "e.g. 25",
+        "monthlyOnlineHint": "How many customers a month say they found you online (best guess is fine)."
+      },
       "businessName": "Business name",
       "businessType": "Business type",
       "country": "Country",
@@ -824,10 +909,22 @@
       "saving": "Saving…",
       "types": {
         "restaurant": "Restaurant",
+        "cafe": "Café",
         "salon": "Salon",
         "retail": "Retail",
-        "plumber": "Plumber",
-        "cafe": "Café",
+        "dentist": "Dentist",
+        "physiotherapist": "Physiotherapy",
+        "family_doctor": "Family doctor",
+        "chiropractor": "Chiropractor",
+        "optometrist": "Optometrist",
+        "veterinarian": "Veterinarian",
+        "lawyer": "Lawyer",
+        "accountant": "Accountant",
+        "realtor": "Realtor",
+        "plumber": "Plumber / trades",
+        "auto_repair": "Auto repair",
+        "cleaning_service": "Cleaning service",
+        "personal_trainer": "Fitness / personal trainer",
         "other": "Other"
       },
       "customType": "Describe your business",
@@ -844,7 +941,13 @@
       "imageUrlLabel": "Logo or photo URL",
       "imageUrlPlaceholder": "https://yourbusiness.com/logo.png",
       "priceRangeLabel": "Price range",
-      "priceRangeHint": "$ = inexpensive, $$$$ = high-end",
+      "priceRangeHint": "How would customers describe your prices?",
+      "priceRange": {
+        "budget": "Budget-friendly ($)",
+        "moderate": "Moderate ($$)",
+        "upscale": "Upscale ($$$)",
+        "premium": "Premium ($$$$)"
+      },
       "schemaTip": "Tip: you can add hours of operation later in Settings to fully complete your schema markup.",
       "canadaOnlyBadge": "🍁 Available in Canada",
       "waitlistPrompt": "Outside Canada?",
@@ -911,7 +1014,8 @@
       "msg5": "Scoring the results…",
       "done": "Audit complete!",
       "failed": "We couldn't run the audit just now — you can try again from your dashboard.",
-      "skip": "Skip and go to dashboard →"
+      "skip": "Skip and go to dashboard →",
+      "slow": "Taking longer than expected. We're still working in the background — you can wait or skip ahead and check back later."
     },
     "stepWins": {
       "heading": "Your first wins, {firstName}",

@@ -5,7 +5,9 @@
       "Bash(git commit *)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/en/blog)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/en/blog/welcome-to-leapone)",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/fr/blog/bienvenue-leapone)"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/fr/blog/bienvenue-leapone)",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "Bash(python -c \"from aeo.router import _extract_text_signals, build_queries, KNOWN_TYPES; print\\('imports ok'\\); print\\('KNOWN_TYPES =', KNOWN_TYPES\\); print\\('signals for \\\\\"Afghani meals\\\\\":', _extract_text_signals\\('Afghani meals dine in pickup'\\)\\)\")"
     ]
   }
 }

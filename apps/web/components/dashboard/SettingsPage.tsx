@@ -11,6 +11,33 @@ const COUNTRIES = [
   'Japan', 'South Korea', 'Singapore', 'South Africa',
 ]
 
+// Mirrors onboarding/StepBusinessInfo TYPES so Settings and the
+// onboarding chip flow stay in sync (same labels via onboarding.step1.types.*).
+// `phrase` is what we store in businesses.type — feeds the audit's search
+// queries, so it reads as a natural noun phrase.
+const BUSINESS_TYPES = [
+  { key: 'restaurant',       phrase: 'restaurant' },
+  { key: 'cafe',             phrase: 'cafe' },
+  { key: 'salon',            phrase: 'salon' },
+  { key: 'retail',           phrase: 'retail' },
+  { key: 'dentist',          phrase: 'dentist' },
+  { key: 'physiotherapist',  phrase: 'physiotherapy clinic' },
+  { key: 'family_doctor',    phrase: 'family doctor' },
+  { key: 'chiropractor',     phrase: 'chiropractor' },
+  { key: 'optometrist',      phrase: 'optometrist' },
+  { key: 'veterinarian',     phrase: 'veterinarian' },
+  { key: 'lawyer',           phrase: 'lawyer' },
+  { key: 'accountant',       phrase: 'accountant' },
+  { key: 'realtor',          phrase: 'realtor' },
+  { key: 'plumber',          phrase: 'plumber' },
+  { key: 'auto_repair',      phrase: 'auto repair' },
+  { key: 'cleaning_service', phrase: 'cleaning service' },
+  { key: 'personal_trainer', phrase: 'personal trainer' },
+  { key: 'other',            phrase: 'other' },
+] as const
+
+const BUSINESS_TYPE_PHRASES = new Set(BUSINESS_TYPES.map(b => b.phrase))
+
 async function apiAuth(path: string, options: RequestInit = {}) {
   const { data: { session } } = await createClient().auth.getSession()
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${path}`, {
@@ -28,11 +55,17 @@ async function apiAuth(path: string, options: RequestInit = {}) {
 export default function SettingsPage() {
   const t = useTranslations('dashboard.settings')
   const tPlan = useTranslations('dashboard.plan')
+  const tTypes = useTranslations('onboarding.step1')
   const locale = useLocale()
 
   // ── Business profile state ─────────────────────────────────────────────────
   const [bizName, setBizName] = useState('')
+  // `bizType` is the canonical phrase stored on the row. `bizTypeSelect`
+  // tracks the dropdown value separately so a saved phrase that isn't in
+  // BUSINESS_TYPES (legacy data, or a custom value entered before this
+  // dropdown existed) cleanly maps to "other" + a populated text input.
   const [bizType, setBizType] = useState('')
+  const [bizTypeSelect, setBizTypeSelect] = useState('')
   const [bizCity, setBizCity] = useState('')
   const [bizProvince, setBizProvince] = useState('')
   const [bizCountry, setBizCountry] = useState('Canada')
@@ -46,6 +79,10 @@ export default function SettingsPage() {
   const [bizPriceRange, setBizPriceRange] = useState('')
   const [bizHours, setBizHours] = useState<HoursValue>({})
   const [bizCompetitorScope, setBizCompetitorScope] = useState<'local' | 'country' | 'global'>('local')
+  // ROI inputs (migration 022). Stored as strings so the empty state is
+  // clean — converted to numbers (or null) just before save.
+  const [bizAvgCustomerValue, setBizAvgCustomerValue]   = useState('')
+  const [bizMonthlyOnline, setBizMonthlyOnline]         = useState('')
   const [bizSaving, setBizSaving] = useState(false)
   const [bizSaved, setBizSaved] = useState(false)
   const [bizError, setBizError] = useState('')
@@ -74,7 +111,18 @@ export default function SettingsPage() {
     apiAuth('/api/v1/aeo/business')
       .then(data => {
         setBizName(data.name ?? '')
-        setBizType(data.type ?? '')
+        const savedType = (data.type ?? '') as string
+        setBizType(savedType)
+        // Map the saved phrase to a dropdown option. Anything we don't
+        // recognize falls through to "other" and the text box surfaces
+        // the original value so the user can edit it.
+        if (!savedType) {
+          setBizTypeSelect('')
+        } else if (BUSINESS_TYPE_PHRASES.has(savedType as typeof BUSINESS_TYPES[number]['phrase'])) {
+          setBizTypeSelect(savedType)
+        } else {
+          setBizTypeSelect('other')
+        }
         setBizCity(data.city ?? '')
         setBizProvince(data.province ?? '')
         setBizCountry(data.country ?? 'Canada')
@@ -90,6 +138,15 @@ export default function SettingsPage() {
         if (scope === 'local' || scope === 'country' || scope === 'global') {
           setBizCompetitorScope(scope)
         }
+        // ROI inputs — empty string = "not set" so the UI shows the
+        // placeholder. We don't convert to "0" because 0 is a valid
+        // (if unusual) answer for "monthly new customers".
+        setBizAvgCustomerValue(
+          data.avg_customer_value_cad != null ? String(data.avg_customer_value_cad) : ''
+        )
+        setBizMonthlyOnline(
+          data.monthly_new_online_customers != null ? String(data.monthly_new_online_customers) : ''
+        )
       })
       .catch(() => {/* silently ignore — fields stay blank */})
 
@@ -113,10 +170,18 @@ export default function SettingsPage() {
   // ── Save business profile ─────────────────────────────────────────────────
   async function handleBizSave(e: React.FormEvent) {
     e.preventDefault()
+    // "Other" selected with an empty text input would silently blank the
+    // business type on the row. Block the save and surface a hint instead.
+    if (bizTypeSelect === 'other' && !bizType.trim()) {
+      setBizError(t('businessProfile.typeRequired'))
+      return
+    }
     setBizSaving(true)
     setBizError('')
     setBizSaved(false)
     try {
+      const avgValueNum = bizAvgCustomerValue.trim() ? Number(bizAvgCustomerValue) : null
+      const monthlyOnlineNum = bizMonthlyOnline.trim() ? Math.round(Number(bizMonthlyOnline)) : null
       await apiAuth('/api/v1/aeo/business', {
         method: 'PUT',
         body: JSON.stringify({
@@ -130,6 +195,8 @@ export default function SettingsPage() {
           price_range: bizPriceRange || null,
           hours: Object.keys(bizHours).length ? bizHours : null,
           competitor_scope: bizCompetitorScope,
+          avg_customer_value_cad:       Number.isFinite(avgValueNum) ? avgValueNum : null,
+          monthly_new_online_customers: Number.isFinite(monthlyOnlineNum) ? monthlyOnlineNum : null,
         }),
       })
       setBizSaved(true)
@@ -203,8 +270,37 @@ export default function SettingsPage() {
 
         <div className="mb-4">
           <label className={labelClass}>{t('businessProfile.typeLabel')}</label>
-          <input type="text" value={bizType} onChange={e => setBizType(e.target.value)} className={inputClass}
-            placeholder="e.g. physiotherapy clinic, italian restaurant" />
+          <select
+            value={bizTypeSelect}
+            onChange={e => {
+              const next = e.target.value
+              setBizTypeSelect(next)
+              if (next === '') {
+                setBizType('')
+              } else if (next === 'other') {
+                // If we already had a non-listed custom phrase, keep it.
+                // Otherwise clear so the text input renders empty.
+                if (BUSINESS_TYPE_PHRASES.has(bizType as typeof BUSINESS_TYPES[number]['phrase'])) {
+                  setBizType('')
+                }
+              } else {
+                setBizType(next)
+              }
+            }}
+            className={inputClass}>
+            <option value="">—</option>
+            {BUSINESS_TYPES.map(bt => (
+              <option key={bt.key} value={bt.phrase}>{tTypes(`types.${bt.key}`)}</option>
+            ))}
+          </select>
+          {bizTypeSelect === 'other' && (
+            <input
+              type="text"
+              value={bizType}
+              onChange={e => setBizType(e.target.value)}
+              placeholder="e.g. physiotherapy clinic, italian restaurant"
+              className={`${inputClass} mt-2`} />
+          )}
           <p className="text-[10px] text-slate-400 mt-1">{t('businessProfile.typeHint')}</p>
         </div>
 
@@ -286,6 +382,45 @@ export default function SettingsPage() {
             <label className={labelClass}>{t('businessProfile.hoursLabel')}</label>
             <p className="text-[10px] text-slate-400 mb-2">{t('businessProfile.hoursHint')}</p>
             <HoursEditor value={bizHours} onChange={setBizHours} />
+          </div>
+
+          {/* ROI inputs (migration 022). Drives dashboard revenue-exposure
+              hero and per-recommendation $ tags. Both optional — vertical
+              defaults fill in any missing value. */}
+          <div className="mb-4 border-t border-slate-100 pt-4">
+            <p className="text-xs font-bold text-[#1e293b] mb-1">{t('businessProfile.roiHeading')}</p>
+            <p className="text-[10px] text-slate-500 mb-3">{t('businessProfile.roiSubtitle')}</p>
+
+            <div className="mb-3">
+              <label className={labelClass}>{t('businessProfile.avgCustomerValueLabel')}</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">$</span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="any"
+                  value={bizAvgCustomerValue}
+                  onChange={e => setBizAvgCustomerValue(e.target.value)}
+                  placeholder={t('businessProfile.avgCustomerValuePlaceholder')}
+                  className={`${inputClass} pl-7`} />
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">{t('businessProfile.avgCustomerValueHint')}</p>
+            </div>
+
+            <div>
+              <label className={labelClass}>{t('businessProfile.monthlyOnlineLabel')}</label>
+              <input
+                type="number"
+                inputMode="numeric"
+                min="0"
+                step="1"
+                value={bizMonthlyOnline}
+                onChange={e => setBizMonthlyOnline(e.target.value)}
+                placeholder={t('businessProfile.monthlyOnlinePlaceholder')}
+                className={inputClass} />
+              <p className="text-[10px] text-slate-400 mt-1">{t('businessProfile.monthlyOnlineHint')}</p>
+            </div>
           </div>
 
           {/* Competitor scope -- who should the audit compare you to? */}

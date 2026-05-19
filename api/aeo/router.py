@@ -58,10 +58,29 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 SERPAPI_KEY = os.getenv("SERPAPI_KEY")
 CRON_SECRET = os.getenv("CRON_SECRET")
 BILLING_ENABLED = os.getenv("BILLING_ENABLED", "false").lower() == "true"
-# NOTE: "restaurant" and "cafe" intentionally omitted — the LLM must
-# enrich them with cuisine context (e.g. "Egyptian restaurant") so that
-# AI-citation queries are specific rather than generic.
-KNOWN_TYPES = {"salon", "retail", "plumber"}
+# Types we recognize directly from the onboarding chip set — for these,
+# normalize_business_type() returns the raw phrase without an LLM call.
+# The chip phrases in apps/web/components/onboarding/StepBusinessInfo.tsx
+# (TYPES[].phrase) must all appear here, otherwise every audit pays for a
+# normalize_business_type LLM round-trip even though the owner picked a
+# specific category.
+#
+# NOTE: "restaurant" and "cafe" are still allowed here even though the
+# LLM previously enriched them with cuisine context — the dedicated
+# website + services cuisine scanner now handles that signal directly.
+KNOWN_TYPES = {
+    # Consumer services
+    "restaurant", "cafe", "salon", "retail",
+    # Healthcare specifics
+    "dentist", "physiotherapy clinic", "family doctor",
+    "chiropractor", "optometrist", "veterinarian",
+    # Professional services
+    "lawyer", "accountant", "realtor",
+    # Trades / home services
+    "plumber", "auto repair", "cleaning service",
+    # Wellness
+    "personal trainer",
+}
 
 # Map full country names (as stored on businesses.country, set in onboarding) to
 # Google's ISO 3166-1 alpha-2 region codes used by the SerpApi `gl` parameter.
@@ -293,6 +312,109 @@ def extract_search_name(business_name: str, city: str) -> str:
     return re.sub(rf'\s+in\s+{re.escape(city)}\s*$', '', business_name, flags=re.IGNORECASE).strip()
 
 
+_TITLE_TAG_RE = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
+
+# Business types that already convey a specific primary identity — for
+# these, we DON'T emit a sub-specialty service tag from body content.
+# Surfacing "pediatric" on a "Burlington Family Dentists" site (because
+# the homepage lists pediatric dentistry as one of many services they
+# offer) labels the entire practice incorrectly. Title-tag matches still
+# count for these types — e.g. "Pediatric Dental Group of Toronto" with
+# "pediatric" in <title> WILL emit pediatric, since the practice is
+# self-identifying that way.
+#
+# Generic types (family doctor, walk-in clinic, medical clinic, "other")
+# stay outside this set and continue to fire sub-specialty tags from
+# body content via the min_matches rule.
+_SPECIFIC_TYPES_BODY_TAGS_SKIPPED = {
+    "dentist", "dental office", "dental clinic", "orthodontist",
+    "physiotherapy clinic", "physiotherapist", "physical therapy", "physical therapist",
+    "chiropractor", "chiropractic clinic",
+    "optometrist", "optometry clinic",
+    "veterinarian", "veterinary clinic", "animal hospital",
+    "podiatrist", "podiatry clinic",
+    "dermatologist", "dermatology clinic",
+}
+
+
+def _is_specific_type_for_subspecialty(business_type: str | None) -> bool:
+    if not business_type:
+        return False
+    return business_type.lower().strip() in _SPECIFIC_TYPES_BODY_TAGS_SKIPPED
+
+
+def _extract_text_signals(
+    text: str,
+    service_min_matches: int = 1,
+    business_type: str | None = None,
+) -> dict:
+    """Run the cuisine, dietary, and clinic-service regex banks over arbitrary text.
+
+    Used for two inputs that benefit from identical scanning logic:
+      * website homepage HTML  (in check_website, with service_min_matches=2)
+      * the user's free-form `services` field from onboarding (in _run_audit_core,
+        with service_min_matches=1 since the input is already short and curated)
+
+    `service_min_matches` exists because long-form HTML often contains a single
+    passing mention of a non-primary specialty (e.g. "pediatric dentistry"
+    listed among 12 services on a family-dentist site). We don't want that to
+    label the entire practice as a pediatric clinic. Title-tag matches are
+    treated as a primary-identity signal and always count regardless of the
+    frequency threshold.
+
+    `business_type` (optional) further constrains body-content tagging: when
+    the owner has selected a specific specialty in onboarding (dentist,
+    physiotherapist, etc. — see _SPECIFIC_TYPES_BODY_TAGS_SKIPPED above), we
+    only emit sub-specialty tags that match in <title>. Body content alone
+    can't override the owner-declared primary identity.
+
+    Returning a dict (not a tuple) so callers can ignore fields they don't need.
+    """
+    if not text:
+        return {"cuisine": None, "cuisine_parent": None, "dietary_tags": [], "service_tags": []}
+
+    title_match = _TITLE_TAG_RE.search(text)
+    title_text = title_match.group(1) if title_match else ""
+
+    dietary_tags = [tag for tag, pattern, _ in _DIETARY_PATTERNS if pattern.search(text)]
+
+    type_is_specific = _is_specific_type_for_subspecialty(business_type)
+    service_tags: list[str] = []
+    for tag, pattern, _ in _CLINIC_SERVICE_PATTERNS:
+        # A match in <title> is a strong primary-identity signal — accept on 1.
+        if title_text and pattern.search(title_text):
+            service_tags.append(tag)
+            continue
+        # When the owner already picked a specific specialty, body matches
+        # alone can't override that identity. Title-tag matches above still
+        # fire (e.g. a specialised pediatric dental practice).
+        if type_is_specific:
+            continue
+        # Otherwise require at least service_min_matches occurrences.
+        if service_min_matches <= 1:
+            if pattern.search(text):
+                service_tags.append(tag)
+        else:
+            hits = pattern.findall(text)
+            if len(hits) >= service_min_matches:
+                service_tags.append(tag)
+
+    cuisine: str | None = None
+    cuisine_parent: str | None = None
+    for pattern, label, parent in _CUISINE_DETECTORS:
+        if pattern.search(text):
+            cuisine = label
+            cuisine_parent = parent
+            break
+
+    return {
+        "cuisine":        cuisine,
+        "cuisine_parent": cuisine_parent,
+        "dietary_tags":   dietary_tags,
+        "service_tags":   service_tags,
+    }
+
+
 def _parse_relative_date(date_str: str | None) -> int | None:
     """Convert SerpApi relative date strings to approximate number of days.
     Examples: '2 days ago' → 2, '3 weeks ago' → 21, '2 months ago' → 60, 'a year ago' → 365.
@@ -359,12 +481,30 @@ def _name_matches(candidate: str, search_name: str) -> bool:
 async def normalize_business_type(raw_type: str, business_name: str) -> str:
     if raw_type.lower() in KNOWN_TYPES:
         return raw_type
+    # The business name is provided ONLY as disambiguation hint. We forbid the LLM
+    # from echoing it back, because earlier prompts produced things like
+    # "Mandi Afandi restaurant" which then poisoned every downstream search query
+    # (searching for the user's own business → zero competitors found).
     result = await content_llm.generate(
-        prompt=f'Given business name: "{business_name}" and type: "{raw_type}", translate to a short English phrase for a search query (e.g. "physiotherapy clinic", "italian restaurant"). Reply with only the phrase.',
+        prompt=(
+            f'Translate the business category "{raw_type}" into a short generic '
+            f'English search phrase, max 4 words (e.g. "physiotherapy clinic", '
+            f'"italian restaurant", "auto repair shop"). '
+            f'Context (do NOT repeat in answer): business name is "{business_name}". '
+            f'Reply with ONLY the generic category phrase. Do NOT include the '
+            f'business name, any proper noun, or any city name.'
+        ),
         max_tokens=20,
         temperature=0.0,
     )
-    return result.strip()
+    cleaned = result.strip().strip('"').strip("'")
+    # Defensive scrub: if the LLM still echoed the business name, strip it out.
+    # Token-by-token (case-insensitive) so "Mandi Afandi restaurant" becomes "restaurant".
+    name_tokens = {t.lower() for t in business_name.split() if len(t) > 2}
+    if name_tokens:
+        kept = [w for w in cleaned.split() if w.lower() not in name_tokens]
+        cleaned = " ".join(kept).strip() or raw_type
+    return cleaned
 
 
 def _detect_cuisine(business_name: str, business_type_en: str) -> tuple[str | None, str | None, bool]:
@@ -394,6 +534,8 @@ def build_queries(
     business_name: str = "",
     dietary_tags: list[str] | None = None,
     service_tags: list[str] | None = None,
+    cuisine_hint: str | None = None,
+    cuisine_hint_parent: str | None = None,
 ) -> list[str]:
     """
     Returns the list of search-query strings to run against each AI engine.
@@ -434,8 +576,23 @@ def build_queries(
         queries.append(f"{business_type_en} open weekends {city}")
 
     # Restaurant vertical: add cuisine-specific and parent-category queries.
-    if business_name and _RESTAURANT_RE.search(f"{business_name} {business_type_en}"):
+    # Match gate also accepts the business_type_en alone (handles `cafe`/`bakery`
+    # where the business_name has no food-related token), and the cuisine_hint
+    # (so a website-only signal like "Arabic food on the homepage" still flips
+    # this branch on).
+    restaurant_gate = (
+        _RESTAURANT_RE.search(f"{business_name} {business_type_en}")
+        or (cuisine_hint and _RESTAURANT_RE.search(business_type_en))
+    )
+    if restaurant_gate:
         cuisine, parent, is_halal_name = _detect_cuisine(business_name, business_type_en)
+        # Gap 1 fix: when name+type detection finds nothing, fall back to the
+        # cuisine_hint extracted from the website/services scan. The user's
+        # "Mandi Afandi" was the exact case this guards against — no cuisine token
+        # in the name, "Arabic" only visible on the homepage.
+        if not cuisine and cuisine_hint:
+            cuisine = cuisine_hint
+            parent = cuisine_hint_parent
         extras: list[str] = []
         if cuisine and cuisine.lower() not in business_type_en.lower():
             extras.append(f"best {cuisine.lower()} restaurant {city}")
@@ -516,10 +673,13 @@ async def run_perplexity_multi(
     is_healthcare: bool = False,
     dietary_tags: list[str] | None = None,
     service_tags: list[str] | None = None,
+    cuisine_hint: str | None = None,
+    cuisine_hint_parent: str | None = None,
 ) -> dict:
     results = []
     for query in build_queries(business_type_en, city, province, postal_code, is_trades, is_healthcare,
-                                business_name=business_name, dietary_tags=dietary_tags, service_tags=service_tags):
+                                business_name=business_name, dietary_tags=dietary_tags, service_tags=service_tags,
+                                cuisine_hint=cuisine_hint, cuisine_hint_parent=cuisine_hint_parent):
         try:
             results.append(await _perplexity_one(business_name, query, city))
         except Exception as e:
@@ -566,10 +726,13 @@ async def run_chatgpt_multi(
     is_healthcare: bool = False,
     dietary_tags: list[str] | None = None,
     service_tags: list[str] | None = None,
+    cuisine_hint: str | None = None,
+    cuisine_hint_parent: str | None = None,
 ) -> dict:
     results = []
     for query in build_queries(business_type_en, city, province, postal_code, is_trades, is_healthcare,
-                                business_name=business_name, dietary_tags=dietary_tags, service_tags=service_tags):
+                                business_name=business_name, dietary_tags=dietary_tags, service_tags=service_tags,
+                                cuisine_hint=cuisine_hint, cuisine_hint_parent=cuisine_hint_parent):
         try:
             results.append(await _chatgpt_one(business_name, query, city))
         except Exception as e:
@@ -907,10 +1070,13 @@ async def run_google_multi(
     competitor_scope: str = "local",
     dietary_tags: list[str] | None = None,
     service_tags: list[str] | None = None,
+    cuisine_hint: str | None = None,
+    cuisine_hint_parent: str | None = None,
 ) -> dict:
     results = []
     for query in build_queries(business_type_en, city, province, postal_code, is_trades, is_healthcare,
-                                business_name=business_name, dietary_tags=dietary_tags, service_tags=service_tags):
+                                business_name=business_name, dietary_tags=dietary_tags, service_tags=service_tags,
+                                cuisine_hint=cuisine_hint, cuisine_hint_parent=cuisine_hint_parent):
         try:
             results.append(await _google_one(
                 business_name, query, city, website, province, country,
@@ -986,20 +1152,35 @@ async def run_google_multi(
 
     logger.info(f"[AEO] Aggregated {len(competitors_data)} unique competitors across {len(results)} queries")
 
-    # If category queries didn't return review count, run a 4th name-based lookup
-    # to force Google to return the knowledge graph for this specific business.
-    # Note: rating alone is NOT enough — SerpApi often returns rating without review
-    # count from the local pack. We need review count for recommendations to be accurate.
+    # Branded name lookup — a 4th SerpApi call against the exact business
+    # name. Two reasons to fire it:
+    #
+    #   1. We don't have review-count data yet. Rating alone isn't enough;
+    #      review count drives the Reviews-pillar recommendation copy.
+    #
+    #   2. We don't have a Knowledge Graph card. Category searches like
+    #      "best dentist Burlington" often return ONLY a local pack entry,
+    #      while branded searches for the actual business name reliably
+    #      return a KG card with title/category/phone/website. Without
+    #      this fallback, GBP scoring and recommendations were penalising
+    #      owners for missing fields that ARE on their real GBP — Google
+    #      just chose not to render the KG for the category query (the
+    #      "wrong info is dangerous" bug reported 2026-05-17).
+    #
+    # Cost: ~$0.005 per audit when triggered. At 100 customers running
+    # weekly that's ~$2/month — trivial vs the trust win.
     has_review_data = bool(
         local_data.get("reviews") or kg_data.get("reviews_count")
     )
+    has_kg = bool(kg_data.get("found"))
     name_result = None
-    if not has_review_data:
-        print(f"[AEO] No review data from category queries — running name lookup for '{business_name}'")
+    if not has_review_data or not has_kg:
+        reason = "no KG" if not has_kg else "no review data"
+        print(f"[AEO] Name lookup for '{business_name}' — {reason}")
         name_result = await _google_name_lookup(business_name, city, website, province, country)
         if name_result["knowledge_graph"]["found"]:
             kg_data = name_result["knowledge_graph"]
-            print(f"[AEO] Name lookup found KG: rating={kg_data.get('rating')} reviews={kg_data.get('reviews_count')}")
+            print(f"[AEO] Name lookup found KG: title={kg_data.get('title')} type={kg_data.get('type')} rating={kg_data.get('rating')} reviews={kg_data.get('reviews_count')}")
         # Also grab local_pack review data from the name query — SerpApi often returns
         # reviews in local_pack even when knowledge_graph is absent
         if name_result["local_pack"]["present"] and name_result["local_pack"].get("reviews"):
@@ -1019,7 +1200,7 @@ async def run_google_multi(
     }
 
 
-async def check_website(website: str | None) -> dict:
+async def check_website(website: str | None, business_type: str | None = None) -> dict:
     if not website:
         return {"reachable": False, "has_local_business_schema": False, "has_faq_schema": False}
 
@@ -1033,55 +1214,79 @@ async def check_website(website: str | None) -> dict:
         print(f"[AEO] Website fetch failed for {url}: {e}")
         return {"reachable": False, "has_local_business_schema": False, "has_faq_schema": False}
 
-    has_local_business = '"@type":"localbusiness"' in html.replace(" ", "") or '"@type": "localbusiness"' in html
-    # Also detect Schema.org LocalBusiness subtypes — many CMS plugins emit a
-    # specific type (Restaurant, Dentist, Plumber, etc.) rather than the generic
-    # LocalBusiness parent.  AI engines accept any of these as local-business signals.
-    if not has_local_business:
-        _LB_SUBTYPES = {
-            "restaurant", "foodestablishment", "cafeorcoffeeshop", "fastfoodrestaurant",
-            "barorpub", "bakery", "icecreamshop", "winery", "distillery",
-            "dentist", "physician", "medicalbusiness", "healthandbeautybusiness",
-            "medicalclinic", "optician", "pharmacy", "physiotherapist",
-            "homeandconstructionbusiness", "electrician", "generalcontractor",
-            "hvacbusiness", "housepainter", "locksmith", "movingcompany",
-            "plumber", "roofingcontractor",
-            "autodealer", "autorepair", "autobodyshop",
-            "legalservice", "accountingservice", "financialservice",
-            "insuranceagency", "realestateagent",
-            "hairsalon", "beautysalon", "nailsalon", "dayspa", "tattooparlor",
-            "store", "sportinggoods", "clothingstore", "electronicsstore",
-            "lodging", "hotel", "motel", "bedandbreakfast",
-            "veterinarycare", "animalshelter",
-        }
-        html_nospace = html.replace(" ", "")
-        has_local_business = any(
-            f'"@type":"{t}"' in html_nospace for t in _LB_SUBTYPES
-        )
-    has_faq = '"@type":"faqpage"' in html.replace(" ", "") or '"@type": "faqpage"' in html
+    # Schema detection — we look for three different surface forms:
+    #   1. JSON-LD ("@type":"LocalBusiness")  — the modern standard
+    #   2. HTML-escaped JSON-LD (&quot;@type&quot;:&quot;LocalBusiness&quot;)
+    #      — happens when a CMS exports the schema via a template that
+    #      escapes the JSON before insertion
+    #   3. Microdata (itemtype="https://schema.org/LocalBusiness") — older
+    #      format still valid per Google
+    #
+    # KNOWN LIMITATION: this is a STATIC HTML scan. Schema injected at
+    # runtime by JavaScript (Yoast SEO on some configs, Webflow's CMS,
+    # Wix's structured-data plugin, etc.) is invisible to us. The audit
+    # recommendation copy reflects this — we say "we couldn't detect"
+    # rather than "you're missing" to avoid accusing owners of a fault
+    # that doesn't exist. See project_gbp_trust_fix for the same pattern.
+    _LB_SUBTYPES = {
+        "restaurant", "foodestablishment", "cafeorcoffeeshop", "fastfoodrestaurant",
+        "barorpub", "bakery", "icecreamshop", "winery", "distillery",
+        "dentist", "physician", "medicalbusiness", "healthandbeautybusiness",
+        "medicalclinic", "optician", "pharmacy", "physiotherapist",
+        "homeandconstructionbusiness", "electrician", "generalcontractor",
+        "hvacbusiness", "housepainter", "locksmith", "movingcompany",
+        "plumber", "roofingcontractor",
+        "autodealer", "autorepair", "autobodyshop",
+        "legalservice", "accountingservice", "financialservice",
+        "insuranceagency", "realestateagent",
+        "hairsalon", "beautysalon", "nailsalon", "dayspa", "tattooparlor",
+        "store", "sportinggoods", "clothingstore", "electronicsstore",
+        "lodging", "hotel", "motel", "bedandbreakfast",
+        "veterinarycare", "animalshelter",
+    }
+    html_nospace = html.replace(" ", "")
+    # html_nospace_unesc — also collapse HTML-escaped quotes so the escaped
+    # JSON-LD pattern (`&quot;@type&quot;:&quot;LocalBusiness&quot;`)
+    # collapses to the same shape as the unescaped one.
+    html_nospace_unesc = html_nospace.replace("&quot;", '"').replace("&#34;", '"')
 
-    # Dietary / cuisine signal extraction from homepage text.
-    # This is the most reliable source for signals not visible in the business
-    # name — e.g. a halal restaurant that says so on the homepage but not
-    # in the GBP name, or a vegetarian restaurant that doesn't use that word
-    # in its Google category.  Only explicitly present words are flagged.
-    dietary_tags: list[str] = [
-        tag for tag, pattern, _ in _DIETARY_PATTERNS if pattern.search(html)
-    ]
-    # Healthcare service tags — specific services mentioned on the homepage
-    # (massage therapy, physiotherapy, dietitian, etc.) so we can build
-    # service-specific queries for multi-service clinics.
-    service_tags: list[str] = [
-        tag for tag, pattern, _ in _CLINIC_SERVICE_PATTERNS if pattern.search(html)
-    ]
-    # Cuisine hint from homepage text — used if the business name alone is ambiguous.
-    cuisine_hint: str | None = None
-    cuisine_hint_parent: str | None = None
-    for pattern, cuisine, parent in _CUISINE_DETECTORS:
-        if pattern.search(html):
-            cuisine_hint = cuisine
-            cuisine_hint_parent = parent
-            break
+    _all_lb_keys = {"localbusiness"} | _LB_SUBTYPES
+    has_local_business = any(
+        f'"@type":"{t}"' in html_nospace_unesc for t in _all_lb_keys
+    )
+    # Microdata fallback — older sites use itemtype="schema.org/LocalBusiness"
+    if not has_local_business:
+        has_local_business = any(
+            f'schema.org/{t}' in html_nospace.replace("https://", "").replace("http://", "")
+            for t in {"LocalBusiness"} | {s[0].upper() + s[1:] for s in _LB_SUBTYPES}
+        )
+    has_faq = (
+        '"@type":"faqpage"' in html_nospace_unesc
+        or 'schema.org/faqpage' in html_nospace.replace("https://", "").replace("http://", "")
+    )
+
+    # Dietary / cuisine / clinic-service signal extraction from homepage text.
+    # Shared with _run_audit_core which runs the same scan over the user's
+    # free-form `services` field so signals declared in onboarding (but not yet
+    # on the website) still drive query enrichment.
+    #
+    # service_min_matches=2 because long-form HTML contains many one-off
+    # mentions of specialties that aren't the practice's primary identity.
+    # E.g. Burlington Family Dentists' page listed "pediatric dentistry" once
+    # in a services grid and the detector labelled the whole practice as
+    # pediatric. A title-tag match always counts regardless (see helper).
+    # business_type adds a second guardrail: when the owner selected a
+    # specific specialty in onboarding (dentist, physiotherapist, etc.),
+    # body-content sub-specialty matches are suppressed entirely.
+    signals = _extract_text_signals(
+        html,
+        service_min_matches=2,
+        business_type=business_type,
+    )
+    dietary_tags = signals["dietary_tags"]
+    service_tags = signals["service_tags"]
+    cuisine_hint = signals["cuisine"]
+    cuisine_hint_parent = signals["cuisine_parent"]
 
     print(f"[AEO] Website: reachable=True local_schema={has_local_business} faq_schema={has_faq} dietary={dietary_tags} services={service_tags} cuisine_hint={cuisine_hint}")
     return {
@@ -1181,11 +1386,25 @@ def calculate_score(business: dict, perplexity: dict, google: dict, website_chec
     effective_reviews = kg.get("reviews_count") or lp.get("reviews") or 0
     has_gbp = kg["found"] or lp["present"]
 
+    # Sometimes Google returns a Local Pack entry but no Knowledge Graph
+    # card for the same business — happens often on category searches
+    # (e.g. "dentist Burlington") vs branded searches. When that happens,
+    # KG fields are null even though the actual GBP profile has them.
+    # We must NOT penalize the owner for fields Google chose not to render
+    # in this response — they look at their real GBP, see everything's
+    # there, and lose trust in our score.
+    #
+    # If the business is found on Google (KG or LP), assume the GBP has
+    # a category (Google requires one for the listing to exist) and
+    # contact info (we also fall back to business.website from onboarding).
+    has_category    = bool(kg.get("type")) or has_gbp
+    has_contact     = bool(kg.get("website") or kg.get("phone") or business.get("website")) or has_gbp
+
     gbp = 0
-    if has_gbp: gbp += 10
+    if has_gbp:       gbp += 10
     if effective_rating: gbp += 5
-    if kg.get("type"): gbp += 5
-    if kg.get("website") or kg.get("phone") or business.get("website"): gbp += 5
+    if has_category:  gbp += 5
+    if has_contact:   gbp += 5
 
     reviews = 0
     if effective_reviews >= 50: reviews += 12
@@ -1307,6 +1526,19 @@ def generate_recommendations(
     rating = kg.get("rating") or lp.get("rating") or 0
     reviews_count = kg.get("reviews_count") or lp.get("reviews") or 0
 
+    # When we have BOTH a Knowledge Graph card and a Local Pack entry, we
+    # have full visibility into the owner's GBP and can definitively call
+    # out missing fields. When we only have LP (no KG, common for category
+    # searches like "dentist Burlington"), we DON'T know if category/phone/
+    # website are missing on the actual profile — Google just chose not to
+    # render the KG for this query. We must NOT recommend "add your
+    # category" if the owner can look at their real GBP and see it's there.
+    #
+    # NOTE: when B (branded SerpApi call) lands, kg["found"] will be True
+    # whenever Google has any KG for this business — so these guards
+    # naturally adapt. Until then, they prevent misleading recs.
+    have_full_gbp_visibility = kg["found"]
+
     # ─── GBP pillar ──────────────────────────────────────────
     if not has_gbp:
         recs.append({
@@ -1318,7 +1550,9 @@ def generate_recommendations(
             "impact": 15,
             "url": "https://business.google.com",
         })
-    else:
+    elif have_full_gbp_visibility:
+        # Only emit "missing field" recs when we can SEE the owner's KG data
+        # — otherwise we'd be making accusations we can't back up.
         if not kg.get("type") and breakdown["gbp"] < 25:
             recs.append({
                 "pillar": "gbp",
@@ -1339,18 +1573,21 @@ def generate_recommendations(
                 "impact": 5,
                 "url": "https://business.google.com",
             })
-        # Business appears in local pack but Google hasn't generated a Knowledge Panel —
-        # the profile is claimed but thin. Earning a KG panel = +5pts and unlocks recency data.
-        if lp["present"] and not kg["found"]:
-            recs.append({
-                "pillar": "gbp",
-                "title": "Enrich your GBP to earn a Google Knowledge Panel",
-                "description": "Your business appears in Google Maps but doesn't have a Knowledge Panel (the sidebar card). AI engines use the Knowledge Panel as a primary trust signal — businesses without one are rarely cited.",
-                "action": "Add a detailed business description, upload at least 10 photos, set your primary category, add your website and phone. Post a GBP update weekly for 4 weeks.",
-                "difficulty": "medium",
-                "impact": 8,
-                "url": "https://business.google.com",
-            })
+    else:
+        # LP-present + KG-empty path: we know they're on Google but can't
+        # see their KG details. Don't accuse — invite a verification check.
+        # This rec applies whether or not the branded search (Part B) found
+        # a KG, since LP-only visibility still suggests the profile could
+        # be more discoverable.
+        recs.append({
+            "pillar": "gbp",
+            "title": "Review your Google Business Profile",
+            "description": "Your business appears in Google's local results but we couldn't see the full Knowledge Panel details on category searches. A complete GBP (description, photos, posts) makes AI engines more likely to cite you.",
+            "action": "Open business.google.com and check that your category, description, hours, photos, and contact info are all complete and current.",
+            "difficulty": "easy",
+            "impact": 5,
+            "url": "https://business.google.com",
+        })
 
     # ─── Reviews pillar ──────────────────────────────────────
     count_label = str(reviews_count) if reviews_count else "unknown"
@@ -1429,20 +1666,27 @@ def generate_recommendations(
         if not website_check["has_local_business_schema"]:
             recs.append({
                 "pillar": "website",
-                "title": "Add LocalBusiness schema to your homepage",
-                "description": "JSON-LD schema markup tells search engines exactly what your business does, where you are, and how to contact you. AI engines rely heavily on it.",
-                "action": "Use the LocalBusiness schema we generated for you in the Content tab. Paste it into your website's <head> tag.",
+                "title": "Check for LocalBusiness schema on your homepage",
+                # Honest framing — our HTML scan can't see schema injected by
+                # JavaScript at runtime (Yoast, Webflow CMS, Wix plugins, etc.).
+                # The owner might already have it via a plugin; we say "couldn't
+                # detect" rather than "is missing" so we don't accuse a fault
+                # that may not exist. Same trust principle as the GBP fix.
+                "description": "We couldn't detect LocalBusiness JSON-LD on your homepage. If you use a CMS plugin that adds schema (Yoast SEO, Rank Math, Webflow), it may be injected via JavaScript — verify in Google's Rich Results Test. If it's missing, the Content tab has a copy-paste schema you can add.",
+                "action": "Run your homepage through Google's Rich Results Test (search.google.com/test/rich-results). If LocalBusiness isn't listed, paste the schema from the Content tab into your <head> tag.",
                 "difficulty": "medium",
                 "impact": 6,
+                "url": "https://search.google.com/test/rich-results",
             })
         if not website_check["has_faq_schema"]:
             recs.append({
                 "pillar": "website",
-                "title": "Add an FAQ page with FAQ schema",
-                "description": "FAQ schema is the most-cited type of structured data by AI engines like ChatGPT and Perplexity.",
-                "action": "Create an FAQ page on your website using the questions we generated in the Content tab. Wrap each Q&A in FAQ schema markup.",
+                "title": "Check for FAQ schema on your homepage",
+                "description": "We couldn't detect FAQ schema on your homepage. FAQ schema is the most-cited structured-data type by AI engines like ChatGPT and Perplexity. If your CMS plugin injects schema via JavaScript it won't show on our scan — verify in Google's Rich Results Test before adding new schema.",
+                "action": "Run your homepage through Google's Rich Results Test. If FAQ schema isn't there, use the Content tab to generate Q&A pairs + JSON-LD you can paste into your <head>.",
                 "difficulty": "medium",
                 "impact": 6,
+                "url": "https://search.google.com/test/rich-results",
             })
 
     # ─── Local Search Presence pillar ────────────────────────
@@ -1707,27 +1951,55 @@ async def _run_audit_core(business: dict) -> dict:
     # kosher, cuisine type, etc.) can be injected into ALL three AI engines'
     # query sets.  The website check takes ~1-3 s; the full audit takes ~15-30 s,
     # so the net latency impact is minimal.
-    website_check = await check_website(website)
-    dietary_tags_v: list[str] = website_check.get("dietary_tags") or []
-    service_tags_v: list[str] = website_check.get("service_tags") or []
+    # Pass the owner-declared business type so sub-specialty body matches
+    # are suppressed when the type already conveys a specific identity
+    # (e.g. "dentist" + a homepage that lists pediatric dentistry as one
+    # of many services won't label the practice as a pediatric clinic).
+    raw_business_type = business.get("type")
+    website_check = await check_website(website, business_type=raw_business_type)
+    dietary_tags_v: list[str] = list(website_check.get("dietary_tags") or [])
+    service_tags_v: list[str] = list(website_check.get("service_tags") or [])
     cuisine_hint_v: str | None = website_check.get("cuisine_hint")
+    cuisine_hint_parent_v: str | None = website_check.get("cuisine_hint_parent")
+
+    # Gap 2: scan the user's free-form `services` field with the same regex banks.
+    # Captures signals declared during onboarding ("Arabic food, halal, catering")
+    # that aren't visible on the website yet — common for new businesses still
+    # building their homepage. Website signals take precedence; services fills gaps.
+    services_text = business.get("services") or ""
+    if services_text:
+        from_services = _extract_text_signals(services_text, business_type=raw_business_type)
+        for tag in from_services["dietary_tags"]:
+            if tag not in dietary_tags_v:
+                dietary_tags_v.append(tag)
+        for tag in from_services["service_tags"]:
+            if tag not in service_tags_v:
+                service_tags_v.append(tag)
+        if not cuisine_hint_v and from_services["cuisine"]:
+            cuisine_hint_v = from_services["cuisine"]
+            cuisine_hint_parent_v = from_services["cuisine_parent"]
+            print(f"[AEO] Services cuisine hint: {cuisine_hint_v} (parent={cuisine_hint_parent_v}) — from onboarding services field")
+
     if cuisine_hint_v:
-        print(f"[AEO] Website cuisine hint: {cuisine_hint_v} (parent={website_check.get('cuisine_hint_parent')})")
+        print(f"[AEO] Cuisine hint resolved: {cuisine_hint_v} (parent={cuisine_hint_parent_v})")
     if dietary_tags_v:
-        print(f"[AEO] Website dietary tags: {dietary_tags_v}")
+        print(f"[AEO] Dietary tags (website ∪ services): {dietary_tags_v}")
     if service_tags_v:
-        print(f"[AEO] Website service tags: {service_tags_v}")
+        print(f"[AEO] Service tags (website ∪ services): {service_tags_v}")
 
     perplexity_result, google_result, chatgpt_result = await asyncio.gather(
         run_perplexity_multi(business_name, business_type_en, city, province,
                              postal_code=postal_code, is_trades=is_trades_v, is_healthcare=is_healthcare_v,
-                             dietary_tags=dietary_tags_v, service_tags=service_tags_v),
+                             dietary_tags=dietary_tags_v, service_tags=service_tags_v,
+                             cuisine_hint=cuisine_hint_v, cuisine_hint_parent=cuisine_hint_parent_v),
         run_google_multi(business_name, business_type_en, city, province, website, country,
                          postal_code=postal_code, is_trades=is_trades_v, is_healthcare=is_healthcare_v,
-                         competitor_scope=competitor_scope, dietary_tags=dietary_tags_v, service_tags=service_tags_v),
+                         competitor_scope=competitor_scope, dietary_tags=dietary_tags_v, service_tags=service_tags_v,
+                         cuisine_hint=cuisine_hint_v, cuisine_hint_parent=cuisine_hint_parent_v),
         run_chatgpt_multi(business_name, business_type_en, city, province,
                           postal_code=postal_code, is_trades=is_trades_v, is_healthcare=is_healthcare_v,
-                          dietary_tags=dietary_tags_v, service_tags=service_tags_v),
+                          dietary_tags=dietary_tags_v, service_tags=service_tags_v,
+                          cuisine_hint=cuisine_hint_v, cuisine_hint_parent=cuisine_hint_parent_v),
     )
 
     # Recency check — only if the KG gave us a place_id (i.e. business is indexed by Google)
@@ -1838,7 +2110,18 @@ async def _run_audit_core(business: dict) -> dict:
     # For each scored competitor that has a place_id, fetch their latest reviews
     # via google_maps_reviews and run AI sentiment analysis to surface complaint themes.
     # This runs in parallel across competitors and is gated on place_id availability.
-    competitor_insights = await _analyze_competitor_weaknesses(scored_competitors, country)
+    # Hard 30s cap: this phase fans out a Perplexity call PER competitor, so a single
+    # slow upstream response can push total audit past 2 min and break the frontend
+    # fetch. Score + recommendations + competitor list don't depend on W2 — if it
+    # times out we degrade silently and ship the rest of the audit on time.
+    try:
+        competitor_insights = await asyncio.wait_for(
+            _analyze_competitor_weaknesses(scored_competitors, country),
+            timeout=30.0,
+        )
+    except asyncio.TimeoutError:
+        logger.warning("[AEO][W2] Timed out after 30s — skipping competitor weak-point analysis")
+        competitor_insights = {}
 
     # ─── Citation gap analysis (W3) ───────────────────────────────────────
     # Walk organic_results across the 3 google queries, detect directory listings
@@ -1885,6 +2168,16 @@ async def _run_audit_core(business: dict) -> dict:
         "competitors":          scored_competitors,
         "competitor_insights":  competitor_insights,
         "citation_gaps":        citation_gaps,
+        # Detected signals (website ∪ services) — surfaced on the dashboard
+        # so the owner can verify what we picked up about their business.
+        # Read-only for now; an edit affordance can come later if owners
+        # report wrong detections.
+        "detected_signals": {
+            "cuisine":        cuisine_hint_v,
+            "cuisine_parent": cuisine_hint_parent_v,
+            "dietary_tags":   dietary_tags_v,
+            "service_tags":   service_tags_v,
+        },
     }
 
 
@@ -2852,6 +3145,11 @@ class BusinessProfileRequest(BaseModel):
     price_range: str | None = None
     hours: dict | None = None  # {"monday": "09:00-17:00", "tuesday": "closed", ...}
     competitor_scope: str | None = None  # 'local' | 'country' | 'global'; see migration 020
+    # ROI MVP (migration 022). All nullable -- dashboard falls back to vertical
+    # defaults when these are missing.
+    avg_customer_value_cad: float | None = None
+    monthly_new_online_customers: int | None = None
+    ltv_multiple_override: float | None = None
 
 
 @router.get("/business")
@@ -2876,6 +3174,9 @@ async def get_business_profile(current_user: dict = Depends(get_current_user)):
         "price_range": business.get("price_range"),
         "hours": business.get("hours"),
         "competitor_scope": business.get("competitor_scope") or "local",
+        "avg_customer_value_cad":       business.get("avg_customer_value_cad"),
+        "monthly_new_online_customers": business.get("monthly_new_online_customers"),
+        "ltv_multiple_override":        business.get("ltv_multiple_override"),
     }
 
 
@@ -2903,6 +3204,22 @@ async def update_business_profile(
         else (business.get("competitor_scope") or "local")
     )
 
+    # Sanitize ROI numeric inputs — null on out-of-range/junk, clamp to a
+    # generous upper bound so a typo can't blow up the dashboard math.
+    def _clean_positive_number(v, upper):
+        try:
+            n = float(v) if v is not None else None
+        except (TypeError, ValueError):
+            return None
+        if n is None or n < 0 or n > upper:
+            return None
+        return n
+
+    avg_value = _clean_positive_number(request.avg_customer_value_cad, 1_000_000)
+    monthly_online_raw = _clean_positive_number(request.monthly_new_online_customers, 100_000)
+    monthly_online = int(round(monthly_online_raw)) if monthly_online_raw is not None else None
+    ltv_override = _clean_positive_number(request.ltv_multiple_override, 200)
+
     supabase_admin.table("businesses").update({
         "name":           name,
         "type":           request.type.strip() if request.type else business.get("type"),
@@ -2918,6 +3235,9 @@ async def update_business_profile(
         "price_range":    _clean_price_range(request.price_range),
         "hours":          _clean_hours(request.hours),
         "competitor_scope": competitor_scope,
+        "avg_customer_value_cad":       avg_value,
+        "monthly_new_online_customers": monthly_online,
+        "ltv_multiple_override":        ltv_override,
     }).eq("id", business["id"]).execute()
 
     return {"message": "Business profile updated"}

@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import ActionPlanPage from '@/components/dashboard/ActionPlanPage'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import UserMenu from '@/components/dashboard/UserMenu'
+import { computeRoi, type RoiBreakdown } from '@/lib/roi'
 
 export default async function Page() {
   const supabase = await createServerSupabaseClient()
@@ -14,7 +15,11 @@ export default async function Page() {
   if (!user) redirect(`/${locale}/login`)
 
   const [{ data: business }, { data: profile }] = await Promise.all([
-    supabase.from('businesses').select('id, name').limit(1).single(),
+    supabase
+      .from('businesses')
+      .select('id, name, type, avg_customer_value_cad, monthly_new_online_customers, ltv_multiple_override')
+      .limit(1)
+      .single(),
     supabase.from('profiles').select('full_name').eq('id', user.id).single(),
   ])
 
@@ -68,6 +73,29 @@ export default async function Page() {
     }
   }
 
+  // Compute ROI breakdown server-side so each recommendation can carry a $
+  // tag. Requires the latest audit's score; if no audit yet we skip — the
+  // ActionPlan page will already show the no-audit empty state.
+  let roi: RoiBreakdown | null = null
+  if (business) {
+    const { data: latestAuditForRoi } = await supabase
+      .from('aeo_audits')
+      .select('score')
+      .eq('business_id', business.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+    if (latestAuditForRoi?.score != null) {
+      roi = computeRoi({
+        businessType:              business.type ?? null,
+        avgCustomerValueCad:       business.avg_customer_value_cad ?? null,
+        monthlyNewOnlineCustomers: business.monthly_new_online_customers ?? null,
+        ltvMultipleOverride:       business.ltv_multiple_override ?? null,
+        score:                     latestAuditForRoi.score,
+      })
+    }
+  }
+
   const fullName = profile?.full_name?.trim() || ''
   const initial = (fullName || user.email || '?')[0].toUpperCase()
 
@@ -100,6 +128,7 @@ export default async function Page() {
         recommendations={recommendations}
         currentTier={currentTier}
         locale={locale}
+        roi={roi}
       />
     </div>
   )

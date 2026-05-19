@@ -10,9 +10,14 @@ export default async function OnboardingPage() {
 
   if (!user) redirect(`/${locale}/login`)
 
+  // Resume-on-refresh:
+  //   no business row              → start at Step 1
+  //   row exists but not finished  → land on Step 2 with the row's id/name
+  //                                  so the extras form can UPDATE it
+  //   row exists and finished      → out of onboarding, go to dashboard
   const { data: businesses } = await supabase
     .from('businesses')
-    .select('id, onboarding_completed')
+    .select('id, name, onboarding_completed')
     .limit(1)
 
   const business = businesses?.[0]
@@ -22,7 +27,6 @@ export default async function OnboardingPage() {
   }
 
   const initialStep = business ? 2 : 1
-  const initialBusinessId = business?.id ?? null
 
   return (
     <div className="min-h-screen bg-[#f1f5f9]">
@@ -30,6 +34,8 @@ export default async function OnboardingPage() {
         userId={user.id}
         userName={user.user_metadata?.full_name ?? user.user_metadata?.first_name ?? ''}
         initialStep={initialStep}
+        initialBusinessId={business?.id ?? null}
+        initialBusinessName={business?.name ?? ''}
       />
     </div>
   )

@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState } from 'react'
-import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import type { Recommendation } from './RecommendationsList'
@@ -35,7 +34,15 @@ interface RawResults {
   }
   google?: {
     ai_overview?: { mentioned: boolean; snippet?: string | null }
-    local_pack?: { present: boolean; position: number | null }
+    // local_pack carries rating/reviews when Google's local pack returns
+    // that data — used as a fallback for the GBP/Reviews breakdown when
+    // the Knowledge Graph card is empty (real production case 2026-05-17).
+    local_pack?: {
+      present: boolean
+      position: number | null
+      rating?: number | null
+      reviews?: number | null
+    }
     organic?: { present: boolean; position?: number | null }
     knowledge_graph?: {
       found: boolean
@@ -93,18 +100,30 @@ export default function AeoAuditCard({ businessId, initialAudit, initialRecommen
       raw.google?.ai_overview?.mentioned,
     ].filter(v => v === true).length
 
+    // Google renders findings inconsistently: sometimes a Knowledge Graph
+    // card, sometimes only a Local Pack entry, sometimes both. The score
+    // already considers both; the hints/breakdown must too. We treat a
+    // present LP as evidence that the business IS found on Google even
+    // when KG is empty, and use the LP rating/reviews_count as fallback.
+    const businessFoundOnGoogle = (kg?.found === true) || (lp?.present === true)
+    const effectiveReviewCount = kg?.reviews_count ?? lp?.reviews ?? null
+    const effectiveRating      = kg?.rating       ?? lp?.rating  ?? null
+
     switch (key) {
       case 'gbp':
-        if (!kg?.found)            return t('pillarHints.gbpNotFound')
-        if (!kg.phone || !kg.website) return t('pillarHints.gbpIncomplete')
+        if (!businessFoundOnGoogle)   return t('pillarHints.gbpNotFound')
+        // Phone/website are only available on KG. If we only have LP data,
+        // we can't tell if the listing is complete — show the "good" hint
+        // rather than misleadingly claiming it's incomplete.
+        if (kg?.found && (!kg.phone || !kg.website)) return t('pillarHints.gbpIncomplete')
         return t('pillarHints.gbpGood')
 
       case 'reviews':
-        if (kg?.reviews_count != null && kg.reviews_count < 30)
-          return t('pillarHints.reviewsLow', { count: kg.reviews_count })
-        if (kg?.rating != null && kg.rating < 4.0)
-          return t('pillarHints.reviewsRating', { rating: kg.rating.toFixed(1) })
-        if (kg?.reviews_count != null) return t('pillarHints.reviewsGood')
+        if (effectiveReviewCount != null && effectiveReviewCount < 30)
+          return t('pillarHints.reviewsLow', { count: effectiveReviewCount })
+        if (effectiveRating != null && effectiveRating < 4.0)
+          return t('pillarHints.reviewsRating', { rating: effectiveRating.toFixed(1) })
+        if (effectiveReviewCount != null) return t('pillarHints.reviewsGood')
         return null
 
       case 'website':
@@ -127,49 +146,15 @@ export default function AeoAuditCard({ businessId, initialAudit, initialRecommen
     }
   }
 
-  const [audit, setAudit] = useState<Audit | null>(initialAudit)
-  const [recommendations, setRecommendations] = useState<Recommendation[]>(initialRecommendations)
-  // After a fresh audit, prev becomes the initial audit's breakdown
-  const [prevBreakdownState] = useState<Breakdown | null>(prevBreakdown)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  async function runAudit() {
-    if (!businessId) return
-    setLoading(true)
-    setError('')
-    try {
-      const { data: { session } } = await createClient().auth.getSession()
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/aeo/audit`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify({ business_id: businessId, locale }),
-      })
-      if (res.status === 402) {
-        setError('upgrade_required')
-        return
-      }
-      if (!res.ok) throw new Error('Audit failed')
-      const data = await res.json()
-      const newAudit = {
-        score: data.score,
-        score_breakdown: data.breakdown,
-        raw_results: data.raw_results ?? null,
-        created_at: new Date().toISOString(),
-      }
-      setAudit(newAudit)
-      setRecommendations(data.recommendations || [])
-      // Notify AuditReportPrint (print-only sibling) so the PDF always reflects the latest audit
-      window.dispatchEvent(new CustomEvent('leapone:audit-updated', { detail: { audit: newAudit } }))
-    } catch {
-      setError(t('auditFailed'))
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Display-only card now — the "Run audit / Re-run audit" action moved up
+  // to the dashboard page header (RerunAuditButton.tsx) so it's reachable
+  // without scrolling. After a fresh audit lands, the page's Server
+  // Components re-render via router.refresh() and pass fresh props here.
+  // The parent passes a `key` (latest audit's created_at) so this Client
+  // Component remounts with the new data instead of clinging to stale state.
+  const audit = initialAudit
+  const recommendations = initialRecommendations
+  const prevBreakdownState = prevBreakdown
 
   const scoreColor = !audit ? 'text-slate-300'
     : audit.score >= 70 ? 'text-green-600'
@@ -197,21 +182,30 @@ export default function AeoAuditCard({ businessId, initialAudit, initialRecommen
     const ws = raw.website
     const lp = raw.google?.local_pack
 
+    // Knowledge Graph and Local Pack are alternate Google surfaces for the
+    // same business. Fall back to LP when KG is empty so we don't show
+    // "Found in Google's business listings: No" for a business that's
+    // clearly on Google (it's just rendered as LP-only this time). See
+    // also getPillarHint above for the same reasoning.
+    const foundOnGoogle = (kg?.found === true) || (lp?.present === true)
+    const effRating      = kg?.rating       ?? lp?.rating  ?? null
+    const effReviewCount = kg?.reviews_count ?? lp?.reviews ?? null
+
     switch (key) {
       case 'gbp':
         return [
-          { label: t('drawer.gbpFound'),    value: kg?.found },
+          { label: t('drawer.gbpFound'),    value: foundOnGoogle },
           { label: t('drawer.gbpTitle'),    value: kg?.title ?? null },
           { label: t('drawer.gbpCategory'), value: kg?.type ?? null },
-          { label: t('drawer.rating'),      value: kg?.rating != null ? `${kg.rating}★` : null },
-          { label: t('drawer.reviewCount'), value: kg?.reviews_count ?? null },
+          { label: t('drawer.rating'),      value: effRating != null ? `${effRating}★` : null },
+          { label: t('drawer.reviewCount'), value: effReviewCount ?? null },
           { label: t('drawer.gbpWebsite'),  value: kg?.website ?? null },
           { label: t('drawer.gbpPhone'),    value: kg?.phone ?? null },
         ]
       case 'reviews':
         return [
-          { label: t('drawer.rating'),      value: kg?.rating != null ? `${kg.rating}★` : null },
-          { label: t('drawer.reviewCount'), value: kg?.reviews_count ?? null },
+          { label: t('drawer.rating'),      value: effRating != null ? `${effRating}★` : null },
+          { label: t('drawer.reviewCount'), value: effReviewCount ?? null },
         ]
       case 'website':
         return [
@@ -285,7 +279,7 @@ export default function AeoAuditCard({ businessId, initialAudit, initialRecommen
           </div>
         )}
 
-        {!audit && !loading && (
+        {!audit && (
           <p className="text-sm font-semibold text-[#1e293b] mb-3">
             {t('findOutVisible')}
           </p>
@@ -297,6 +291,14 @@ export default function AeoAuditCard({ businessId, initialAudit, initialRecommen
               const delta = prevBreakdownState
                 ? audit.score_breakdown![p.key] - prevBreakdownState[p.key]
                 : null
+              // Pillar-specific CTAs surfaced inside the "What we checked"
+              // expand. For GBP we always link to business.google.com so
+              // owners can verify their profile themselves — especially
+              // important when the audit took the LP-only path and we
+              // can't see all KG fields (see project_gbp_trust_fix memory).
+              const cta = p.key === 'gbp'
+                ? { label: t('drawer.viewYourGbp'), href: 'https://business.google.com' }
+                : null
               return (
                 <PillarRow
                   key={p.key}
@@ -306,33 +308,16 @@ export default function AeoAuditCard({ businessId, initialAudit, initialRecommen
                   delta={delta}
                   hint={getPillarHint(p.key, audit.raw_results)}
                   signals={getPillarSignals(p.key, audit.raw_results)}
+                  cta={cta}
                 />
               )
             })}
           </div>
         )}
 
-        {error === 'upgrade_required' ? (
-          <div className="mb-3 p-3 bg-amber-50 border border-amber-100 rounded-xl">
-            <p className="text-xs text-amber-700 font-semibold mb-1">{t('upgradeTitle')}</p>
-            <p className="text-[11px] text-amber-600 mb-2">{t('upgradeBody')}</p>
-            <a href={`/${locale}/dashboard/plan`}
-              className="text-xs font-semibold text-[#4f46e5] hover:underline">
-              {t('upgradeCta')}
-            </a>
-          </div>
-        ) : error ? (
-          <p className="text-xs text-red-500 mb-2">{error}</p>
-        ) : null}
-
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={runAudit}
-            disabled={loading}
-            className="text-xs font-semibold bg-[#4f46e5] text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50">
-            {loading ? t('running') : audit ? t('rerunAudit') : t('runAudit')}
-          </button>
-        </div>
+        {/* The "Re-run audit" button used to live here. It moved to the
+            dashboard page header (RerunAuditButton.tsx) so the most
+            important action on the page is reachable without scrolling. */}
       </div>
 
       {audit && <AISnapshotSection rawResults={audit.raw_results} />}
@@ -498,7 +483,7 @@ function AISnapshotSection({ rawResults }: { rawResults: RawResults | null }) {
 }
 
 function PillarRow({
-  label, points, max, delta, hint, signals,
+  label, points, max, delta, hint, signals, cta,
 }: {
   label: string
   points: number
@@ -506,6 +491,10 @@ function PillarRow({
   delta: number | null
   hint?: string | null
   signals?: { label: string; value: string | boolean | number | null | undefined }[]
+  /** Optional pillar-specific call-to-action shown inside the expanded
+   *  "What we checked" panel. Used by the GBP pillar today to deep-link
+   *  to business.google.com so owners can verify their profile. */
+  cta?: { label: string; href: string } | null
 }) {
   const t = useTranslations('dashboard.aeo')
   const [expanded, setExpanded] = useState(false)
@@ -550,6 +539,16 @@ function PillarRow({
           {signals!.map((s, i) => (
             <Signal key={i} label={s.label} value={s.value} />
           ))}
+          {cta && (
+            <a
+              href={cta.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#4f46e5] hover:underline">
+              {cta.label}
+              <span aria-hidden="true">→</span>
+            </a>
+          )}
         </div>
       )}
     </div>

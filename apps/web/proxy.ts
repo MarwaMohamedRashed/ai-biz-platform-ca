@@ -47,5 +47,8 @@ export default async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next|_vercel|.*\\..*).*)']
+  // Exclude /api/ — those are server route handlers, not pages.
+  // next-intl was rewriting POST /api/onboarding/business to /en/api/...
+  // and 404ing every onboarding mutation.
+  matcher: ['/((?!_next|_vercel|api|.*\\..*).*)']
 }

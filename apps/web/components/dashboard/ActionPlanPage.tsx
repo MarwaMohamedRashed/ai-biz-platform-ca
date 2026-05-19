@@ -2,15 +2,19 @@
 
 import { useTranslations } from 'next-intl'
 import RecommendationsList, { Recommendation } from './RecommendationsList'
+import type { RoiBreakdown } from '@/lib/roi'
 
 interface Props {
   businessName: string | null
   recommendations: Recommendation[]
   currentTier: 'starter' | 'pro'
   locale: string
+  /** ROI breakdown computed server-side. When provided, each recommendation
+   *  shows a dollar-range impact tag using lib/roi.recommendationImpactRange. */
+  roi: RoiBreakdown | null
 }
 
-export default function RecommendationsPage({ businessName, recommendations, currentTier, locale }: Props) {
+export default function RecommendationsPage({ businessName, recommendations, currentTier, locale, roi }: Props) {
   const t = useTranslations('dashboard.actionPlan')
 
   return (
@@ -37,6 +41,8 @@ export default function RecommendationsPage({ businessName, recommendations, cur
             recommendations={recommendations}
             currentTier={currentTier}
             businessKey={businessName ?? undefined}
+            roi={roi}
+            locale={locale}
           />
         )}
       </div>

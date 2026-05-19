@@ -57,6 +57,13 @@ export default function CompetitorPicker({
   const [error, setError] = useState('')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Snapshot the original list so we can detect "unsaved changes" — used
+  // by the sticky banner that surfaces the Save button. Without this,
+  // users add a competitor, navigate away, and the audit re-runs without
+  // their addition (real bug pattern reported during testing).
+  const initialKey = useRef(serializeList(initialList.slice(0, MAX_COMPETITORS)))
+  const dirty = !saving && !saved && serializeList(list) !== initialKey.current
+
   const atMax = list.length >= MAX_COMPETITORS
 
   // ─── Search (debounced) ──────────────────────────────────────────────
@@ -134,6 +141,9 @@ export default function CompetitorPicker({
       if (!res.ok) throw new Error('save failed')
       const data = await res.json()
       setSaved(true)
+      // Reset the dirty-detection baseline so the unsaved-changes banner
+      // disappears after a successful save.
+      initialKey.current = serializeList(list)
       onSaved?.(data.competitors || [])
       setTimeout(() => setSaved(false), 3000)
     } catch {
@@ -153,6 +163,30 @@ export default function CompetitorPicker({
 
   return (
     <div className="flex flex-col gap-4">
+      {/* ── Unsaved-changes banner ──
+          Triggers whenever the in-memory list differs from what was last
+          saved. Caught during 2026-05-17 testing: owner added a competitor,
+          re-ran the audit without clicking Save, and was surprised the
+          competitor "dropped out". The banner makes the required Save
+          action impossible to miss. Hidden when the parent (onboarding)
+          is wrapping us with its own Continue button. */}
+      {!hideSave && dirty && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-amber-600 text-sm" aria-hidden="true">⚠</span>
+            <p className="text-xs font-semibold text-amber-900">{t('unsavedChanges')}</p>
+          </div>
+          <button
+            type="button"
+            onClick={save}
+            disabled={saving}
+            className="text-xs font-bold bg-amber-600 text-white px-3 py-1.5 rounded-lg
+                       hover:bg-amber-700 transition-colors disabled:opacity-50 flex-shrink-0">
+            {saving ? t('saving') : t('saveNow')}
+          </button>
+        </div>
+      )}
+
       {/* ── Current list ── */}
       <div>
         <div className="flex items-baseline justify-between mb-2">
@@ -268,6 +302,14 @@ export default function CompetitorPicker({
       {saving && <ScoringModal />}
     </div>
   )
+}
+
+// Stable hash of the list (order + identity only) so the unsaved-changes
+// banner can tell if the user has mutated their list since the last save.
+// We intentionally ignore metadata (rating, reviews, etc.) that changes
+// server-side — only adds, removes, and reorders count as "dirty".
+function serializeList(list: CompetitorEntry[]): string {
+  return list.map(c => `${c.place_id}:${c.source}`).join('|')
 }
 
 function CompetitorRow({ entry, onRemove }: { entry: CompetitorEntry; onRemove: () => void }) {

@@ -182,7 +182,8 @@
         "subtitle": "Utilisé pour votre audit de visibilité IA — mettez à jour ici dès que quelque chose change.",
         "nameLabel": "Nom de l'entreprise",
         "typeLabel": "Type d'entreprise",
-        "typeHint": "p. ex. clinique de physiothérapie, restaurant italien",
+        "typeHint": "Choisissez l'option la plus proche — ou sélectionnez Autre pour saisir la vôtre.",
+        "typeRequired": "Veuillez décrire le type d'entreprise avant d'enregistrer.",
         "cityLabel": "Ville",
         "provinceLabel": "Province / État",
         "provinceHint": "p. ex. ON, QC, BC (laisser vide si non applicable)",
@@ -211,6 +212,14 @@
         "saving": "Enregistrement…",
         "saved": "Profil enregistré",
         "errorSave": "Échec de l'enregistrement du profil",
+        "roiHeading": "Données de revenus",
+        "roiSubtitle": "Alimente la carte d'exposition aux revenus de votre tableau de bord. Les moyennes sectorielles sont utilisées si ces champs sont vides.",
+        "avgCustomerValueLabel": "Valeur moyenne par client (CAD)",
+        "avgCustomerValuePlaceholder": "ex. 200",
+        "avgCustomerValueHint": "Revenus typiques d'une première visite ou commande d'un nouveau client.",
+        "monthlyOnlineLabel": "Nouveaux clients par mois trouvés en ligne",
+        "monthlyOnlinePlaceholder": "ex. 25",
+        "monthlyOnlineHint": "Une estimation suffit — nous l'utilisons pour estimer vos revenus influencés par l'IA.",
         "competitorScopeLabel": "À qui devons-nous vous comparer ?",
         "competitorScopeHint": "Vous pouvez modifier ce choix à tout moment dans les paramètres.",
         "competitorScopes": {
@@ -239,6 +248,61 @@
       "title": "Rapport de visibilité IA",
       "generatedOn": "Généré le",
       "preparedFor": "Préparé pour"
+    },
+    "detectedSignals": {
+      "title": "Ce que nous avons détecté sur votre entreprise",
+      "subtitle": "Détecté à partir de votre site web et des informations que vous nous avez fournies. Utilisé pour affiner les requêtes de votre audit IA.",
+      "cuisine": "Cuisine",
+      "dietary": "Diététique",
+      "services": "Services"
+    },
+    "progress": {
+      "eyebrow": "Progrès mensuel",
+      "title": "Ce qui a changé depuis votre dernier audit",
+      "comparedTo": "vs audit du {date}",
+      "scoreLabel": "Score de visibilité IA",
+      "points": "pts",
+      "citations": {
+        "chatgpt": "Mention ChatGPT",
+        "perplexity": "Mention Perplexity",
+        "googleAi": "Aperçu IA Google"
+      },
+      "localPack": "Pack local Google",
+      "reviews": "Avis Google",
+      "changeUp": "Amélioré",
+      "changeDown": "Baisse",
+      "changeFlat": "Stable",
+      "newCompetitors": "{count, plural, one {# nouveau concurrent apparu} other {# nouveaux concurrents apparus}}",
+      "droppedCompetitors": "{count, plural, one {# concurrent disparu} other {# concurrents disparus}}",
+      "completedNote": "Vous avez marqué {count} actions comme terminées. Continuez.",
+      "disclosure": "Compare votre dernier audit au précédent. Actualisé à chaque nouvel audit.",
+      "lockedTitle": "Votre premier rapport mensuel arrive bientôt",
+      "lockedSubtitle": "Nous afficherons ce qui a changé dès que votre prochain audit sera prêt.",
+      "lockedSubtitleWithDate": "Votre prochain audit débloquera cette carte vers le {date}."
+    },
+    "roi": {
+      "eyebrow": "Revenus exposés via la recherche IA",
+      "headline": "Estimation des revenus exposés à la recherche IA ce mois-ci",
+      "perMonth": "/ mois",
+      "captureLine": "Vous en captez environ {pct}% aujourd'hui. Environ {atRisk} reste à saisir.",
+      "upsideLabel": "Potentiel à capter",
+      "upsideHint": "Écart entre aujourd'hui et un score plafond de 95",
+      "potentialLabel": "Potentiel au score 95",
+      "potentialHint": "Plafond pratique — jamais promis, jamais garanti",
+      "showMath": "Comment c'est calculé",
+      "hideMath": "Masquer le calcul",
+      "disclosure": "Estimé à partir de votre score AEO, des valeurs client fournies et d'une moyenne industrielle de {aiShare}% de part de découverte en ligne via l'IA (données 2026 ; révisé chaque trimestre). Le lien score-à-revenu est corrélationnel, pas causal — ce sont des fourchettes d'exposition, pas des garanties.",
+      "math": {
+        "score": "Score AEO",
+        "monthlyOnline": "Nouveaux clients en ligne / mois",
+        "aiShare": "Part IA de la découverte en ligne",
+        "avgCustomerValue": "Valeur moyenne par client",
+        "ltvMultiple": "Multiple de valeur à vie",
+        "aiInfluenced": "Clients influencés IA / mois",
+        "lifetimeValue": "Valeur à vie par client",
+        "usingDefault": "(moyenne du secteur)",
+        "customersUnit": "clients"
+      }
     },
     "aeo": {
       "label": "VISIBILITÉ IA",
@@ -302,7 +366,8 @@
         "mentionedChatgpt": "Mentionné par ChatGPT",
         "chatgptNote": "Les réponses de ChatGPT proviennent de données d'entraînement — les améliorations apparaissent lors des prochaines mises à jour du modèle (6 à 12 mois).",
         "mentionedPerplexity": "Mentionné par Perplexity",
-        "mentionedGoogleAI": "Mentionné dans Google AI Overview"
+        "mentionedGoogleAI": "Mentionné dans Google AI Overview",
+        "viewYourGbp": "Voir votre profil Google Business"
       },
       "aiSnapshot": {
         "label": "Ce que les clients voient dans la recherche IA",
@@ -626,7 +691,9 @@
       "completedSection": {
         "title": "Terminés",
         "subtitle": "Éléments marqués comme faits. Enregistrés sur cet appareil."
-      }
+      },
+      "perMonthShort": "/mois",
+      "dollarTagTooltip": "Revenu mensuel estimé débloqué si vous le complétez. Fourchette, pas garantie."
     },
     "nav": {
       "chat": "Tableau de bord",
@@ -795,6 +862,8 @@
       "save": "Enregistrer la liste",
       "saving": "Enregistrement…",
       "saved": "Enregistré",
+      "unsavedChanges": "Modifications non enregistrées — cliquez Enregistrer pour que l'audit utilise cette liste.",
+      "saveNow": "Enregistrer",
       "suggestionsTitle": "Suggéré par Google",
       "suggestionsHint": "Entreprises trouvées dans votre catégorie que vous n'avez pas encore ajoutées.",
       "acceptSuggestion": "Ajouter à ma liste",
@@ -805,13 +874,29 @@
   "onboarding": {
     "stepper": {
       "step1": "Parlez-nous de votre entreprise",
-      "step2": "Vérifier votre visibilité IA",
-      "step3": "Confirmer les concurrents",
-      "step4": "Vos premiers gains"
+      "step2": "Quelques détails de plus",
+      "step3": "Vérifier votre visibilité IA",
+      "step4": "Confirmer les concurrents",
+      "step5": "Vos premiers gains"
     },
     "step1": {
       "heading": "Parlez-nous de votre entreprise",
-      "subtitle": "Cela nous aide à auditer votre visibilité sur les moteurs de recherche IA",
+      "subtitle": "Juste l'essentiel — nous demanderons les détails optionnels ensuite",
+      "extrasHeading": "Quelques détails de plus",
+      "extrasSubtitle": "Tous optionnels — ils améliorent votre audit et votre balisage schéma",
+      "extrasSubtitleNamed": "Tous optionnels — affinent l'audit pour {name} et améliorent votre balisage schéma",
+      "extrasContinue": "Continuer",
+      "extrasSkip": "Passer — je remplirai plus tard",
+      "roi": {
+        "heading": "Aidez-nous à estimer l'impact sur vos revenus",
+        "subtitle": "Optionnel, mais le tableau de bord parle en dollars quand ces champs sont remplis. Sinon nous utilisons des moyennes sectorielles.",
+        "avgCustomerValueLabel": "Valeur moyenne par client (CAD)",
+        "avgCustomerValuePlaceholder": "ex. 200",
+        "avgCustomerValueHint": "Revenus typiques d'une première visite ou commande d'un nouveau client.",
+        "monthlyOnlineLabel": "Nouveaux clients par mois trouvés en ligne",
+        "monthlyOnlinePlaceholder": "ex. 25",
+        "monthlyOnlineHint": "Combien de clients par mois disent vous avoir trouvé en ligne (une estimation suffit)."
+      },
       "businessName": "Nom de l'entreprise",
       "businessType": "Type d'entreprise",
       "country": "Pays",
@@ -824,10 +909,22 @@
       "saving": "Enregistrement…",
       "types": {
         "restaurant": "Restaurant",
+        "cafe": "Café",
         "salon": "Salon",
         "retail": "Commerce",
-        "plumber": "Plombier",
-        "cafe": "Café",
+        "dentist": "Dentiste",
+        "physiotherapist": "Physiothérapie",
+        "family_doctor": "Médecin de famille",
+        "chiropractor": "Chiropraticien",
+        "optometrist": "Optométriste",
+        "veterinarian": "Vétérinaire",
+        "lawyer": "Avocat",
+        "accountant": "Comptable",
+        "realtor": "Courtier immobilier",
+        "plumber": "Plombier / Métiers",
+        "auto_repair": "Mécanique auto",
+        "cleaning_service": "Service de nettoyage",
+        "personal_trainer": "Coach sportif",
         "other": "Autre"
       },
       "customType": "Décrivez votre entreprise",
@@ -844,7 +941,13 @@
       "imageUrlLabel": "URL du logo ou de la photo",
       "imageUrlPlaceholder": "https://votreentreprise.com/logo.png",
       "priceRangeLabel": "Gamme de prix",
-      "priceRangeHint": "$ = abordable, $$$$ = haut de gamme",
+      "priceRangeHint": "Comment les clients décriraient-ils vos prix?",
+      "priceRange": {
+        "budget": "Économique ($)",
+        "moderate": "Modéré ($$)",
+        "upscale": "Haut de gamme ($$$)",
+        "premium": "Premium ($$$$)"
+      },
       "schemaTip": "Astuce : vous pourrez ajouter vos heures d'ouverture plus tard dans les paramètres pour compléter votre balisage de schéma.",
       "canadaOnlyBadge": "🍁 Disponible au Canada",
       "waitlistPrompt": "Hors du Canada ?",
@@ -911,7 +1014,8 @@
       "msg5": "On calcule le score…",
       "done": "Audit terminé !",
       "failed": "Nous n'avons pas pu lancer l'audit pour le moment — vous pouvez réessayer depuis le tableau de bord.",
-      "skip": "Passer et aller au tableau de bord →"
+      "skip": "Passer et aller au tableau de bord →",
+      "slow": "Cela prend plus de temps que prévu. Nous continuons en arrière-plan — vous pouvez attendre ou passer et revenir plus tard."
     },
     "stepWins": {
       "heading": "Vos premiers gains, {firstName}",

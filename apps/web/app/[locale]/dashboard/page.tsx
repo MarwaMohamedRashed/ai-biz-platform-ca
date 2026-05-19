@@ -7,6 +7,11 @@ import AeoAuditCard from '@/components/dashboard/AeoAuditCard'
 import ScoreHistoryChart from '@/components/dashboard/ScoreHistoryChart'
 import DownloadPdfButton from '@/components/dashboard/DownloadPdfButton'
 import AuditReportPrint from '@/components/dashboard/AuditReportPrint'
+import DetectedSignalsCard from '@/components/dashboard/DetectedSignalsCard'
+import RoiHeroCard from '@/components/dashboard/RoiHeroCard'
+import ProgressCard from '@/components/dashboard/ProgressCard'
+import RerunAuditButton from '@/components/dashboard/RerunAuditButton'
+import { computeDrift } from '@/lib/audit-drift'
 
 function getGreetingKey(): 'morning' | 'afternoon' | 'evening' {
   const hour = new Date().getHours()
@@ -28,7 +33,7 @@ export default async function DashboardPage() {
 
   const { data: business } = await supabase
   .from('businesses')
-  .select('id, name')
+  .select('id, name, type, avg_customer_value_cad, monthly_new_online_customers, ltv_multiple_override')
   .limit(1)
   .single()
 
@@ -56,6 +61,25 @@ export default async function DashboardPage() {
   const latestAudit = auditHistory?.[0] ?? null
   const historyAsc = auditHistory ? [...auditHistory].reverse() : []
   const locale = await getLocale()
+
+  // Drift between the latest two audits powers the Progress card. The
+  // helper returns null gracefully when there's only one audit so far.
+  const drift = computeDrift(
+    auditHistory?.map(a => ({
+      score:      a.score ?? 0,
+      created_at: a.created_at,
+      raw_results: a.raw_results,
+    })) ?? null,
+  )
+
+  // Next-monthly-report date used in the locked empty state — 30 days
+  // after the latest audit. Formatted server-side for locale stability.
+  const nextReportDateLabel = latestAudit
+    ? new Date(new Date(latestAudit.created_at).getTime() + 30 * 86_400_000)
+        .toLocaleDateString(locale === 'fr' ? 'fr-CA' : 'en-CA', {
+          year: 'numeric', month: 'long', day: 'numeric',
+        })
+    : undefined
 
   // Fetch own-reputation server-side so AuditReportPrint can include it in the PDF
   type RepItem = { theme?: string; detail?: string; source?: string; example?: string }
@@ -135,7 +159,15 @@ export default async function DashboardPage() {
             <span className="text-[#4f46e5]">Leap</span><span className="text-[#f97316]">One</span>
           </span>
         </div>
-        <UserMenu initial={initial} name={fullName} email={user!.email ?? ''} />
+        <div className="flex items-center gap-2">
+          {/* Mobile: same Re-run audit button as desktop, slightly smaller. */}
+          <RerunAuditButton
+            businessId={business?.id ?? null}
+            hasAudit={!!latestAudit}
+            locale={locale}
+          />
+          <UserMenu initial={initial} name={fullName} email={user!.email ?? ''} />
+        </div>
       </header>
 
       {/* Desktop page header */}
@@ -151,6 +183,14 @@ export default async function DashboardPage() {
           )}
         </div>
         <div className="flex items-center gap-3">
+          {/* Re-run audit promoted to the page header (was buried mid-page
+              inside AeoAuditCard). On success, router.refresh() re-renders
+              every Server Component on the dashboard against the new audit. */}
+          <RerunAuditButton
+            businessId={business?.id ?? null}
+            hasAudit={!!latestAudit}
+            locale={locale}
+          />
           {latestAudit && (
             <DownloadPdfButton businessName={business?.name ?? null} />
           )}
@@ -196,6 +236,19 @@ export default async function DashboardPage() {
             </p>
           </div>
 
+          {/* ROI hero — revenue exposure speaks the dentist's language;
+              the score is now a diagnostic that lives below this card. */}
+          {latestAudit && business && (
+            <RoiHeroCard
+              score={latestAudit.score ?? null}
+              businessType={business.type ?? null}
+              avgCustomerValueCad={business.avg_customer_value_cad ?? null}
+              monthlyNewOnlineCustomers={business.monthly_new_online_customers ?? null}
+              ltvMultipleOverride={business.ltv_multiple_override ?? null}
+              locale={locale}
+            />
+          )}
+
           {/* Score-history trend (renders when 2+ audits exist) */}
           {historyAsc.length >= 2 && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
@@ -203,9 +256,55 @@ export default async function DashboardPage() {
             </div>
           )}
 
-          {/* AEO audit + recommendations (screen only — AuditReportPrint covers the PDF) */}
+          {/* Monthly Progress — month-over-month drift between latest two
+              audits. Until the second audit lands this shows a locked
+              empty state with the next-cycle unlock date. */}
+          {latestAudit && (
+            <ProgressCard
+              drift={drift}
+              businessKey={business?.name ?? null}
+              nextReportDateLabel={nextReportDateLabel}
+            />
+          )}
+
+          {/* What the scanner detected about this business — transparency
+              card so the owner can spot wrong detections at a glance.
+              Prefers the explicit detected_signals block (new) but falls
+              back to the nested website.* fields so older audits also
+              surface signals without a re-audit. */}
+          {(() => {
+            const raw = latestAudit?.raw_results as {
+              detected_signals?: {
+                cuisine?: string | null
+                cuisine_parent?: string | null
+                dietary_tags?: string[]
+                service_tags?: string[]
+              }
+              website?: {
+                cuisine_hint?: string | null
+                cuisine_hint_parent?: string | null
+                dietary_tags?: string[]
+                service_tags?: string[]
+              }
+            } | null
+            const fromBlock   = raw?.detected_signals
+            const fromWebsite = raw?.website
+            const signals = fromBlock ?? (fromWebsite ? {
+              cuisine:        fromWebsite.cuisine_hint ?? null,
+              cuisine_parent: fromWebsite.cuisine_hint_parent ?? null,
+              dietary_tags:   fromWebsite.dietary_tags ?? [],
+              service_tags:   fromWebsite.service_tags ?? [],
+            } : null)
+            return <DetectedSignalsCard signals={signals} />
+          })()}
+
+          {/* AEO audit + recommendations (screen only — AuditReportPrint covers the PDF).
+              key={latestAudit?.created_at} forces a remount when a new audit
+              lands so the Client Component picks up fresh props instead of
+              clinging to its initial useState values. */}
           <div className="print-hide">
             <AeoAuditCard
+              key={latestAudit?.created_at ?? 'no-audit'}
               businessId={business?.id ?? null}
               initialAudit={latestAudit ?? null}
               initialRecommendations={initialRecommendations}

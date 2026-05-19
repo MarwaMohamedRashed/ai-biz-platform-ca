@@ -1,6 +1,6 @@
 # LeapOne — Built Functionality, Implementation & Competitive Notes
 
-**Date:** 2026-05-16 (added Canada-only signup, competitor scope toggle, and user-confirmed competitor list with score-on-add)
+**Date:** 2026-05-18 (added ROI MVP, drift-monitoring Progress card, GBP trust fix, 18-vertical business types with sub-specialty guardrails, onboarding service-role route pattern)
 **Audience:** Founder / sales conversations / competitive comparisons
 **Companion docs:**
 [feature-inventory-current.md](feature-inventory-current.md) (what exists, by surface) ·
@@ -1953,3 +1953,413 @@ New namespaces in both EN and FR (parity verified):
   flips to `status: 'closed'`) — relates to the deferred score-change
   email work; defer until email infra is in place
 
+## 28. ROI MVP — revenue is the dashboard hero (completed 2026-05-17)
+
+**Status:** Built — shipped overnight in response to dentist-owner feedback
+*"I don't care about AI visibility. I care about revenue and ROI."*
+
+### Problem it solves
+
+Every competing AEO tool (Otterly, Athena, Profound, HubSpot AEO,
+BrightLocal AI mentions) leads with a visibility or mention score. SMB
+owners — especially the dentist who tested LeapOne in May 2026 — don't
+think in scores. They think in customers per month and dollars per
+customer. A 67/100 score doesn't book hygiene appointments. A range
+that says "you're leaving roughly $1,800–$2,700 / month on the table"
+does.
+
+### What was built
+
+**Migration `022_business_roi_inputs.sql`** — three nullable columns on
+`businesses`:
+
+```sql
+ALTER TABLE businesses
+  ADD COLUMN IF NOT EXISTS avg_customer_value_cad numeric(10,2),
+  ADD COLUMN IF NOT EXISTS monthly_new_online_customers integer,
+  ADD COLUMN IF NOT EXISTS ltv_multiple_override numeric(6,2);
+```
+
+`avg_customer_value_cad` and `monthly_new_online_customers` are
+surfaced in onboarding (Step 2 extras) and Settings → Business
+profile. `ltv_multiple_override` exists for a future power-user knob;
+not yet in any UI.
+
+**Libraries** in [apps/web/lib/](../apps/web/lib/):
+
+- `roi-defaults.ts` — 18 vertical defaults (avg value + monthly online
+  customers + LTV multiple) drawn from the `leapone-roi-framework.md`
+  table. Includes a free-text-`business.type` → vertical-key regex
+  matcher (`resolveVerticalKey`) so legacy rows with strings like
+  "italian restaurant" still resolve correctly. Generic `other`
+  fallback when nothing hits.
+- `roi.ts` — formula 3a (simple) implementation: `computeRoi(profile)`
+  returns a `RoiBreakdown` with `exposure`, `captured`, `upside`,
+  `potential`, and per-pillar `pillarDrivers`. Always returns
+  `{low, high}` ranges (±20% uncertainty), never single-point figures.
+  Exports `recommendationImpactRange()` for per-rec dollar tags.
+  Constants: `DEFAULT_AI_SHARE = 0.22`, `POTENTIAL_CEILING = 0.95`,
+  `UNCERTAINTY = 0.20`.
+
+**UI surfaces:**
+
+- [`components/dashboard/RoiHeroCard.tsx`](../apps/web/components/dashboard/RoiHeroCard.tsx)
+  — mounted at the top of the dashboard, above the score chart.
+  Headline range is the **exposure** figure ("you're missing
+  ~$X – $Y / month"). Expandable "How we calculate this" panel shows
+  the inputs and labels each one `(owner)` or `(industry default)`
+  so the owner knows exactly where every number came from.
+- [`components/dashboard/RecommendationsList.tsx`](../apps/web/components/dashboard/RecommendationsList.tsx)
+  — now accepts `roi` + `locale` props and shows an emerald
+  `~$X – $Y / mo` chip on each recommendation alongside the existing
+  impact-points and difficulty pills. Driven by
+  `recommendationImpactRange()` which weights the per-rec impact by
+  the pillar's share of total exposure.
+
+**FastAPI** — `BusinessProfileRequest` (in
+[`api/aeo/router.py`](../api/aeo/router.py)) accepts and persists the
+two ROI columns via the existing PUT `/api/v1/aeo/business`. GET
+returns them in the same response so Settings can hydrate cleanly.
+
+### Three honest-framing safeguards (don't remove without thinking)
+
+1. **Always ranges, never points.** Display uses `formatCadRange()`.
+   Math rounds to nearest $50 to avoid implying false precision.
+2. **Disclosure under every figure.** Copy explicitly says
+   "correlational, not causal", names the 22% AI-share assumption,
+   and tells the owner the methodology is updated quarterly.
+3. **Input attribution in the math expander.** When a value came from
+   the industry-default table instead of the owner's input, the math
+   block labels it `(industry default)`. Owner can see at a glance
+   which numbers are real vs estimated.
+
+### Competitive notes
+
+- The framework is built on the explicit assumption that score →
+  revenue is **correlational, not causal**. Competing tools that imply
+  causation ("our score went up so revenue went up") are making
+  claims they can't back up. We pre-empt that with the disclosure
+  copy.
+- The per-recommendation dollar tag is what makes the Action Plan
+  actionable for a non-technical owner. "Add LocalBusiness schema"
+  is abstract; "~$200 – $400 / mo" is concrete.
+
+### What was deliberately deferred
+
+- Public `/roi` landing-page calculator (Phase 5)
+- Detailed 3b formula (search-volume-based, would require
+  DataForSEO or similar — see `docs/dataforseo-test-plan.md`)
+- A/B test of widget on/off
+- `ltv_multiple_override` UI surface
+
+---
+
+## 29. Progress card — month-over-month drift monitoring (completed 2026-05-17)
+
+**Status:** Built — Phase 2 of the retention-engine work, shipped the
+same night as the ROI MVP.
+
+### Problem it solves
+
+The ROI hero answers *"what's at stake right now?"* The Progress card
+answers *"are you actually moving the needle?"* — which is the
+retention hook for the post-launch month-2/month-3 subscribers. Without
+a recurring "look, here's what changed since last month" signal, the
+dashboard becomes static after the first audit and the owner has no
+reason to keep paying.
+
+### What was built
+
+**Library** — [`apps/web/lib/audit-drift.ts`](../apps/web/lib/audit-drift.ts)
+— `computeDrift(latest, previous)` over the two most-recent audits for
+a business. Returns score delta, per-pillar movement, per-engine
+mention change, and competitor diff (added / removed / unchanged).
+No new schema — piggybacks on the existing `audits` history table.
+
+**UI** — [`components/dashboard/ProgressCard.tsx`](../apps/web/components/dashboard/ProgressCard.tsx)
+— mounted directly under the ROI hero. Two states:
+
+- **Has drift data** (2+ audits exist): shows score delta with
+  direction arrow, the top 2-3 movers (pillars or engines), and the
+  next-cycle date so the owner knows when the next data point lands.
+- **Locked empty state** (only 1 audit so far): shows a placeholder
+  with the next-cycle date and a one-line "we'll show you what
+  changed once your next audit runs" message. Critical for first-week
+  trust — owner doesn't see an empty card and think the feature is
+  broken.
+
+### Why it lives on the dashboard, not in a tab
+
+The retention loop only fires when the owner sees `$exposure` and
+`↑$delta` in the same glance. Splitting into a separate tab means
+they only see drift if they go looking, and drift is the hook. Move
+to a tab later if there's more than one card's worth of content
+(per-pillar trend graphs, competitor movement timeline, AI engine
+mention timelines — all on the post-launch roadmap).
+
+### What's deliberately not measured (yet)
+
+- **Causal attribution.** We don't claim "you added schema and that's
+  why your score went up." The Progress card reports what changed; it
+  doesn't claim why. Same correlational framing as the ROI hero.
+- **Sub-monthly drift.** First version recomputes only when a new full
+  audit lands. Faster drift (review-count changes, local-pack
+  position) is gated on the audit-cadence redesign — see [[project_gbp_trust_fix]]
+  for that planning thread.
+
+---
+
+## 30. GBP trust fix — defensive scoring + branded SerpApi fallback (completed 2026-05-17)
+
+**Status:** Built — shipped same week as ROI MVP after the May 2026
+testing session surfaced the issue.
+
+### Problem it solves
+
+During testing, the dentist owner pointed at LeapOne's dashboard,
+which said *"Found in Google's business listings: No"* and recommended
+*"Add your website / phone / category"* — then opened
+`business.google.com` and showed those fields were all populated. The
+owner's reaction: *"giving wrong information specially with something
+obvious like google profile is dangerous."* That single trust hit
+would have been enough for the owner to cancel before month two.
+
+### Root cause
+
+SerpApi returns Google's Knowledge Graph card for some queries (with
+title / category / phone / website / rating / reviews) and only a
+Local Pack entry for others. Category queries like `"dentist
+Burlington"` typically return LP only; branded queries like
+`"Burlington Family Dentists"` typically return KG. Our audit ran
+category queries and interpreted KG-empty as *"the owner has an
+incomplete profile"* — which is wrong: it's a query-shape artifact,
+not a profile gap.
+
+### What was built (in [`api/aeo/router.py`](../api/aeo/router.py))
+
+**Part A — defensive scoring + recommendation paths:**
+
+- `calculate_score()` — when `lp.present` is true, assume the GBP
+  has both a category AND contact info. Google requires a category
+  for the listing to exist in the local pack at all. Previously this
+  cost the owner 5 points unnecessarily.
+- `generate_recommendations()` — split GBP recommendations into two
+  paths:
+  - `kg.found == true` (full KG visibility): emit precise
+    `"Set your category"` / `"Add your phone+website"` recs when
+    those KG fields are empty.
+  - `lp.present` + KG empty: emit a soft
+    `"Review your Google Business Profile"` rec instead. We can't
+    see the profile details, so we can't accuse fields of being
+    missing.
+- The *"Enrich your GBP to earn a Knowledge Panel"* rec now only
+  fires on the LP-only path — still accurate advice for that case.
+
+**Part B — branded SerpApi name lookup as KG fallback:**
+
+- Extended the trigger on the existing `_google_name_lookup()`
+  helper. Previously fired only when category queries returned no
+  review data. Now also fires when category queries returned no
+  Knowledge Graph at all.
+- Cost: ~$0.005 per audit when triggered. ~$2/month at 100 customers
+  running weekly. Trivial vs the trust win.
+- Result: most owners end up with `kg.found == true` from the
+  branded query, which routes recommendations down the precise path.
+
+### Schema-detection improvements (same session)
+
+While fixing GBP, we also tightened schema markup detection so the
+audit stops emitting false-negative "schema is missing" claims:
+
+- Added microdata pattern detection (`itemtype="...LocalBusiness"`)
+  alongside JSON-LD.
+- Added HTML-escaped JSON-LD detection (`&lt;script type=&quot;application/ld+json&quot;&gt;`),
+  which CMS plugins sometimes emit.
+- Recommendation copy softened from *"Add LocalBusiness schema"* to
+  *"Check for LocalBusiness schema"* when our scraper can't confirm
+  one way or the other — same principle as the GBP fix: don't accuse
+  without evidence.
+
+### The rule (extracted to memory as `[[project_gbp_trust_fix]]`)
+
+**Don't accuse missing fields without evidence.** When a signal can
+be ambiguous (missing-from-profile vs not-rendered-in-response), the
+safer default is:
+
+- *soft recommendation* — *"Review your X, make sure it's complete"*
+
+rather than:
+
+- *accusation* — *"Your X is missing, add it now"*
+
+This principle applies beyond GBP. Schema markup detection, directory
+presence, AI engine mentions — all of these can be wrong for
+infrastructure reasons (JS-rendered schema, alternate name variants,
+query phrasing mismatch). When we can't *prove* something is missing,
+we shouldn't say it is.
+
+### Competitive notes
+
+- Every competing tool we've evaluated emits "missing field" copy
+  with full confidence regardless of evidence quality. The
+  defensive-default path is a moat against the trust hit that
+  killed our first test session.
+- The branded-name fallback also doubles as cheap insurance against
+  query-shape edge cases for AI Citation pillar accuracy — same
+  helper, more upstream calls trigger it.
+
+---
+
+## 31. Onboarding service-role route pattern (completed 2026-05-16)
+
+**Status:** Built — fixes RLS 42501 that blocked Step 1 INSERT on
+second-login sessions.
+
+### Problem it solves
+
+Onboarding Step 1's INSERT and Step 2's UPDATE were direct browser
+`supabase.from('businesses').insert(...)` calls. They worked on the
+first login of a session but failed with RLS `42501` on subsequent
+logins — even though the cookie session looked healthy and
+`getUser()` returned the right `user.id`. Both the
+`createBrowserClient` path and the `@supabase/ssr` server data path
+exhibited the bug. The JWT was attached for auth calls but dropped on
+data calls in certain refresh-token flows.
+
+### What was built
+
+**Server routes:**
+
+- [`apps/web/app/api/onboarding/business/route.ts`](../apps/web/app/api/onboarding/business/route.ts)
+  — POST. Reads the cookie session via `createServerClient` to verify
+  identity (`getUser()`), then performs the INSERT using an
+  **admin client with `SUPABASE_SERVICE_ROLE_KEY`**, forcing
+  `user_id = user.id` from the validated session. Returns
+  `{ id, name }`.
+- [`apps/web/app/api/onboarding/business/extras/route.ts`](../apps/web/app/api/onboarding/business/extras/route.ts)
+  — POST. Same two-client pattern: cookie-session client validates
+  identity, admin client performs the UPDATE with
+  `.eq('id', business_id).eq('user_id', user.id)` so the service-role
+  bypass can't be cross-account abused.
+
+**Frontend** — [`components/onboarding/StepBusinessInfo.tsx`](../apps/web/components/onboarding/StepBusinessInfo.tsx)
+calls `fetch('/api/onboarding/business', ...)` and
+`fetch('/api/onboarding/business/extras', ...)`. No direct
+`supabase.from(...)` left in the onboarding flow.
+
+**Middleware** — [`apps/web/proxy.ts`](../apps/web/proxy.ts) matcher
+updated to exclude `api/` so next-intl doesn't try to locale-prefix
+`/api/onboarding/business` to `/en/api/onboarding/business` (which
+404s).
+
+### The pattern, in general
+
+**RLS-protected writes go through Next.js route handlers, not the
+browser `supabase-js` client.** The route handler:
+
+1. Reads the cookie session via `createServerClient` and validates
+   identity with `getUser()`.
+2. Constructs a second admin client using
+   `SUPABASE_SERVICE_ROLE_KEY`.
+3. Performs the mutation through the admin client, forcing the
+   `user_id` field from the validated session (INSERT) or scoping
+   the WHERE clause to `.eq('user_id', user.id)` (UPDATE/DELETE).
+
+This is the same pattern documented in `[[feedback_supabase_mutations]]`
+and now also applied to Settings ROI inputs, competitor curation,
+and any future write path that hits an RLS-protected table.
+
+### Cost
+
+- `SUPABASE_SERVICE_ROLE_KEY` lives only on the FastAPI / Next.js
+  server side (never NEXT_PUBLIC). Without it, both routes return
+  500 with `Server misconfigured` and log
+  `SUPABASE_SERVICE_ROLE_KEY not set`.
+- Onboarding stepper is **5 steps** now: required → extras → audit
+  → confirm competitors → quick wins (was 4).
+
+---
+
+## 32. 18-vertical business types + sub-specialty guardrails (completed 2026-05-17)
+
+**Status:** Built — expanded from 5 generic chips to 18 specific
+verticals after the dentist test surfaced false sub-specialty tags.
+
+### Problem it solves
+
+The original onboarding chip list (`restaurant / cafe / salon /
+retail / other`) forced specific verticals — dentist, lawyer,
+physiotherapist — into the `other` bucket with free-text. That
+worked for type-detection but missed two improvements:
+
+1. **Audit query patterns** can specialize per vertical (e.g.
+   *"emergency 24/7"* and *"weekend availability"* for healthcare and
+   trades, FSA-prefix for all locals).
+2. **Sub-specialty body-tag detection** was firing false positives.
+   Burlington Family Dentists got tagged "pediatric" because their
+   homepage body mentioned pediatric dentistry several times, even
+   though they explicitly identify as a family practice.
+
+### What was built
+
+**18 verticals**, in onboarding chips, Settings dropdown, and
+FastAPI `KNOWN_TYPES`:
+
+`restaurant`, `cafe`, `salon`, `retail`, `dentist`,
+`physiotherapist`, `family_doctor`, `chiropractor`, `optometrist`,
+`veterinarian`, `lawyer`, `accountant`, `realtor`, `plumber`,
+`auto_repair`, `cleaning_service`, `personal_trainer`, `other`.
+
+The `key` is stable; the `phrase` is what we store on
+`businesses.type` — written as natural noun phrases (e.g.
+`physiotherapy clinic`) because it doubles as the search phrase the
+audit feeds into Google.
+
+**Settings now uses the same list as onboarding** —
+[`components/dashboard/SettingsPage.tsx`](../apps/web/components/dashboard/SettingsPage.tsx)
+renders a `<select>` driven by the same i18n keys
+(`onboarding.step1.types.*`). Picking "Other" reveals a free-text
+input. Legacy rows whose `businesses.type` value isn't in the list
+(e.g. an early test entry of `"Dental office"`) auto-map to "Other"
+with the original text editable so nothing silently changes on save.
+A guard blocks save if "Other" is selected with an empty text input.
+
+### Sub-specialty guardrails (in `api/aeo/router.py`)
+
+Three-layer rule in `_extract_text_signals()`:
+
+1. **`service_min_matches=2`** — body-content tag detection only
+   fires when a service phrase appears at least twice in the page.
+   Single mentions caused the pediatric bug.
+2. **`_SPECIFIC_TYPES_BODY_TAGS_SKIPPED`** — when the owner picked a
+   specific business type (dentist, physiotherapist, family_doctor,
+   etc.), sub-specialty body-content tags are skipped entirely. The
+   owner already declared what they are; weaker website signals
+   shouldn't override that.
+3. **Title-tag check (`_TITLE_TAG_RE`)** — title-tag matches override
+   body-content. Title is the strongest signal of business identity
+   that isn't owner-declared.
+
+### How to extend
+
+- New business type → update `TYPES` in `StepBusinessInfo.tsx`,
+  `BUSINESS_TYPES` in `SettingsPage.tsx`, `KNOWN_TYPES` in
+  `api/aeo/router.py`, and i18n keys in both `en.json` / `fr.json`
+  (parity required).
+- New sub-specialty tag that should NOT fire on a specific parent
+  type → add the parent to `_SPECIFIC_TYPES_BODY_TAGS_SKIPPED`.
+- Do not loosen `service_min_matches` below 2 without a test case
+  showing single-mention detection is valuable.
+
+---
+
+## Research artifacts (gated decisions, not yet built)
+
+- [`docs/dataforseo-test-plan.md`](dataforseo-test-plan.md) — 8-step,
+  &lt;$1, ~1-hour validation plan for whether DataForSEO can power a
+  post-launch Monthly Insights tab (trending PAA, search volume
+  movement). Decision criteria + 5-business test matrix + caveats.
+  Owner runs this manually before we commit to Phase 4 (category
+  intelligence). Pre-test recommendation: validate the PAA story on
+  SerpApi first (already paid for) before paying $20 in DataForSEO
+  credits — same `related_questions` data.

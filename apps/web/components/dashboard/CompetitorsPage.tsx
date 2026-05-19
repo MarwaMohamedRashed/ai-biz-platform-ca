@@ -3,7 +3,6 @@
 import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import OwnReputationCard from '@/components/dashboard/OwnReputationCard'
 import CompetitorPicker, { type CompetitorEntry } from '@/components/dashboard/CompetitorPicker'
 
 interface Breakdown {
@@ -212,7 +211,7 @@ export default function CompetitorsPage({ businessId, businessName, latestAudit,
     return (
       <PageShell>
         <div className="max-w-3xl mx-auto p-6 md:p-10">
-          <Header businessName={businessName} />
+          <Header businessName={businessName} localPackPosition={userPosition} />
           <div className="bg-white border border-slate-100 rounded-2xl p-6 flex flex-col gap-3">
             <p className="text-sm font-semibold text-[#1e293b]">
               {t('empty.noCompetitorsTitle')}
@@ -243,19 +242,19 @@ export default function CompetitorsPage({ businessId, businessName, latestAudit,
   return (
     <PageShell>
       <div className="max-w-3xl mx-auto p-6 md:p-10">
-        <Header businessName={businessName} />
+        {/* Header now carries the map-position pill so we don't lose that
+            unique signal when YourScoreCard is removed. */}
+        <Header businessName={businessName} localPackPosition={userPosition} />
 
       <p className="text-sm text-slate-600 mb-4">
         {t('intro', { count: competitors.length })}
       </p>
 
-      <YourScoreCard
-        businessName={businessName}
-        score={latestAudit.score}
-        breakdown={latestAudit.score_breakdown}
-        localPackPosition={userPosition}
-      />
-
+      {/* YourScoreCard was removed: every number it showed (score, pillar
+          bars, rating, reviews) is already in the comparison table below
+          as the "YOU" column, and the score+pillars are the hero of the
+          main Dashboard. The map-position pill was the only unique signal
+          and now lives in the header above. */}
       <ComparisonTable
         businessName={businessName}
         userScore={latestAudit.score}
@@ -275,9 +274,11 @@ export default function CompetitorsPage({ businessId, businessName, latestAudit,
         <CitationGapSection gaps={latestAudit.raw_results.citation_gaps} />
       )}
 
-      <div className="mt-4">
-        <OwnReputationCard />
-      </div>
+      {/* OwnReputationCard was removed from this page: it's the user's OWN
+          reputation, which is already the responsibility of the main
+          Dashboard's audit card. The Competitors page should be about
+          THEM (the competitors), not YOU. Competitor reputation/themes
+          live in <CompetitorInsightsSection /> above. */}
 
       <CompetitorEditorSection
         userCompetitors={userCompetitors}
@@ -428,205 +429,46 @@ function CompetitorInsightsSection({ insights }: { insights: CompetitorInsights 
   )
 }
 
-function Header({ businessName }: { businessName: string | null }) {
+function Header({
+  businessName, localPackPosition,
+}: {
+  businessName: string | null
+  /** Owner's #position in Google's local pack for their category & city.
+   *  Carried up from YourScoreCard (now removed) so the most page-unique
+   *  signal — "you're #3 in Maps" — stays visible without re-displaying
+   *  every audit number. */
+  localPackPosition: number | null
+}) {
   const t = useTranslations('dashboard.competitors')
   return (
     <div className="mb-6">
       <h1 className="text-xl font-extrabold text-[#1e293b]">{t('pageTitle')}</h1>
-      {businessName && (
-        <p className="text-xs text-slate-500 mt-1 font-medium">{businessName}</p>
-      )}
-    </div>
-  )
-}
-
-function YourScoreCard({ businessName, score, breakdown, localPackPosition }: {
-  businessName: string | null; score: number; breakdown: Breakdown | null; localPackPosition: number | null
-}) {
-  const t = useTranslations('dashboard.competitors')
-  return (
-    <div className="bg-indigo-50 border-2 border-[#4f46e5] rounded-2xl p-4">
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-bold text-[#4f46e5] uppercase tracking-wider">{t('youLabel')}</span>
-            {localPackPosition != null ? (
-              <span
-                className="text-[10px] font-semibold text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded-full cursor-default"
-                title={`Your business appears at position #${localPackPosition} in Google's map results for your category and city.`}>
-                {t('onMapsPack', { pos: localPackPosition })}
-              </span>
-            ) : (
-              <span
-                className="text-[10px] font-semibold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full cursor-default"
-                title="Your business doesn't appear in Google's top map results for your category and city. This means customers searching nearby may not find you.">
-                {t('notOnMaps')}
-              </span>
-            )}
-          </div>
-          {businessName && (
-            <p className="text-sm font-semibold text-[#1e293b] truncate">{businessName}</p>
-          )}
-        </div>
-        <p className={`text-2xl font-extrabold ${scoreColorClass(score)}`}>
-          {score}<span className="text-xs font-semibold text-slate-400">/100</span>
-        </p>
+      <div className="flex items-center gap-2 mt-1 flex-wrap">
+        {businessName && (
+          <p className="text-xs text-slate-500 font-medium">{businessName}</p>
+        )}
+        {localPackPosition != null ? (
+          <span
+            className="text-[10px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded-full cursor-default"
+            title={`Your business appears at position #${localPackPosition} in Google's map results for your category and city.`}>
+            {t('onMapsPack', { pos: localPackPosition })}
+          </span>
+        ) : (
+          <span
+            className="text-[10px] font-semibold text-red-600 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded-full cursor-default"
+            title="Your business doesn't appear in Google's top map results for your category and city. This means customers searching nearby may not find you.">
+            {t('notOnMaps')}
+          </span>
+        )}
       </div>
-      {breakdown && (
-        <div className="flex flex-col gap-1.5">
-          {PILLAR_KEYS.map(p => (
-            <PillarBar key={p.key} pillarKey={p.key} tKey={p.tKey} points={breakdown[p.key]} max={p.max} />
-          ))}
-        </div>
-      )}
     </div>
   )
 }
 
-function CompetitorRow({ competitor, userBreakdown }: {
-  competitor: Competitor; userBreakdown: Breakdown | null
-}) {
-  const t = useTranslations('dashboard.competitors')
-  const ratingColor = !competitor.rating
-    ? 'text-slate-400'
-    : competitor.rating >= 4.5
-    ? 'text-green-600'
-    : competitor.rating >= 4.0
-    ? 'text-amber-500'
-    : 'text-red-500'
-
-  return (
-    <div className="bg-white border border-slate-100 rounded-2xl p-4">
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-start gap-3 min-w-0">
-          <div className="w-7 h-7 rounded-full bg-indigo-50 text-[#4f46e5]
-                          flex items-center justify-center text-xs font-bold flex-shrink-0">
-            #{competitor.position}
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <p className="text-sm font-semibold text-[#1e293b] truncate">{competitor.name}</p>
-              {competitor.cross_border && (
-                <span className="text-[9px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full whitespace-nowrap"
-                  title="Google is associating this business with your category, but it's outside your country.">
-                  {t('differentCountry')}
-                </span>
-              )}
-              {!competitor.cross_border && competitor.cross_city && (
-                <span className="text-[9px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-full whitespace-nowrap"
-                  title="This business is in a nearby city but ranks for your city's searches — a real competitive threat.">
-                  📍 {competitor.city ?? 'Nearby city'}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {competitor.type && (
-                <p className="text-[11px] text-slate-500 truncate">{competitor.type}</p>
-              )}
-              {!competitor.cross_city && competitor.city && (
-                <p className="text-[11px] text-slate-400 truncate">{competitor.city}</p>
-              )}
-              <span
-                className="text-[10px] font-semibold text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded-full cursor-default whitespace-nowrap"
-                title={`This business appears at position #${competitor.position} in Google's map results for your category and city.`}>
-                {t('onMapsPack', { pos: competitor.position })}
-              </span>
-            </div>
-            {competitor.address && (
-              <p className="text-[10px] text-slate-400 mt-0.5 truncate" title={competitor.address}>
-                {competitor.address}
-              </p>
-            )}
-          </div>
-        </div>
-        <div className="text-right flex-shrink-0">
-          {competitor.score != null ? (
-            <p className={`text-2xl font-extrabold ${scoreColorClass(competitor.score)}`}>
-              {competitor.score}<span className="text-xs font-semibold text-slate-400">/100</span>
-            </p>
-          ) : (
-            <p className="text-xs text-slate-400">{t('noScore')}</p>
-          )}
-          {competitor.rating != null && (
-            <p className={`text-[11px] font-semibold ${ratingColor}`}>
-              {competitor.rating.toFixed(1)}★
-              {competitor.reviews != null && (
-                <span className="text-slate-500 font-normal"> · {t('reviews', { count: competitor.reviews })}</span>
-              )}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {competitor.breakdown && (
-        <div className="flex flex-col gap-1.5">
-          {PILLAR_KEYS.map(p => (
-            <PillarBar
-              key={p.key}
-              pillarKey={p.key}
-              tKey={p.tKey}
-              points={competitor.breakdown![p.key]}
-              max={p.max}
-              userPoints={userBreakdown?.[p.key]}
-            />
-          ))}
-        </div>
-      )}
-
-      {competitor.has_full_data === false && (
-        <p className="text-[10px] text-slate-400 italic mt-2">
-          {t('partialData')}
-        </p>
-      )}
-
-      {(competitor.website || competitor.phone) && (
-        <div className="flex items-center gap-3 mt-3 pt-3 border-t border-slate-100">
-          {competitor.website && (
-            <a href={competitor.website} target="_blank" rel="noopener noreferrer"
-              className="text-[11px] text-[#4f46e5] hover:underline truncate max-w-[180px]">
-              {competitor.website.replace(/^https?:\/\/(www\.)?/, '')}
-            </a>
-          )}
-          {competitor.phone && (
-            <span className="text-[11px] text-slate-500">{competitor.phone}</span>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function PillarBar({ pillarKey, tKey, points, max, userPoints }: {
-  pillarKey: keyof Breakdown; tKey: string; points: number; max: number; userPoints?: number
-}) {
-  const t = useTranslations('dashboard.competitors')
-  const label = t(`pillars.${tKey}`)
-  const pct = max === 0 ? 0 : (points / max) * 100
-  const color = pct >= 75 ? 'bg-green-500' : pct >= 40 ? 'bg-amber-400' : 'bg-red-300'
-
-  let delta: ReactNode = null
-  if (userPoints != null) {
-    const diff = userPoints - points
-    if (diff > 0) {
-      delta = <span className="text-[9px] font-bold text-green-600 w-14 text-right">{t('youAhead', { diff })}</span>
-    } else if (diff < 0) {
-      delta = <span className="text-[9px] font-bold text-red-500 w-14 text-right">{t('youBehind', { diff })}</span>
-    } else {
-      delta = <span className="text-[9px] text-slate-400 w-14 text-right">{t('tied')}</span>
-    }
-  }
-
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-[10px] text-slate-600 w-12 flex-shrink-0">{label}</span>
-      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden flex-1">
-        <div className={`h-full ${color} rounded-full`} style={{ width: `${pct}%` }} />
-      </div>
-      <span className="text-[10px] text-slate-500 w-10 text-right flex-shrink-0">{points}/{max}</span>
-      {delta}
-    </div>
-  )
-}
+// CompetitorRow + PillarBar were retired with YourScoreCard — they were
+// only used by an earlier per-competitor card UI that was superseded by
+// ComparisonTable below. CompetitorPicker.tsx has its own (unrelated)
+// CompetitorRow that still does the work for the picker.
 
 function ComparisonTable({ businessName, userScore, userBreakdown, userRating, userReviews, userWebsite, competitors }: {
   businessName: string | null
