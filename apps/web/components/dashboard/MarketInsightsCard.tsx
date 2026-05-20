@@ -17,13 +17,28 @@ import type { MarketInsightsSummary } from '@/lib/market-intelligence'
 interface Props {
   insights: MarketInsightsSummary | null
   locale: string
+  /** True when the business is country/global scope — area data doesn't apply. */
+  nonLocal?: boolean
 }
 
 type Tab = 'questions' | 'demand' | 'leaderboard' | 'benchmarks'
 
-export default function MarketInsightsCard({ insights, locale }: Props) {
+export default function MarketInsightsCard({ insights, locale, nonLocal }: Props) {
   const t = useTranslations('dashboard.marketInsights')
   const [tab, setTab] = useState<Tab>('questions')
+
+  // Country / global scope: area-based intelligence doesn't apply. Show a short
+  // note instead of the "building your area" state (which never resolves).
+  if (nonLocal) {
+    return (
+      <section className="rounded-2xl border border-slate-100 bg-white p-5 md:p-6">
+        <Header t={t} insights={null} />
+        <p className="mt-4 text-sm text-slate-500 leading-relaxed">
+          {t('nonLocalNote')}
+        </p>
+      </section>
+    )
+  }
 
   // No data yet (market row exists but refresh hasn't run, or no market row)
   if (!insights) {

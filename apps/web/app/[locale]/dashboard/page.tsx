@@ -324,6 +324,7 @@ export default async function DashboardPage() {
           <MarketInsightsCard
             insights={marketInsights}
             locale={locale}
+            nonLocal={!isLocalScope}
           />
 
           {/* What the scanner detected about this business — transparency

@@ -328,6 +328,7 @@
       "headlineFallback": "AI search landscape — your area",
       "refreshedAt": "Updated {date}",
       "buildingArea": "We're building your area's AI search data. Check back after your next audit.",
+      "nonLocalNote": "Area market intelligence is shown for businesses serving a defined city or region. Your profile is set to a country-wide or global service area, so we focus your audit on AI visibility rather than local-area comparisons.",
       "momUp": "increase in AI mention share vs last audit",
       "momDown": "decrease in AI mention share vs last audit",
       "benchmarksNotReady": "Not enough area data yet to benchmark — check back after a few weeks.",

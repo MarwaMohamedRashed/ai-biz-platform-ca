@@ -317,6 +317,7 @@
       "headlineFallback": "Paysage de recherche IA — votre secteur",
       "refreshedAt": "Mis à jour le {date}",
       "buildingArea": "Nous compilons les données de recherche IA pour votre secteur. Revenez après votre prochain audit.",
+      "nonLocalNote": "L'intelligence de marché locale est offerte aux entreprises desservant une ville ou une région définie. Votre profil indique une zone de service nationale ou mondiale ; nous concentrons donc votre audit sur la visibilité IA plutôt que sur les comparaisons locales.",
       "momUp": "d'augmentation de la part de mentions IA vs dernier audit",
       "momDown": "de baisse de la part de mentions IA vs dernier audit",
       "benchmarksNotReady": "Pas encore assez de données dans votre secteur — revenez dans quelques semaines.",
