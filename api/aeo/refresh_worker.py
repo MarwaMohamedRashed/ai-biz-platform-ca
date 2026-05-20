@@ -39,7 +39,12 @@ from .audit.geo import country_to_gl
 from .audit.maps import resolve_maps_place_id
 from .audit.scoring import name_matches
 from .audit.verticals import DIRECTORY_DOMAINS
-from .market_intelligence import mention_weight
+from .market_intelligence import (
+    canonical_vertical,
+    get_or_create,
+    mention_weight,
+    normalize_city,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -726,3 +731,68 @@ async def run_refresh(
         except Exception:
             pass
         raise
+
+
+# ── Monthly batch entry (Phase 8) ───────────────────────────────────────────
+
+async def refresh_all_markets(target_month: Optional[str] = None) -> dict:
+    """Refresh every market that has at least one active local-scope business.
+
+    Markets are derived from the businesses table (canonical vertical +
+    normalized city), so we only ever refresh combos with real customers —
+    never speculative cities. Idempotent end-to-end: run_refresh skips any
+    market already fresh for target_month, so re-running the cron is safe.
+
+    Runs sequentially to stay within AI-engine rate limits (each market is
+    ~30 questions × 3 engines). Intended to be invoked once a month by the
+    CRON_SECRET-protected /cron-refresh-markets endpoint.
+    """
+    if target_month is None:
+        target_month = date.today().replace(day=1).isoformat()
+
+    try:
+        rows = supabase_admin.table("businesses").select(
+            "type, city, province, country, competitor_scope"
+        ).execute()
+    except Exception as e:
+        logger.error(f"[REFRESH-ALL] Failed to load businesses: {e}")
+        return {"status": "error", "error": str(e)}
+
+    # Dedupe to unique (vertical, city, country) markets — local scope only.
+    seen: dict[tuple, dict] = {}
+    for b in rows.data or []:
+        if (b.get("competitor_scope") or "local") in ("country", "global"):
+            continue
+        city, btype = b.get("city"), b.get("type")
+        if not city or not btype:
+            continue
+        vertical = canonical_vertical(btype)
+        city_norm = normalize_city(city)
+        country = b.get("country") or "Canada"
+        key = (vertical, city_norm, country)
+        if key not in seen:
+            seen[key] = {
+                "vertical": vertical,
+                "city":     city_norm,
+                "province": b.get("province") or "",
+                "country":  country,
+            }
+
+    results: list[dict] = []
+    for m in seen.values():
+        try:
+            row = await get_or_create(m["vertical"], m["city"], m["province"], m["country"])
+            if not row:
+                results.append({**m, "status": "no_row"})
+                continue
+            res = await run_refresh(
+                str(row["id"]), m["vertical"], m["city"], m["province"], m["country"], target_month
+            )
+            results.append({**m, "status": res.get("status")})
+        except Exception as e:
+            logger.error(f"[REFRESH-ALL] Failed for {m}: {e}")
+            results.append({**m, "status": "error", "error": str(e)[:200]})
+
+    ok = sum(1 for r in results if r.get("status") in ("ok", "already_done"))
+    logger.info(f"[REFRESH-ALL] {ok}/{len(results)} markets refreshed for {target_month}")
+    return {"target_month": target_month, "markets": len(results), "ok": ok, "results": results}

@@ -635,6 +635,18 @@ async def cron_monthly_audit(authorization: str | None = Header(default=None)):
     return {"audited": len(summary), "results": summary}
 
 
+@router.post("/cron-refresh-markets")
+async def cron_refresh_markets(authorization: str | None = Header(default=None)):
+    """Monthly market-intelligence refresh for every (vertical, city) combo with
+    at least one active local-scope business. Idempotent: markets already fresh
+    for the current month are skipped. Called by the scheduled cron (same
+    CRON_SECRET auth as /cron-monthly)."""
+    if not CRON_SECRET or authorization != f"Bearer {CRON_SECRET}":
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    from .refresh_worker import refresh_all_markets
+    return await refresh_all_markets()
+
+
 
 # ─── Content generation (handlers in api/aeo/content/generator.py) ──────
 # Mounted on the same prefix so existing endpoint URLs stay stable:
