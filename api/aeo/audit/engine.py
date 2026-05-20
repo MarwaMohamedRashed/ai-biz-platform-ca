@@ -702,6 +702,12 @@ async def _run_audit_core(business: dict) -> dict:
     if service_tags_v:
         print(f"[AEO] Service tags (website ∪ services): {service_tags_v}")
 
+    # Market intelligence setup (Phase 3). Fire-and-forget so the audit doesn't
+    # block on the DataForSEO refresh. Only runs for local-scope businesses.
+    if competitor_scope == "local":
+        from ..market_augment import setup_market_background
+        setup_market_background(business["type"], city, province, country)
+
     perplexity_result, google_result, chatgpt_result = await asyncio.gather(
         run_perplexity_multi(business_name, business_type_en, city, province,
                              postal_code=postal_code, is_trades=is_trades_v, is_healthcare=is_healthcare_v,
@@ -871,6 +877,34 @@ async def _run_audit_core(business: dict) -> dict:
         except Exception as e:
             logger.warning(f"[AEO][COMP] Failed to refresh user_competitors metadata: {e}")
 
+    # ─── Market visibility (Phase 3) ─────────────────────────────────────────────
+    _market_visibility: dict | None = None
+    if competitor_scope == "local":
+        from ..market_augment import (
+            compute_market_visibility,
+            get_augmented_questions,
+        )
+        from ..market_intelligence import get_or_create, canonical_vertical, normalize_city
+        try:
+            _vertical_key = canonical_vertical(business["type"])
+            _city_norm    = normalize_city(city)
+            _market_row   = await get_or_create(_vertical_key, _city_norm, province, country)
+            if _market_row:
+                _augmented = await get_augmented_questions(
+                    service_tags_v, cuisine_hint_v, cuisine_hint_parent_v,
+                    dietary_tags_v, _vertical_key, _city_norm, province, country,
+                )
+                _market_visibility = compute_market_visibility(
+                    business_name, city, _market_row, _augmented
+                )
+                logger.info(
+                    f"[AEO][MI] market_visibility: covered={_market_visibility.get('questions_covered')} "
+                    f"share={_market_visibility.get('weighted_mention_share')} "
+                    f"aug_vol={_market_visibility.get('augmented_volume_total')}"
+                )
+        except Exception as e:
+            logger.warning(f"[AEO][MI] market_visibility failed for '{business_name}': {e}")
+
     return {
         "score":                score,
         "breakdown":            breakdown,
@@ -893,4 +927,5 @@ async def _run_audit_core(business: dict) -> dict:
             "dietary_tags":   dietary_tags_v,
             "service_tags":   service_tags_v,
         },
+        "market_visibility": _market_visibility,
     }

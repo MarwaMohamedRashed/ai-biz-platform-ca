@@ -394,6 +394,7 @@ async def run_audit(
             "competitor_insights":   raw.get("competitor_insights") or {},
             "citation_gaps":         raw.get("citation_gaps") or {},
             "auto_suggestions":      raw.get("auto_suggestions") or [],
+            "market_visibility":     raw.get("market_visibility"),
             "raw_results":           raw,
             "reused": True,
         }
@@ -428,6 +429,7 @@ async def run_audit(
             "competitor_insights":  result.get("competitor_insights", {}),
             "citation_gaps":        result.get("citation_gaps", {}),
             "auto_suggestions":     result.get("auto_suggestions", []),
+            "market_visibility":    result.get("market_visibility"),
         },
     }).execute()
 
@@ -447,6 +449,7 @@ async def run_audit(
         "competitor_insights": result.get("competitor_insights", {}),
         "citation_gaps":       result.get("citation_gaps", {}),
         "auto_suggestions":    result.get("auto_suggestions", []),
+        "market_visibility":   result.get("market_visibility"),
     }
     return result
 
@@ -613,6 +616,7 @@ async def cron_monthly_audit(authorization: str | None = Header(default=None)):
                     "competitors":         result.get("competitors", []),
                     "competitor_insights": result.get("competitor_insights", {}),
                     "citation_gaps":       result.get("citation_gaps", {}),
+                    "market_visibility":   result.get("market_visibility"),
                 },
             }).execute()
 
