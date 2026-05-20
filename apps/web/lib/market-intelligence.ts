@@ -91,6 +91,31 @@ export interface MarketBusiness {
   avgPosition:  number | null
 }
 
+export interface MarketRisingKeyword {
+  keyword:   string
+  changePct: number
+}
+
+export interface MarketSource {
+  domain:      string
+  label:       string
+  isDirectory: boolean
+  count:       number
+}
+
+export interface CategoryDemand {
+  /** Total monthly search volume across the market's tracked questions. */
+  totalVolume:     number
+  /** Month-over-month change vs the previous refresh, e.g. 0.08 = +8%. null when no history yet. */
+  momGrowthPct:    number | null
+  /** Fastest-growing queries in the area (from DataForSEO monthly_searches). */
+  risingKeywords:  MarketRisingKeyword[]
+  /** Directories / publishers AI + Google cite for this market's questions. */
+  topSources:      MarketSource[]
+  /** Your AI-answer coverage (questions you appear in / total), for the "demand grew, did you?" line. */
+  coveragePct:     number | null
+}
+
 export interface MarketInsightsSummary {
   city:           string
   vertical:       string
@@ -107,6 +132,7 @@ export interface MarketInsightsSummary {
     sampleSize: number
   }
   momShareChange: number | null
+  categoryDemand: CategoryDemand
 }
 
 // ── Server-side builder ───────────────────────────────────────────────────
@@ -164,6 +190,9 @@ export function buildMarketInsights(
   businessName: string,
   currentShare: number | null,
   prevShare: number | null,
+  // Phase 6 — category-volume tracking inputs:
+  prevCategoryVolume: number | null = null,   // from latest market_intelligence_history snapshot
+  coveragePct: number | null = null,          // from latest audit's market_visibility
 ): MarketInsightsSummary {
   const questions = (row.questions as RawQuestion[]) ?? []
   const topBiz    = (row.top_businesses as RawBusiness[]) ?? []
@@ -203,6 +232,33 @@ export function buildMarketInsights(
       ? Math.round((currentShare - prevShare) * 1000) / 1000
       : null
 
+  // Phase 6 — category demand. category_volume_summary + category_sources are
+  // computed by the refresh worker and stored in benchmarks (no extra table).
+  const cvs = (benchmarks.category_volume_summary as {
+    total_volume?: number
+    rising_keywords?: { keyword?: string; change_pct?: number }[]
+  } | undefined) ?? {}
+  const categoryTotalVolume = cvs.total_volume ?? totalVolume
+  const momGrowthPct =
+    prevCategoryVolume != null && prevCategoryVolume > 0
+      ? Math.round(((categoryTotalVolume - prevCategoryVolume) / prevCategoryVolume) * 1000) / 1000
+      : null
+  const risingKeywords: MarketRisingKeyword[] = (cvs.rising_keywords ?? [])
+    .filter(r => r.keyword)
+    .slice(0, 3)
+    .map(r => ({ keyword: r.keyword as string, changePct: r.change_pct ?? 0 }))
+  const topSources: MarketSource[] = ((benchmarks.category_sources as {
+    domain?: string; label?: string; is_directory?: boolean; count?: number
+  }[] | undefined) ?? [])
+    .filter(s => s.domain)
+    .slice(0, 6)
+    .map(s => ({
+      domain:      s.domain as string,
+      label:       s.label ?? (s.domain as string),
+      isDirectory: s.is_directory ?? false,
+      count:       s.count ?? 0,
+    }))
+
   return {
     city:          row.city,
     vertical:      row.vertical,
@@ -219,5 +275,12 @@ export function buildMarketInsights(
       sampleSize: (benchmarks.sample_size as number | null) ?? 0,
     },
     momShareChange,
+    categoryDemand: {
+      totalVolume:    categoryTotalVolume,
+      momGrowthPct,
+      risingKeywords,
+      topSources,
+      coveragePct,
+    },
   }
 }

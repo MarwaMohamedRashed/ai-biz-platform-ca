@@ -338,8 +338,19 @@
       "benchNote": "Based on {n} businesses tracked in your area.",
       "tab": {
         "questions": "Questions",
+        "demand": "Demand",
         "leaderboard": "Leaderboard",
         "benchmarks": "Benchmarks"
+      },
+      "demand": {
+        "searchesPerMonth": "searches/month in your area",
+        "vsLastMonth": "vs last month",
+        "noHistory": "We'll show month-over-month change once we have a second month of data.",
+        "coverageLine": "You appear in answers for {pct}% of these questions.",
+        "coverageWarn": "Demand is growing but your coverage is low — that's where the upside is.",
+        "rising": "Fastest-growing searches",
+        "sources": "Where AI looks in your area",
+        "sourcesNote": "Directories and sites AI engines cite for these questions. Being listed on the highlighted ones improves your odds of being mentioned."
       },
       "col": {
         "question": "AI search question",

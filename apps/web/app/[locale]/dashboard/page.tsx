@@ -82,9 +82,30 @@ export default async function DashboardPage() {
         .single()
 
       if (marketRow && (marketRow.questions as unknown[]).length > 0) {
-        const currentShare = (latestAudit?.raw_results as any)?.market_visibility?.weighted_mention_share ?? null
+        const mv = (latestAudit?.raw_results as any)?.market_visibility ?? null
+        const currentShare = mv?.weighted_mention_share ?? null
         const prevShare    = (auditHistory?.[1]?.raw_results as any)?.market_visibility?.weighted_mention_share ?? null
-        marketInsights = buildMarketInsights(marketRow as any, business.name, currentShare, prevShare)
+        const coveragePct  = mv?.questions_total
+          ? (mv.questions_covered ?? 0) / mv.questions_total
+          : null
+
+        // Latest history snapshot holds the previous period's state (written
+        // before the last refresh), so its category volume is "last month".
+        let prevCategoryVolume: number | null = null
+        const { data: histRow } = await supabase
+          .from('market_intelligence_history')
+          .select('benchmarks')
+          .eq('market_id', marketRow.id)
+          .order('snapshot_month', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        prevCategoryVolume =
+          (histRow?.benchmarks as any)?.category_volume_summary?.total_volume ?? null
+
+        marketInsights = buildMarketInsights(
+          marketRow as any, business.name, currentShare, prevShare,
+          prevCategoryVolume, coveragePct,
+        )
       }
     } catch {
       // silently degrade — card shows null state

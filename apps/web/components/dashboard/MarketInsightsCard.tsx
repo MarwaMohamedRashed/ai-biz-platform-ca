@@ -19,7 +19,7 @@ interface Props {
   locale: string
 }
 
-type Tab = 'questions' | 'leaderboard' | 'benchmarks'
+type Tab = 'questions' | 'demand' | 'leaderboard' | 'benchmarks'
 
 export default function MarketInsightsCard({ insights, locale }: Props) {
   const t = useTranslations('dashboard.marketInsights')
@@ -53,7 +53,7 @@ export default function MarketInsightsCard({ insights, locale }: Props) {
 
         {/* Tab bar */}
         <div className="mt-4 flex gap-1 border-b border-slate-100">
-          {(['questions', 'leaderboard', 'benchmarks'] as Tab[]).map(id => (
+          {(['questions', 'demand', 'leaderboard', 'benchmarks'] as Tab[]).map(id => (
             <button
               key={id}
               type="button"
@@ -75,6 +75,9 @@ export default function MarketInsightsCard({ insights, locale }: Props) {
           hasQuestions
             ? <QuestionsTab questions={insights.topQuestions} t={t} />
             : <EmptyTab t={t} />
+        )}
+        {tab === 'demand' && (
+          <DemandTab demand={insights.categoryDemand} locale={locale} t={t} />
         )}
         {tab === 'leaderboard' && (
           hasBiz
@@ -291,6 +294,99 @@ function BenchmarksTab({ b, t }: {
       <p className="text-[10.5px] text-slate-400 leading-relaxed">
         {t('benchNote', { n: b.sampleSize })}
       </p>
+    </div>
+  )
+}
+
+function DemandTab({ demand, locale, t }: {
+  demand: MarketInsightsSummary['categoryDemand']
+  locale: string
+  t: ReturnType<typeof useTranslations>
+}) {
+  const fmt = (n: number) => n.toLocaleString(locale === 'fr' ? 'fr-CA' : 'en-CA')
+  const growth = demand.momGrowthPct
+  const growthUp = (growth ?? 0) > 0
+  const coverage = demand.coveragePct
+
+  return (
+    <div className="space-y-5">
+      {/* Demand headline: total category volume + MoM growth */}
+      <div>
+        <div className="flex items-baseline gap-2">
+          <span className="text-2xl font-extrabold text-[#1e293b] tabular-nums">
+            {fmt(demand.totalVolume)}
+          </span>
+          <span className="text-xs text-slate-400">{t('demand.searchesPerMonth')}</span>
+        </div>
+        {growth != null
+          ? (
+            <p className={`mt-1 text-xs font-semibold ${growthUp ? 'text-emerald-600' : 'text-rose-500'}`}>
+              {growthUp ? '▲' : '▼'} {Math.abs(Math.round(growth * 100))}% {t('demand.vsLastMonth')}
+            </p>
+          )
+          : <p className="mt-1 text-[11px] text-slate-400">{t('demand.noHistory')}</p>
+        }
+      </div>
+
+      {/* Coverage vs demand: the "demand grew, did you keep up?" line */}
+      {coverage != null && (
+        <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 rounded-lg px-3 py-2">
+          {t('demand.coverageLine', { pct: Math.round(coverage * 100) })}
+          {growth != null && growthUp && coverage < 0.5 && (
+            <span className="text-amber-600 font-medium"> {t('demand.coverageWarn')}</span>
+          )}
+        </p>
+      )}
+
+      {/* Rising queries */}
+      {demand.risingKeywords.length > 0 && (
+        <div>
+          <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
+            {t('demand.rising')}
+          </h3>
+          <ul className="space-y-1.5">
+            {demand.risingKeywords.map((r, i) => (
+              <li key={i} className="flex items-center justify-between gap-2 text-xs">
+                <span className="text-slate-700 truncate">{r.keyword}</span>
+                <span className="text-emerald-600 font-semibold shrink-0 tabular-nums">
+                  ▲ {Math.round(r.changePct * 100)}%
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Citation sources — where AI/Google point for these questions */}
+      {demand.topSources.length > 0 && (
+        <div>
+          <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
+            {t('demand.sources')}
+          </h3>
+          <div className="flex flex-wrap gap-1.5">
+            {demand.topSources.map((s, i) => (
+              <span
+                key={i}
+                className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
+                  s.isDirectory
+                    ? 'bg-indigo-50 text-indigo-600'
+                    : 'bg-slate-100 text-slate-500'
+                }`}
+                title={s.domain}
+              >
+                {s.label}
+              </span>
+            ))}
+          </div>
+          <p className="mt-2 text-[10.5px] text-slate-400 leading-relaxed">
+            {t('demand.sourcesNote')}
+          </p>
+        </div>
+      )}
+
+      {demand.risingKeywords.length === 0 && demand.topSources.length === 0 && growth == null && (
+        <EmptyTab t={t} />
+      )}
     </div>
   )
 }

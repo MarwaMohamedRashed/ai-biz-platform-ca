@@ -327,8 +327,19 @@
       "benchNote": "Basé sur {n} entreprises suivies dans votre secteur.",
       "tab": {
         "questions": "Questions",
+        "demand": "Demande",
         "leaderboard": "Classement",
         "benchmarks": "Références"
+      },
+      "demand": {
+        "searchesPerMonth": "recherches/mois dans votre région",
+        "vsLastMonth": "vs le mois dernier",
+        "noHistory": "Nous afficherons l'évolution mensuelle dès qu'un deuxième mois de données sera disponible.",
+        "coverageLine": "Vous apparaissez dans les réponses pour {pct} % de ces questions.",
+        "coverageWarn": "La demande augmente mais votre couverture est faible — c'est là que se trouve le potentiel.",
+        "rising": "Recherches en plus forte croissance",
+        "sources": "Où l'IA cherche dans votre région",
+        "sourcesNote": "Annuaires et sites cités par les moteurs IA pour ces questions. Être inscrit sur ceux en surbrillance améliore vos chances d'être mentionné."
       },
       "col": {
         "question": "Question de recherche IA",
