@@ -20,7 +20,9 @@ export interface VerticalDefault {
   avgCustomerValueCad: number
   /** Multiplier converting first-transaction value into expected LTV. */
   ltvMultiple: number
-  /** Lead -> customer conversion rate (informational; not used in formula 3a). */
+  /** Conversion rate. Original Formula C (3a) doesn't use it; ROI v2 Formula
+   *  A/B (computeRoiV2 in roi.ts) use it as the search -> customer factor that
+   *  turns category search volume into an estimated monthly customer pool. */
   conversionRate: number
   /** AI Overview / citation appearance rate for "best X" queries in this vertical. */
   aiOverviewRate: number

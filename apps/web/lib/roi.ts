@@ -272,7 +272,7 @@ export function computeRoiV2(
 /**
  * Formula A — volume-weighted mention share (primary path).
  *
- *   aiPool = total_volume × aiShare
+ *   aiPool = total_volume × aiShare × conversionRate   // searches → customers
  *   captured = mention_share × aiPool × ltv
  *   potential = CEILING × aiPool × ltv
  *   upside = (target_share − mention_share) × aiPool × ltv
@@ -287,7 +287,12 @@ function computeRoiFormulaA(inputs: RoiInputs, mv: MarketVisibility): RoiBreakdo
   const ltv = avgCustomerValueCad * ltvMultiple
 
   const share       = mv.weighted_mention_share!
-  const aiPool      = mv.total_volume * aiShare
+  // searches → customers funnel: total category search volume, the slice
+  // influenced by AI answers (aiShare), then the slice that becomes customers
+  // (conversionRate, from roi-defaults.ts). Without the conversionRate factor
+  // the pool is raw searches, which overstates dollars several-fold. With it,
+  // aiPool is genuinely "AI-influenced new customers per month for the market".
+  const aiPool      = mv.total_volume * aiShare * vertical.conversionRate
   const targetShare = Math.min(POTENTIAL_CEILING, mv.vertical_p75_share ?? POTENTIAL_CEILING)
 
   const capturedPoint  = share * aiPool * ltv
@@ -323,7 +328,7 @@ function computeRoiFormulaA(inputs: RoiInputs, mv: MarketVisibility): RoiBreakdo
  * Formula B — question coverage × augmented volume (mid-quality fallback).
  *
  *   coverage = questions_covered / questions_total
- *   aiPool = augmented_volume_total × aiShare
+ *   aiPool = augmented_volume_total × aiShare × conversionRate  // searches → customers
  *   captured = coverage × aiPool × ltv
  */
 function computeRoiFormulaB(inputs: RoiInputs, mv: MarketVisibility): RoiBreakdown {
@@ -335,7 +340,9 @@ function computeRoiFormulaB(inputs: RoiInputs, mv: MarketVisibility): RoiBreakdo
   const ltv = avgCustomerValueCad * ltvMultiple
 
   const coverage   = mv.questions_covered / mv.questions_total
-  const aiPool     = (mv.augmented_volume_total ?? 0) * aiShare
+  // Same searches → customers funnel as Formula A (see note there): apply the
+  // vertical conversionRate so aiPool is customers/month, not raw searches.
+  const aiPool     = (mv.augmented_volume_total ?? 0) * aiShare * vertical.conversionRate
 
   const capturedPoint  = coverage * aiPool * ltv
   const potentialPoint = POTENTIAL_CEILING * aiPool * ltv
