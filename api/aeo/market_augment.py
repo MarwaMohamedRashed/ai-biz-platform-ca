@@ -175,6 +175,7 @@ def compute_market_visibility(
             "market_id":              market_id,
             "questions_covered":      0,
             "questions_total":        0,
+            "total_volume":           0,
             "weighted_mention_share": None,
             "position_avg":           None,
             "sentiment_avg":          None,
@@ -191,10 +192,16 @@ def compute_market_visibility(
     questions_covered = 0
     positions: list[float] = []
     sentiments: list[float] = []
+    total_volume = 0
 
     for q_entry in questions:
         sv = q_entry.get("search_volume") or 1  # treat null as "below threshold" = 1
         mentions = q_entry.get("mentions") or {}
+
+        # Accumulate total measurable volume (null → excluded from this sum)
+        raw_sv = q_entry.get("search_volume")
+        if raw_sv is not None:
+            total_volume += raw_sv
 
         # Compute total weighted score for ALL businesses in this question
         q_total_score = 0.0
@@ -234,6 +241,7 @@ def compute_market_visibility(
         "market_id":              market_id,
         "questions_covered":      questions_covered,
         "questions_total":        len(questions),
+        "total_volume":           total_volume,
         "weighted_mention_share": round(weighted_share, 4),
         "position_avg":           position_avg,
         "sentiment_avg":          sentiment_avg,

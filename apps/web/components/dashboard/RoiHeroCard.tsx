@@ -4,9 +4,11 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   computeRoi,
+  computeRoiV2,
   formatCadRange,
   formatCad,
   type RoiBreakdown,
+  type MarketVisibility,
   DEFAULT_AI_SHARE,
 } from '@/lib/roi'
 
@@ -33,6 +35,7 @@ interface Props {
   monthlyNewOnlineCustomers:   number | null
   ltvMultipleOverride:         number | null
   locale:                      string
+  marketVisibility?:           MarketVisibility | null
 }
 
 export default function RoiHeroCard({
@@ -42,6 +45,7 @@ export default function RoiHeroCard({
   monthlyNewOnlineCustomers,
   ltvMultipleOverride,
   locale,
+  marketVisibility,
 }: Props) {
   const t = useTranslations('dashboard.roi')
   const [showMath, setShowMath] = useState(false)
@@ -51,13 +55,14 @@ export default function RoiHeroCard({
   // see the existing "run your first audit" CTA from the audit card.
   if (score == null) return null
 
-  const roi = computeRoi({
+  const roiInputs = {
     businessType,
     avgCustomerValueCad,
     monthlyNewOnlineCustomers,
     ltvMultipleOverride,
     score,
-  })
+  }
+  const roi = computeRoiV2(roiInputs, marketVisibility)
 
   // Pick a visual band based on capture %. Same thresholds as the audit
   // card's scoreTier so the two cards feel consistent.
@@ -132,11 +137,23 @@ export default function RoiHeroCard({
         {showMath && (
           <RoiMathBlock roi={roi} t={t} locale={locale} />
         )}
-        <p className="text-[10.5px] text-slate-500 leading-relaxed mt-2">
-          {t('disclosure', {
-            aiShare: Math.round(DEFAULT_AI_SHARE * 100),
-          })}
-        </p>
+        <div className="flex items-start justify-between gap-2 mt-2">
+          <p className="text-[10.5px] text-slate-500 leading-relaxed flex-1">
+            {roi.formulaSource === 'A'
+              ? t('disclosureA', { aiShare: Math.round(roi.resolved.aiShare * 100) })
+              : roi.formulaSource === 'B'
+              ? t('disclosureB', { aiShare: Math.round(roi.resolved.aiShare * 100) })
+              : t('disclosure', { aiShare: Math.round(DEFAULT_AI_SHARE * 100) })
+            }
+          </p>
+          <span className={`shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+            roi.formulaSource === 'C'
+              ? 'bg-slate-100 text-slate-500'
+              : 'bg-indigo-50 text-indigo-600'
+          }`}>
+            {t(`formulaSource.${roi.formulaSource}`)}
+          </span>
+        </div>
       </div>
     </section>
   )
@@ -165,41 +182,69 @@ function RoiMathBlock({
   return (
     <div className="mt-3 rounded-lg bg-white/80 p-3 text-[11px] text-slate-600 leading-relaxed">
       <dl className="grid grid-cols-[auto,1fr] gap-x-3 gap-y-1.5 tabular-nums">
-        <dt className="font-semibold">{t('math.score')}</dt>
-        <dd>{r.score}/100</dd>
+        {roi.formulaSource === 'A' || roi.formulaSource === 'B' ? (
+          <>
+            <dt className="font-semibold">{t('math.aiShare')}</dt>
+            <dd>{Math.round(r.aiShare * 100)}%</dd>
 
-        <dt className="font-semibold">{t('math.monthlyOnline')}</dt>
-        <dd>
-          {r.monthlyNewOnlineCustomers}
-          {!r.monthlyNewOnlineCustomersFromOwner && (
-            <span className="text-slate-400 ml-1">{t('math.usingDefault')}</span>
-          )}
-        </dd>
+            <dt className="font-semibold">{t('math.avgCustomerValue')}</dt>
+            <dd>
+              {formatCad(r.avgCustomerValueCad, locale)}
+              {!r.avgCustomerValueFromOwner && (
+                <span className="text-slate-400 ml-1">{t('math.usingDefault')}</span>
+              )}
+            </dd>
 
-        <dt className="font-semibold">{t('math.aiShare')}</dt>
-        <dd>{Math.round(r.aiShare * 100)}%</dd>
+            <dt className="font-semibold">{t('math.ltvMultiple')}</dt>
+            <dd>
+              {r.ltvMultiple}×
+              {!r.ltvFromOwner && (
+                <span className="text-slate-400 ml-1">{t('math.usingDefault')}</span>
+              )}
+            </dd>
 
-        <dt className="font-semibold">{t('math.avgCustomerValue')}</dt>
-        <dd>
-          {formatCad(r.avgCustomerValueCad, locale)}
-          {!r.avgCustomerValueFromOwner && (
-            <span className="text-slate-400 ml-1">{t('math.usingDefault')}</span>
-          )}
-        </dd>
+            <dt className="font-semibold">{t('math.lifetimeValue')}</dt>
+            <dd>{formatCad(roi.lifetimeValueCad, locale)}</dd>
+          </>
+        ) : (
+          <>
+            <dt className="font-semibold">{t('math.score')}</dt>
+            <dd>{r.score}/100</dd>
 
-        <dt className="font-semibold">{t('math.ltvMultiple')}</dt>
-        <dd>
-          {r.ltvMultiple}×
-          {!r.ltvFromOwner && (
-            <span className="text-slate-400 ml-1">{t('math.usingDefault')}</span>
-          )}
-        </dd>
+            <dt className="font-semibold">{t('math.monthlyOnline')}</dt>
+            <dd>
+              {r.monthlyNewOnlineCustomers}
+              {!r.monthlyNewOnlineCustomersFromOwner && (
+                <span className="text-slate-400 ml-1">{t('math.usingDefault')}</span>
+              )}
+            </dd>
 
-        <dt className="font-semibold">{t('math.aiInfluenced')}</dt>
-        <dd>{roi.aiInfluencedCustomersPerMonth.toFixed(1)} {t('math.customersUnit')}</dd>
+            <dt className="font-semibold">{t('math.aiShare')}</dt>
+            <dd>{Math.round(r.aiShare * 100)}%</dd>
 
-        <dt className="font-semibold">{t('math.lifetimeValue')}</dt>
-        <dd>{formatCad(roi.lifetimeValueCad, locale)}</dd>
+            <dt className="font-semibold">{t('math.avgCustomerValue')}</dt>
+            <dd>
+              {formatCad(r.avgCustomerValueCad, locale)}
+              {!r.avgCustomerValueFromOwner && (
+                <span className="text-slate-400 ml-1">{t('math.usingDefault')}</span>
+              )}
+            </dd>
+
+            <dt className="font-semibold">{t('math.ltvMultiple')}</dt>
+            <dd>
+              {r.ltvMultiple}×
+              {!r.ltvFromOwner && (
+                <span className="text-slate-400 ml-1">{t('math.usingDefault')}</span>
+              )}
+            </dd>
+
+            <dt className="font-semibold">{t('math.aiInfluenced')}</dt>
+            <dd>{roi.aiInfluencedCustomersPerMonth.toFixed(1)} {t('math.customersUnit')}</dd>
+
+            <dt className="font-semibold">{t('math.lifetimeValue')}</dt>
+            <dd>{formatCad(roi.lifetimeValueCad, locale)}</dd>
+          </>
+        )}
       </dl>
     </div>
   )

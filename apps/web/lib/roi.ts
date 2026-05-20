@@ -73,6 +73,8 @@ export interface RoiBreakdown {
     aiShare:                 number
     score:                   number
   }
+  /** Which formula produced these numbers. Shown in the card footer. */
+  formulaSource: 'A' | 'B' | 'C'
   /** Estimated AI-influenced customers per month (single point, used by UI labels). */
   aiInfluencedCustomersPerMonth: number
   /** Estimated lifetime revenue per AI-influenced customer (single point). */
@@ -125,6 +127,7 @@ export function computeRoi(inputs: RoiInputs): RoiBreakdown {
       aiShare,
       score,
     },
+    formulaSource: 'C',
     aiInfluencedCustomersPerMonth: aiInfluenced,
     lifetimeValueCad: ltv,
     exposureMonthly:  toRange(capturedPoint),
@@ -208,4 +211,155 @@ export function recommendationImpactRange(
   const point = roi.potentialMonthly.low / (1 - UNCERTAINTY) * fractionOfPotential
   const cappedPoint = Math.min(point, roi.upsideMonthly.high)
   return toRange(cappedPoint)
+}
+
+// ─── ROI v2 — market-intelligence-backed formulas ──────────────────────────
+
+/** Shape of audits.raw_results.market_visibility, written by market_augment.py. */
+export interface MarketVisibility {
+  market_id:              string
+  questions_covered:      number
+  questions_total:        number
+  /** Sum of non-null search_volume across market questions. */
+  total_volume:           number
+  /** Volume-weighted AI mention share for this business across the question set. */
+  weighted_mention_share: number | null
+  position_avg:           number | null
+  sentiment_avg:          number | null
+  /** Average mention share across all businesses in the same (vertical, city). */
+  vertical_avg_share:     number | null
+  /** 75th-percentile mention share — the target for "outperform most local peers". */
+  vertical_p75_share:     number | null
+  /** Sum of non-null search_volume from the per-business augmented keyword set. */
+  augmented_volume_total: number | null
+  augmented_n_with_volume: number | null
+  data_ready:             boolean
+}
+
+/**
+ * Pick and run the best available ROI formula given market visibility data.
+ *
+ * Formula A — `total_volume` from the cached question set + observed mention share.
+ *   Best signal. Used when market_visibility is data_ready and has measurable volume.
+ * Formula B — augmented_volume_total + question coverage ratio.
+ *   Used when volume exists from augmentation but Formula A data is thin.
+ * Formula C — existing score-based formula (computeRoi). Final fallback.
+ */
+export function computeRoiV2(
+  inputs: RoiInputs,
+  marketVisibility?: MarketVisibility | null,
+): RoiBreakdown {
+  if (marketVisibility?.data_ready) {
+    const share = marketVisibility.weighted_mention_share
+    const vol   = marketVisibility.total_volume ?? 0
+
+    // Formula A: observed mention share × measured market volume
+    if (share != null && vol > 0) {
+      return computeRoiFormulaA(inputs, marketVisibility)
+    }
+
+    // Formula B: question coverage × augmented volume
+    const augVol = marketVisibility.augmented_volume_total ?? 0
+    if (marketVisibility.questions_total > 0 && augVol > 0) {
+      return computeRoiFormulaB(inputs, marketVisibility)
+    }
+  }
+
+  // Formula C: existing score-based path
+  return computeRoi(inputs)
+}
+
+/**
+ * Formula A — volume-weighted mention share (primary path).
+ *
+ *   aiPool = total_volume × aiShare
+ *   captured = mention_share × aiPool × ltv
+ *   potential = CEILING × aiPool × ltv
+ *   upside = (target_share − mention_share) × aiPool × ltv
+ *     where target_share = min(CEILING, vertical_p75_share)
+ */
+function computeRoiFormulaA(inputs: RoiInputs, mv: MarketVisibility): RoiBreakdown {
+  const vertical = getVerticalDefault(inputs.businessType)
+  const aiShare  = inputs.aiShareOverride ?? DEFAULT_AI_SHARE
+
+  const avgCustomerValueCad = inputs.avgCustomerValueCad ?? vertical.avgCustomerValueCad
+  const ltvMultiple         = inputs.ltvMultipleOverride ?? vertical.ltvMultiple
+  const ltv = avgCustomerValueCad * ltvMultiple
+
+  const share       = mv.weighted_mention_share!
+  const aiPool      = mv.total_volume * aiShare
+  const targetShare = Math.min(POTENTIAL_CEILING, mv.vertical_p75_share ?? POTENTIAL_CEILING)
+
+  const capturedPoint  = share * aiPool * ltv
+  const potentialPoint = POTENTIAL_CEILING * aiPool * ltv
+  const upsidePoint    = Math.max(0, (targetShare - share) * aiPool * ltv)
+  const atRiskPoint    = Math.max(0, potentialPoint - capturedPoint)
+
+  return {
+    resolved: {
+      vertical,
+      // Formula A doesn't use monthly_new_online_customers as the main input,
+      // but we preserve it for the math disclosure block.
+      monthlyNewOnlineCustomers: inputs.monthlyNewOnlineCustomers ?? 0,
+      monthlyNewOnlineCustomersFromOwner: inputs.monthlyNewOnlineCustomers != null,
+      avgCustomerValueCad,
+      avgCustomerValueFromOwner: inputs.avgCustomerValueCad != null,
+      ltvMultiple,
+      ltvFromOwner: inputs.ltvMultipleOverride != null,
+      aiShare,
+      score: inputs.score,
+    },
+    formulaSource: 'A',
+    aiInfluencedCustomersPerMonth: aiPool,
+    lifetimeValueCad: ltv,
+    exposureMonthly:  toRange(capturedPoint),
+    atRiskMonthly:    toRange(atRiskPoint),
+    potentialMonthly: toRange(potentialPoint),
+    upsideMonthly:    toRange(upsidePoint),
+  }
+}
+
+/**
+ * Formula B — question coverage × augmented volume (mid-quality fallback).
+ *
+ *   coverage = questions_covered / questions_total
+ *   aiPool = augmented_volume_total × aiShare
+ *   captured = coverage × aiPool × ltv
+ */
+function computeRoiFormulaB(inputs: RoiInputs, mv: MarketVisibility): RoiBreakdown {
+  const vertical = getVerticalDefault(inputs.businessType)
+  const aiShare  = inputs.aiShareOverride ?? DEFAULT_AI_SHARE
+
+  const avgCustomerValueCad = inputs.avgCustomerValueCad ?? vertical.avgCustomerValueCad
+  const ltvMultiple         = inputs.ltvMultipleOverride ?? vertical.ltvMultiple
+  const ltv = avgCustomerValueCad * ltvMultiple
+
+  const coverage   = mv.questions_covered / mv.questions_total
+  const aiPool     = (mv.augmented_volume_total ?? 0) * aiShare
+
+  const capturedPoint  = coverage * aiPool * ltv
+  const potentialPoint = POTENTIAL_CEILING * aiPool * ltv
+  const upsidePoint    = Math.max(0, potentialPoint - capturedPoint)
+  const atRiskPoint    = Math.max(0, (1 - coverage) * aiPool * ltv)
+
+  return {
+    resolved: {
+      vertical,
+      monthlyNewOnlineCustomers: inputs.monthlyNewOnlineCustomers ?? 0,
+      monthlyNewOnlineCustomersFromOwner: inputs.monthlyNewOnlineCustomers != null,
+      avgCustomerValueCad,
+      avgCustomerValueFromOwner: inputs.avgCustomerValueCad != null,
+      ltvMultiple,
+      ltvFromOwner: inputs.ltvMultipleOverride != null,
+      aiShare,
+      score: inputs.score,
+    },
+    formulaSource: 'B',
+    aiInfluencedCustomersPerMonth: aiPool,
+    lifetimeValueCad: ltv,
+    exposureMonthly:  toRange(capturedPoint),
+    atRiskMonthly:    toRange(atRiskPoint),
+    potentialMonthly: toRange(potentialPoint),
+    upsideMonthly:    toRange(upsidePoint),
+  }
 }

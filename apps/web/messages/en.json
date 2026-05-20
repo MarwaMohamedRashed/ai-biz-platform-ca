@@ -303,6 +303,13 @@
       "showMath": "How we calculate this",
       "hideMath": "Hide the math",
       "disclosure": "Estimated using your AEO score, owner-provided customer values, and an industry midpoint of {aiShare}% AI share of online discovery (2026 data; we revise quarterly). Score-to-revenue is correlational, not causal — these figures are exposure ranges, not guarantees.",
+      "disclosureA": "Based on observed AI mention data for your area ({aiShare}% AI share of discovery applied). Figures are volume-weighted exposure ranges, not captured revenue guarantees.",
+      "disclosureB": "Based on your question coverage in the AI search landscape for your area ({aiShare}% AI share of discovery applied). Figures are exposure ranges.",
+      "formulaSource": {
+        "A": "Observed AI data",
+        "B": "Coverage estimate",
+        "C": "Audit-signal estimate"
+      },
       "math": {
         "score": "AEO score",
         "monthlyOnline": "Monthly new online customers",

@@ -246,6 +246,7 @@ export default async function DashboardPage() {
               monthlyNewOnlineCustomers={business.monthly_new_online_customers ?? null}
               ltvMultipleOverride={business.ltv_multiple_override ?? null}
               locale={locale}
+              marketVisibility={(latestAudit.raw_results as any)?.market_visibility ?? null}
             />
           )}
 

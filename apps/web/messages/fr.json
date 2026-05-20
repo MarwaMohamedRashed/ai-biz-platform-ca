@@ -292,6 +292,13 @@
       "showMath": "Comment c'est calculé",
       "hideMath": "Masquer le calcul",
       "disclosure": "Estimé à partir de votre score AEO, des valeurs client fournies et d'une moyenne industrielle de {aiShare}% de part de découverte en ligne via l'IA (données 2026 ; révisé chaque trimestre). Le lien score-à-revenu est corrélationnel, pas causal — ce sont des fourchettes d'exposition, pas des garanties.",
+      "disclosureA": "Basé sur les données de mentions IA observées dans votre région ({aiShare}% de part de découverte IA appliquée). Ces chiffres sont des fourchettes d'exposition pondérées par le volume, pas des garanties de revenus capturés.",
+      "disclosureB": "Basé sur votre couverture des questions dans le paysage de recherche IA de votre région ({aiShare}% de part de découverte IA appliquée). Ces chiffres sont des fourchettes d'exposition.",
+      "formulaSource": {
+        "A": "Données IA observées",
+        "B": "Estimation de couverture",
+        "C": "Estimation des signaux d'audit"
+      },
       "math": {
         "score": "Score AEO",
         "monthlyOnline": "Nouveaux clients en ligne / mois",
