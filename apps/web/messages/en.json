@@ -322,6 +322,48 @@
         "customersUnit": "customers"
       }
     },
+    "marketInsights": {
+      "eyebrow": "Area Market Intelligence",
+      "headline": "AI search landscape — {city}",
+      "headlineFallback": "AI search landscape — your area",
+      "refreshedAt": "Updated {date}",
+      "buildingArea": "We're building your area's AI search data. Check back after your next audit.",
+      "momUp": "increase in AI mention share vs last audit",
+      "momDown": "decrease in AI mention share vs last audit",
+      "benchmarksNotReady": "Not enough area data yet to benchmark — check back after a few weeks.",
+      "noData": "No data available yet.",
+      "mentions": "mentions",
+      "mentionedYes": "Your business was mentioned in answers to this question",
+      "mentionedNo": "Your business was not mentioned",
+      "benchNote": "Based on {n} businesses tracked in your area.",
+      "tab": {
+        "questions": "Questions",
+        "leaderboard": "Leaderboard",
+        "benchmarks": "Benchmarks"
+      },
+      "col": {
+        "question": "AI search question",
+        "volume": "Monthly searches",
+        "intent": "Intent",
+        "mentioned": "You"
+      },
+      "intent": {
+        "commercial": "Commercial",
+        "informational": "Informational",
+        "mixed": "Mixed"
+      },
+      "status": {
+        "fresh": "Fresh",
+        "stale": "Stale",
+        "refreshing": "Refreshing",
+        "failed": "Error"
+      },
+      "bench": {
+        "yours": "Your share",
+        "avg": "Area avg",
+        "p75": "Top 25%"
+      }
+    },
     "aeo": {
       "label": "AI VISIBILITY",
       "scoreLabel": "AI Visibility Score",

@@ -10,8 +10,10 @@ import AuditReportPrint from '@/components/dashboard/AuditReportPrint'
 import DetectedSignalsCard from '@/components/dashboard/DetectedSignalsCard'
 import RoiHeroCard from '@/components/dashboard/RoiHeroCard'
 import ProgressCard from '@/components/dashboard/ProgressCard'
+import MarketInsightsCard from '@/components/dashboard/MarketInsightsCard'
 import RerunAuditButton from '@/components/dashboard/RerunAuditButton'
 import { computeDrift } from '@/lib/audit-drift'
+import { canonicalVertical, normalizeCity, buildMarketInsights, type MarketInsightsSummary } from '@/lib/market-intelligence'
 
 function getGreetingKey(): 'morning' | 'afternoon' | 'evening' {
   const hour = new Date().getHours()
@@ -33,7 +35,7 @@ export default async function DashboardPage() {
 
   const { data: business } = await supabase
   .from('businesses')
-  .select('id, name, type, avg_customer_value_cad, monthly_new_online_customers, ltv_multiple_override')
+  .select('id, name, type, city, province, competitor_scope, avg_customer_value_cad, monthly_new_online_customers, ltv_multiple_override')
   .limit(1)
   .single()
 
@@ -61,6 +63,33 @@ export default async function DashboardPage() {
   const latestAudit = auditHistory?.[0] ?? null
   const historyAsc = auditHistory ? [...auditHistory].reverse() : []
   const locale = await getLocale()
+
+  // Market insights — fetch the cached (vertical, city) intelligence row when
+  // the business is local-scoped and has location data. Skip for country/global
+  // scope (they get Formula C ROI and no area leaderboard).
+  let marketInsights: MarketInsightsSummary | null = null
+  const isLocalScope = business?.competitor_scope !== 'country' && business?.competitor_scope !== 'global'
+  if (business?.city && business.type && isLocalScope) {
+    try {
+      const vertical  = canonicalVertical(business.type)
+      const cityNorm  = normalizeCity(business.city)
+      const { data: marketRow } = await supabase
+        .from('market_intelligence')
+        .select('id, vertical, city, questions, top_businesses, benchmarks, refresh_status, refreshed_at')
+        .eq('vertical', vertical)
+        .eq('city', cityNorm)
+        .eq('country', 'Canada')
+        .single()
+
+      if (marketRow && (marketRow.questions as unknown[]).length > 0) {
+        const currentShare = (latestAudit?.raw_results as any)?.market_visibility?.weighted_mention_share ?? null
+        const prevShare    = (auditHistory?.[1]?.raw_results as any)?.market_visibility?.weighted_mention_share ?? null
+        marketInsights = buildMarketInsights(marketRow as any, business.name, currentShare, prevShare)
+      }
+    } catch {
+      // silently degrade — card shows null state
+    }
+  }
 
   // Drift between the latest two audits powers the Progress card. The
   // helper returns null gracefully when there's only one audit so far.
@@ -267,6 +296,14 @@ export default async function DashboardPage() {
               nextReportDateLabel={nextReportDateLabel}
             />
           )}
+
+          {/* Monthly Insights — market intelligence card (Phase 5). Shows top
+              questions, area leaderboard, and benchmark bar for this business's
+              (vertical, city). null state shows gracefully when data isn't ready. */}
+          <MarketInsightsCard
+            insights={marketInsights}
+            locale={locale}
+          />
 
           {/* What the scanner detected about this business — transparency
               card so the owner can spot wrong detections at a glance.
