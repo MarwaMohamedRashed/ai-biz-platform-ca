@@ -24,6 +24,8 @@ import asyncio
 import json
 import logging
 import os
+import re
+from collections import Counter
 from datetime import date, datetime, timezone
 from typing import Optional
 
@@ -36,6 +38,7 @@ from integrations import serpapi as serpapi_client
 from .audit.geo import country_to_gl
 from .audit.maps import resolve_maps_place_id
 from .audit.scoring import name_matches
+from .audit.verticals import DIRECTORY_DOMAINS
 from .market_intelligence import mention_weight
 
 
@@ -158,24 +161,79 @@ async def _discover_questions(
     return entries
 
 
+# ── Source extraction (which directories AI / Google cite for this market) ────
+
+def _domain_of(url: str) -> str:
+    """Bare domain from a URL: strip scheme, leading www., and any path."""
+    s = re.sub(r"^https?://", "", url or "", flags=re.I)
+    s = re.sub(r"^www\.", "", s, flags=re.I)
+    return s.split("/", 1)[0].strip().lower()
+
+
+def _extract_serp_sources(serp_response: dict) -> list[str]:
+    """Domains appearing in a serp_advanced response — organic results plus the
+    sources behind People Also Ask answers. These are the directories /
+    publishers Google (and, by extension, the AI engines that read them) cite
+    for a market's questions: Yelp, BBB, Yellow Pages, RateMDs, Reddit, etc.
+
+    Returns a flat list of domains (with duplicates — frequency is the signal).
+    Skips local_pack entries since those are businesses, not citation sources."""
+    domains: list[str] = []
+    for item in dataforseo.get_items(serp_response):
+        itype = item.get("type")
+        if itype == "organic":
+            d = item.get("domain") or _domain_of(item.get("url", ""))
+            if d:
+                domains.append(d)
+        elif itype == "people_also_ask":
+            for paa in item.get("items") or []:
+                for el in paa.get("expanded_element") or []:
+                    d = el.get("domain") or _domain_of(el.get("url", ""))
+                    if d:
+                        domains.append(d)
+    return domains
+
+
+def _aggregate_sources(domains: list[str]) -> list[dict]:
+    """Roll a flat domain list into a ranked source table for the cache.
+    is_directory flags the known directory/citation surfaces (DIRECTORY_DOMAINS)
+    so the dashboard can later say 'competitors appear on Yelp/BBB, you don't'."""
+    counts = Counter(d for d in domains if d)
+    out: list[dict] = []
+    for domain, count in counts.most_common(25):
+        label = DIRECTORY_DOMAINS.get(domain)
+        out.append({
+            "domain":       domain,
+            "label":        label or domain,
+            "is_directory": label is not None,
+            "count":        count,
+        })
+    return out
+
+
 # ── PAA expansion ─────────────────────────────────────────────────────────────
 
 async def _expand_paa(
     questions: list[dict],
     city: str,
     country: str = "Canada",
-) -> list[str]:
-    """Pull People Also Ask + related_searches for the top-N questions.
+) -> tuple[list[str], list[str]]:
+    """Pull People Also Ask + related_searches for the top-N questions, and
+    harvest the citation-source domains from the same SERP responses.
 
-    Returns additional question strings (not yet scored/ranked) to merge
-    into the question list. Gracefully handles missing PAA blocks.
+    Returns (extra_question_strings, source_domains). extra_question_strings
+    are merged into the question list; source_domains are aggregated into
+    benchmarks.category_sources. Gracefully handles missing PAA blocks.
     """
     extra: list[str] = []
+    sources: list[str] = []
     top = questions[:_PAA_TOP_N]
     for entry in top:
         kw = entry["question"]
         try:
             raw = await dataforseo.serp_advanced(kw, location_name=f"{city}, {country}")
+            # Harvest citation sources from every SERP response, PAA or not.
+            sources.extend(_extract_serp_sources(raw))
             items = dataforseo.get_items(raw)
             added_from_paa = False
             for item in items:
@@ -197,8 +255,9 @@ async def _expand_paa(
                         break
         except Exception as e:
             logger.warning(f"[REFRESH] PAA expansion failed for '{kw}': {e}")
-    logger.info(f"[REFRESH] PAA expansion added {len(extra)} candidate questions")
-    return extra
+    logger.info(f"[REFRESH] PAA expansion added {len(extra)} candidate questions, "
+                f"{len(set(sources))} unique source domains")
+    return extra, sources
 
 
 def _merge_paa(discovered: list[dict], paa_extras: list[str]) -> list[dict]:
@@ -605,8 +664,8 @@ async def run_refresh(
             ).eq("id", market_id).execute()
             return {"status": "no_questions", "market_id": market_id}
 
-        # 4. PAA expansion
-        paa_extras = await _expand_paa(questions, city, country)
+        # 4. PAA expansion (also harvests citation-source domains)
+        paa_extras, source_domains = await _expand_paa(questions, city, country)
         questions = _merge_paa(questions, paa_extras)
 
         # 5. Mention extraction (concurrency-limited)
@@ -619,6 +678,9 @@ async def run_refresh(
         # 6. Aggregate
         top_businesses = await _aggregate_top_businesses(questions, city, country)
         benchmarks = _compute_benchmarks(questions, top_businesses)
+        # Citation sources (which directories Google/AI cite for this market).
+        # Stored in benchmarks JSONB so it snapshots to history with no migration.
+        benchmarks["category_sources"] = _aggregate_sources(source_domains)
 
         # 7. Snapshot BEFORE overwrite (idempotent — ON CONFLICT is no-op)
         _snapshot_to_history(
